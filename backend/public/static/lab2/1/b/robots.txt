@@ -1,6 +1,6 @@
 # FashionHub Robots.txt - Fashion & Apparel
 User-agent: *
-Disallow: /lab2/1/b/fashion_control_panel
+Disallow: /fashion_control_panel
 Disallow: /admin/
 Disallow: /management/
 Disallow: /config/
@@ -10,7 +10,7 @@ User-agent: Bingbot
 Disallow: /private/
 
 # Hidden admin panel location
-# Try accessing: /lab2/1/b/fashion_control_panel
+# Try accessing: /fashion_control_panel
 Allow: /products/
 Allow: /gallery/
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import { getLabSessionId } from '../../utils/sessionId';
 import { 
   FolderOpen, Upload, FileText, File as FileIcon, 
   Image as ImageIcon, Archive, MoreVertical, 
@@ -11,17 +12,29 @@ export default function Lab1Sub1() {
   const [files, setFiles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [instanceId, setInstanceId] = useState<string | null>(null);
+
   useEffect(() => {
-    axios.get('http://localhost:5000/api/lab1/1/files', { withCredentials: true })
-      .then(res => {
-        setFiles(res.data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Failed to load files", err);
-        setLoading(false);
-      });
+    const newId = getLabSessionId('lab1', 'sub1', 'default', true);
+    setInstanceId(newId);
   }, []);
+
+  useEffect(() => {
+    if (instanceId) {
+      axios.get('http://localhost:5000/api/lab1/1/files', { 
+        withCredentials: true,
+        headers: { 'X-Variant-Session-ID': instanceId }
+      })
+        .then(res => {
+          setFiles(res.data);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error("Failed to load files", err);
+          setLoading(false);
+        });
+    }
+  }, [instanceId]);
 
   const getFileIcon = (filename: string) => {
     if (filename.endsWith('.pdf')) return <FileIcon className="text-red-500" size={32} />;
@@ -76,12 +89,13 @@ export default function Lab1Sub1() {
           </nav>
           
           {/* Vuln Banner */}
-          <div className="bg-red-50 border border-red-100 p-4 rounded-2xl text-xs">
+          <div className="bg-red-50 border border-red-100 p-4 rounded-2xl text-xs mb-4">
             <div className="flex items-center gap-2 text-red-600 font-bold mb-1 uppercase tracking-wider">
                <ShieldAlert size={14} /> Lab 1.1
             </div>
             <p className="text-red-500/80 font-medium">Path Traversal Vulnerability present in the download endpoint.</p>
           </div>
+          
         </div>
       </aside>
 

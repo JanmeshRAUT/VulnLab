@@ -1,40 +1,23 @@
 import os
-import hashlib
 from fastapi import APIRouter, Request, HTTPException, Form
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from .session_utils import get_or_generate_flag, get_variant_session_id, store_variant_flag
 
 router = APIRouter(prefix="/api/lab7", tags=["Lab 7"])
 
-def get_or_generate_flag(identity_key: str, lab_id: str, variation: str = 'default'):
-    secret_key = os.environ.get('SECRET_KEY', 'default_vulnerable_key_replace_in_prod')
-    seed_string = f"{identity_key}-{lab_id}-{variation}-{secret_key}"
-    short_hash = hashlib.sha256(seed_string.encode()).hexdigest()[:12]
-    prefix = lab_id.split('_')[0]
-    return f"FLAG{{{prefix}_{variation}_{short_hash}}}"
-
 def get_random_flag(request: Request, lab_id: str, variation: str = 'default'):
-    identity_key = request.session.get('user_id')
-    if not identity_key:
-        identity_key = request.headers.get('X-SSRF-Researcher-GUID')
-        
+    identity_key = request.session.get('user_id') or request.headers.get('X-SSRF-Researcher-GUID')
+
     if not identity_key:
         if variation == 'variation_A': return "FLAG{sqli_auth_bypass_alpha}"
         if variation == 'variation_B': return "FLAG{sqli_auth_bypass_beta}"
         if variation == 'variation_C': return "FLAG{sqli_auth_bypass_gamma}"
         return "FLAG{unauthenticated_research_lock}"
-        
-    issued_flag = get_or_generate_flag(identity_key, lab_id, variation)
-    
-    lab_flags = request.session.get('lab_flags', {})
-    lab_issued = list(lab_flags.get(lab_id, []))
-    if issued_flag not in lab_issued:
-        lab_issued.append(issued_flag)
-    if len(lab_issued) > 25:
-        lab_issued = lab_issued[-25:]
-    lab_flags[lab_id] = lab_issued
-    request.session['lab_flags'] = lab_flags
-    
+
+    issued_flag = get_or_generate_flag(get_variant_session_id(request, lab_id, variation), lab_id, variation)
+    store_variant_flag(request, lab_id, variation, issued_flag)
+
     return issued_flag
 
 # -------------------------

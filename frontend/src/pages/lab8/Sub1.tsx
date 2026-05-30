@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { ShieldAlert, ArrowLeft, Terminal, Bug } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, Bug } from 'lucide-react';
 
 export default function Lab8Sub1() {
   const { variantId } = useParams<{ variantId: string }>();

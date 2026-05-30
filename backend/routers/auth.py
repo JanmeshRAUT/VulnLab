@@ -2,6 +2,7 @@ import os
 from fastapi import APIRouter, Request, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 from authlib.integrations.starlette_client import OAuth
+from .session_utils import get_base_identity
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -49,6 +50,7 @@ async def auth_callback(request: Request):
     # In a full migration, you would call the MongoDB logic from mongodb_client here.
     # For now, we stub it to allow basic sign in via session.
     request.session['user_id'] = f"mock_user_id_{email}"
+    request.session['base_identity'] = request.session['user_id']
     request.session['email'] = email
     request.session['role'] = 'admin' if 'admin' in email.lower() else 'user'
     
@@ -60,6 +62,24 @@ async def auth_callback(request: Request):
     target = f"{frontend_url}{next_url}" if next_url.startswith("/") else frontend_url
     return RedirectResponse(url=target)
 
+from pydantic import BaseModel
+
+class MockLoginData(BaseModel):
+    email: str
+    password: str
+
+@router.post("/mock-login")
+async def mock_login(request: Request, data: MockLoginData):
+    """Mock login endpoint for testing without OAuth."""
+    # Ignore password, just mock using email
+    email = data.email
+    request.session['user_id'] = f"mock_user_id_{email}"
+    request.session['base_identity'] = request.session['user_id']
+    request.session['email'] = email
+    request.session['role'] = 'admin' if 'admin' in email.lower() else 'user'
+    
+    return {"success": True, "message": "Mock login successful"}
+
 @router.get("/status")
 async def auth_status(request: Request):
     """Check if the current session is authenticated."""
@@ -70,7 +90,8 @@ async def auth_status(request: Request):
     return {
         "is_authenticated": True,
         "email": request.session.get('email'),
-        "role": request.session.get('role', 'user')
+        "role": request.session.get('role', 'user'),
+        "session_identity": get_base_identity(request)
     }
 
 @router.post("/logout")

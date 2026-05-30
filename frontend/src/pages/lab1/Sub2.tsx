@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { Coffee, ShoppingCart, ShieldAlert, Check, ArrowLeft } from 'lucide-react';
+import { getLabSessionId } from '../../utils/sessionId';
 
 interface Product {
   id: number;
@@ -16,18 +17,29 @@ export default function Lab1Sub2() {
   const [loading, setLoading] = useState(true);
   const [cartCount, setCartCount] = useState(0);
   const [addedItems, setAddedItems] = useState<Record<number, boolean>>({});
+  const [instanceId, setInstanceId] = useState<string | null>(null);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/lab1/2/products', { withCredentials: true })
-      .then(res => {
-        setProducts(res.data);
-        setLoading(false);
+    const newId = getLabSessionId('lab1', 'sub2', 'default', true);
+    setInstanceId(newId);
+  }, []);
+
+  useEffect(() => {
+    if (instanceId) {
+      axios.get('http://localhost:5000/api/lab1/2/products', { 
+        withCredentials: true,
+        headers: { 'X-Variant-Session-ID': instanceId }
       })
+        .then(res => {
+          setProducts(res.data);
+          setLoading(false);
+        })
       .catch(err => {
         console.error("Failed to load products", err);
         setLoading(false);
       });
-  }, []);
+    }
+  }, [instanceId]);
 
   const handleAddToCart = (id: number) => {
     setCartCount(prev => prev + 1);
@@ -46,8 +58,8 @@ export default function Lab1Sub2() {
       </Link>
 
       {/* Top Banner (Lab Context) */}
-      <div className="bg-red-600 text-white text-xs font-bold font-sans uppercase tracking-[0.2em] py-1.5 text-center flex items-center justify-center gap-2 shadow-sm relative z-50">
-        <ShieldAlert size={14} /> Vulnerable Environment: Lab 1.2 (Path Traversal via Image Loader)
+      <div className="bg-red-600 text-white text-xs font-bold font-sans uppercase tracking-[0.2em] py-1.5 px-4 text-center flex flex-col md:flex-row items-center justify-center gap-2 md:gap-6 shadow-sm relative z-50">
+        <div className="flex items-center gap-2"><ShieldAlert size={14} /> Vulnerable Environment: Lab 1.2 (Path Traversal via Image Loader)</div>
       </div>
 
       {/* Elegant Header */}

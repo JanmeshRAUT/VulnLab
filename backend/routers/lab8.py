@@ -1,23 +1,14 @@
 import os
-import hashlib
 from fastapi import APIRouter, Request, HTTPException, Form, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from .session_utils import get_or_generate_flag, get_variant_session_id, store_variant_flag
 
 router = APIRouter(prefix="/api/lab8", tags=["Lab 8"])
 
-def get_or_generate_flag(identity_key: str, lab_id: str, variation: str = 'default'):
-    secret_key = os.environ.get('SECRET_KEY', 'default_vulnerable_key_replace_in_prod')
-    seed_string = f"{identity_key}-{lab_id}-{variation}-{secret_key}"
-    short_hash = hashlib.sha256(seed_string.encode()).hexdigest()[:12]
-    prefix = lab_id.split('_')[0]
-    return f"FLAG{{{prefix}_{variation}_{short_hash}}}"
-
 def get_random_flag(request: Request, lab_id: str, variation: str = 'default'):
-    identity_key = request.session.get('user_id')
-    if not identity_key:
-        identity_key = request.headers.get('X-SSRF-Researcher-GUID')
-        
+    identity_key = request.session.get('user_id') or request.headers.get('X-SSRF-Researcher-GUID')
+
     if not identity_key:
         if variation == 'variation_A': return "FLAG{xss_reflected_alpha}"
         if variation == 'variation_B': return "FLAG{xss_reflected_beta}"
@@ -26,18 +17,10 @@ def get_random_flag(request: Request, lab_id: str, variation: str = 'default'):
         if variation == 'variation_E': return "FLAG{xss_reflected_epsilon}"
         if variation == 'lab8_2': return "FLAG{xss_stored_profile}"
         return "FLAG{unauthenticated_research_lock}"
-        
-    issued_flag = get_or_generate_flag(identity_key, lab_id, variation)
-    
-    lab_flags = request.session.get('lab_flags', {})
-    lab_issued = list(lab_flags.get(lab_id, []))
-    if issued_flag not in lab_issued:
-        lab_issued.append(issued_flag)
-    if len(lab_issued) > 25:
-        lab_issued = lab_issued[-25:]
-    lab_flags[lab_id] = lab_issued
-    request.session['lab_flags'] = lab_flags
-    
+
+    issued_flag = get_or_generate_flag(get_variant_session_id(request, lab_id, variation), lab_id, variation)
+    store_variant_flag(request, lab_id, variation, issued_flag)
+
     return issued_flag
 
 def check_xss_payload(user_input: str, variant: str) -> bool:
@@ -106,15 +89,17 @@ class ProfileUpdate(BaseModel):
 
 @router.get("/2/profile")
 async def lab8_2_get_profile(request: Request):
-    if 'lab8_2_profile' not in request.session:
-        request.session['lab8_2_profile'] = {
+    profile_key = f"lab8_2_profile:{get_variant_session_id(request, 'lab8_2', 'lab8_2')}"
+
+    if profile_key not in request.session:
+        request.session[profile_key] = {
             'full_name': 'Joan Smith',
             'email': 'joan.smith@techfusion.corp',
             'address': '123 Cyber Lane, Tech City',
             'bio': 'Senior Analyst at TechFusion Dynamics. Love hiking and coding.'
         }
     
-    user_data = request.session['lab8_2_profile']
+    user_data = request.session[profile_key]
     
     # Check for Stored XSS Flag condition on read
     flag = None
@@ -128,7 +113,8 @@ async def lab8_2_get_profile(request: Request):
 
 @router.post("/2/profile")
 async def lab8_2_update_profile(request: Request, body: ProfileUpdate):
-    profile = request.session.get('lab8_2_profile', {}).copy()
+    profile_key = f"lab8_2_profile:{get_variant_session_id(request, 'lab8_2', 'lab8_2')}"
+    profile = request.session.get(profile_key, {}).copy()
     
     # VULNERABILITY: Storing input without sanitization
     profile['full_name'] = body.full_name
@@ -136,5 +122,5 @@ async def lab8_2_update_profile(request: Request, body: ProfileUpdate):
     profile['address'] = body.address
     profile['bio'] = body.bio
     
-    request.session['lab8_2_profile'] = profile
+    request.session[profile_key] = profile
     return JSONResponse({'success': True})

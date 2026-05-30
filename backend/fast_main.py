@@ -45,12 +45,14 @@ async def get_config(request: Request):
 # Routers
 from routers.auth import router as auth_router
 from routers.lab1 import router as lab1_router
+from routers.lab2 import router as lab2_router
 from routers.lab6 import router as lab6_router
 from routers.lab7 import router as lab7_router
 from routers.lab8 import router as lab8_router
 
 app.include_router(auth_router)
 app.include_router(lab1_router)
+app.include_router(lab2_router)
 app.include_router(lab6_router)
 app.include_router(lab7_router)
 app.include_router(lab8_router)

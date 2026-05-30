@@ -296,8 +296,9 @@ function App() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const step = searchParams.get('step');
-  const isSubPath = location.pathname.match(/^\/labs\/\d+\/sub\d+(?:\/[a-c])?$/i) !== null;
-  const isLabEnvironment = isSubPath && (step === 'lab' || !step);
+  const isLab1SubPath = location.pathname.match(/^\/labs\/1\/sub\d+$/i) !== null;
+  const isOtherLabEnvPath = location.pathname.match(/^\/labs\/[2-8]\/sub\d+\/[a-c](?:\/.*)?$/i) !== null;
+  const isLabEnvironment = (isLab1SubPath || isOtherLabEnvPath) && (step === 'lab' || !step);
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
@@ -328,9 +329,15 @@ function App() {
               <Route path="/labs/1/sub3" element={<Lab1Sub3 />} />
               
               {/* Lab 2 Modules (with variants) */}
+              <Route path="/labs/2/sub1" element={<Lab2Sub1 />} />
               <Route path="/labs/2/sub1/:variantId" element={<Lab2Sub1 />} />
+              <Route path="/labs/2/sub1/:variantId/*" element={<Lab2Sub1 />} />
+              <Route path="/labs/2/sub2" element={<Lab2Sub2 />} />
               <Route path="/labs/2/sub2/:variantId" element={<Lab2Sub2 />} />
+              <Route path="/labs/2/sub2/:variantId/*" element={<Lab2Sub2 />} />
+              <Route path="/labs/2/sub3" element={<Lab2Sub3 />} />
               <Route path="/labs/2/sub3/:variantId" element={<Lab2Sub3 />} />
+              <Route path="/labs/2/sub3/:variantId/*" element={<Lab2Sub3 />} />
               <Route path="/labs/2/sub4/:variantId" element={<Lab2Sub4 />} />
               <Route path="/labs/2/sub5/:variantId" element={<Lab2Sub5 />} />
 

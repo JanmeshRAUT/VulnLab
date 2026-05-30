@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { ShieldAlert, ArrowLeft, Bug, User } from 'lucide-react';
+import { getLabSessionId } from '../../utils/sessionId';
 
 export default function Lab8Sub2() {
   const [profile, setProfile] = useState<any>(null);
@@ -14,10 +15,18 @@ export default function Lab8Sub2() {
     bio: ''
   });
 
-  const fetchProfile = async () => {
+  const [instanceId, setInstanceId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const newId = getLabSessionId('lab8', 'sub2', 'default', true);
+    setInstanceId(newId);
+  }, []);
+
+  const fetchProfile = async (currentInstanceId: string) => {
     try {
       const res = await axios.get(`http://localhost:5000/api/lab8/2/profile`, {
-        withCredentials: true
+        withCredentials: true,
+        headers: { 'X-Variant-Session-ID': currentInstanceId }
       });
       setProfile(res.data.profile);
       setFormData(res.data.profile);
@@ -30,17 +39,22 @@ export default function Lab8Sub2() {
   };
 
   useEffect(() => {
-    fetchProfile();
-  }, []);
+    if (instanceId) {
+      fetchProfile(instanceId);
+    }
+  }, [instanceId]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!instanceId) return;
+    
     try {
       await axios.post(`http://localhost:5000/api/lab8/2/profile`, formData, {
-        withCredentials: true
+        withCredentials: true,
+        headers: { 'X-Variant-Session-ID': instanceId }
       });
       setIsEditing(false);
-      fetchProfile(); // Re-fetch to see stored XSS trigger
+      fetchProfile(instanceId); // Re-fetch to see stored XSS trigger
     } catch (err) {
       console.error(err);
     }

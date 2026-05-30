@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { ShieldAlert, ArrowLeft, Search, Terminal } from 'lucide-react';
+import { getLabSessionId } from '../../utils/sessionId';
 
 export default function Lab7Sub1() {
   const { variantId } = useParams<{ variantId: string }>();
@@ -19,10 +20,18 @@ export default function Lab7Sub1() {
 
   const endpoint = endpoints[variant];
 
-  const fetchProducts = async (cat: string) => {
+  const [instanceId, setInstanceId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const newId = getLabSessionId('lab7', 'sub1', variantId || 'a', true);
+    setInstanceId(newId);
+  }, [variantId]);
+
+  const fetchProducts = async (cat: string, currentInstanceId: string) => {
     try {
       const res = await axios.get(`http://localhost:5000${endpoint}?category=${encodeURIComponent(cat)}`, {
-        withCredentials: true
+        withCredentials: true,
+        headers: { 'X-Variant-Session-ID': currentInstanceId }
       });
       setProducts(res.data.products);
       if (res.data.flag) {
@@ -34,12 +43,16 @@ export default function Lab7Sub1() {
   };
 
   useEffect(() => {
-    fetchProducts('');
-  }, [variant]);
+    if (instanceId) {
+      fetchProducts('', instanceId);
+    }
+  }, [variant, instanceId]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchProducts(category);
+    if (instanceId) {
+      fetchProducts(category, instanceId);
+    }
   };
 
   return (

@@ -1,10 +1,29 @@
 import { LogIn, ShieldCheck, Terminal, Key } from 'lucide-react';
 
+import { useState } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+
 export default function Login() {
-  
-  const handleGoogleLogin = () => {
-    // Redirect to the FastAPI auth endpoint
-    window.location.href = "http://localhost:5000/api/auth/login";
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const handleMockLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await axios.post('http://localhost:5000/api/auth/mock-login', {
+        email,
+        password
+      }, { withCredentials: true });
+      // Redirect to home/labs after successful mock login
+      window.location.href = '/labs';
+    } catch (err) {
+      console.error(err);
+      setLoading(false);
+    }
   };
 
   return (
@@ -54,14 +73,37 @@ export default function Login() {
             </p>
           </div>
           
-          <div className="space-y-6">
+          <form onSubmit={handleMockLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-1">Email / Username</label>
+              <input 
+                type="text" 
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="user@example.com or admin"
+                className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-orange outline-none"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-1">Password</label>
+              <input 
+                type="password" 
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-orange outline-none"
+                required
+              />
+            </div>
             <button 
-              onClick={handleGoogleLogin}
-              className="w-full flex justify-center items-center gap-3 py-4 px-4 border border-transparent rounded-xl shadow-md text-lg font-bold text-white bg-brand-orange hover:bg-brand-orange-700 hover:shadow-lg transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-orange transition-all"
+              type="submit"
+              disabled={loading}
+              className="w-full flex justify-center items-center gap-3 py-4 px-4 mt-4 border border-transparent rounded-xl shadow-md text-lg font-bold text-white bg-brand-orange hover:bg-brand-orange-700 hover:shadow-lg transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-orange transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <LogIn size={22} /> Sign in with Google
+              <LogIn size={22} /> {loading ? 'Signing in...' : 'Sign In (Mock)'}
             </button>
-          </div>
+          </form>
           
           <div className="pt-8">
             <div className="relative">

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevPortal | Infrastructure as Code</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        dev: { bg: '#0d1117', panel: '#161b22', border: '#30363d', accent: '#58a6ff', text: '#c9d1d9', muted: '#8b949e' }
+                    }
+                }
+            }
+        }
+    </script>
+    <script>
+        // System Config: Admin endpoint definition
+        const config = {
+            sysAdminEndpoint: "/docs_sysadmin"
+        };
+    </script>
+    <style>
+        .code-block { position: relative; }
+        .code-block::before {
+            content: "Terminal";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            background: #0d1117;
+            padding: 4px 12px;
+            font-size: 11px;
+            color: #8b949e;
+            border-bottom: 1px solid #30363d;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+        .nav-link { position: relative; }
+        .nav-link::after {
+            content: ''; position: absolute; width: 100%; transform: scaleX(0); height: 2px;
+            bottom: -4px; left: 0; background-color: #58a6ff;
+            transform-origin: bottom right; transition: transform 0.25s ease-out;
+        }
+        .nav-link:hover::after { transform: scaleX(1); transform-origin: bottom left; }
+    </style>
+</head>
+<body class="w-full bg-dev-bg text-dev-text min-h-screen flex flex-col m-0 p-0 antialiased selection:bg-dev-accent selection:text-white">
+    <script>
+        // Transfer session ID from URL hash to sessionStorage without leaving it in the URL
+        if (window.location.hash.startsWith('#session=')) {
+            const sessionId = window.location.hash.split('=')[1];
+            sessionStorage.setItem('lab2_2_instance_id', sessionId);
+            history.replaceState(null, '', window.location.pathname);
+        }
+    </script>
+    <a href="/docs_sysadmin" style="display: none;">
+        System Administration
+    </a>
+    
+    <header class="bg-dev-panel border-b border-dev-border sticky top-0 z-50">
+        <div class="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer group">
+                <div class="w-8 h-8 rounded bg-dev-accent flex items-center justify-center text-white font-black group-hover:rotate-12 transition-transform">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                </div>
+                <span class="text-xl font-black tracking-tight text-white">DevPortal</span>
+            </div>
+
+            <div class="hidden md:flex flex-1 max-w-2xl mx-12">
+                <div class="relative w-full group">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute left-3 top-1/2 -translate-y-1/2 text-dev-muted group-focus-within:text-dev-accent transition-colors"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input 
+                        type="text" 
+                        placeholder="Search documentation, API references, or guides (Press '/')" 
+                        class="w-full bg-dev-bg border border-dev-border focus:border-dev-accent focus:ring-1 focus:ring-dev-accent rounded-md py-1.5 pl-9 pr-4 transition-all outline-none text-sm text-white placeholder-dev-muted shadow-inner"
+                    >
+                </div>
+            </div>
+
+            <div class="flex items-center gap-6 text-sm font-medium">
+                <a href="#" class="hidden sm:block text-dev-text hover:text-white nav-link transition-colors">Documentation</a>
+                <a href="#" class="hidden sm:block text-dev-text hover:text-white nav-link transition-colors">API</a>
+                <a href="#" class="hidden sm:block text-dev-text hover:text-white nav-link transition-colors">Enterprise</a>
+                <div class="h-5 w-px bg-dev-border hidden sm:block"></div>
+                <button class="text-white bg-[#238636] hover:bg-[#2ea043] px-4 py-1.5 rounded-md font-bold transition-colors shadow-sm">
+                    Sign In
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-1 max-w-[1400px] mx-auto w-full px-6 flex items-start gap-8 py-8">
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 shrink-0 hidden lg:block sticky top-24 border-r border-dev-border pr-6 pb-12">
+            <nav class="space-y-8">
+                <div>
+                    <h4 class="text-xs font-bold text-dev-muted uppercase tracking-wider mb-3">Getting Started</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="block text-dev-accent font-bold bg-dev-accent/10 px-3 py-1.5 rounded-md">Introduction</a></li>
+                        <li><a href="#" class="block text-dev-text hover:text-white hover:bg-dev-panel px-3 py-1.5 rounded-md transition-colors">Quickstart Guide</a></li>
+                        <li><a href="#" class="block text-dev-text hover:text-white hover:bg-dev-panel px-3 py-1.5 rounded-md transition-colors">Authentication</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold text-dev-muted uppercase tracking-wider mb-3">Core Concepts</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="block text-dev-text hover:text-white hover:bg-dev-panel px-3 py-1.5 rounded-md transition-colors">Deployments</a></li>
+                        <li><a href="#" class="block text-dev-text hover:text-white hover:bg-dev-panel px-3 py-1.5 rounded-md transition-colors">Edge Functions</a></li>
+                        <li><a href="#" class="block text-dev-text hover:text-white hover:bg-dev-panel px-3 py-1.5 rounded-md transition-colors">Serverless Storage</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold text-dev-muted uppercase tracking-wider mb-3">API Reference</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="block text-dev-text hover:text-white hover:bg-dev-panel px-3 py-1.5 rounded-md transition-colors font-mono text-xs">POST /v1/deploy</a></li>
+                        <li><a href="#" class="block text-dev-text hover:text-white hover:bg-dev-panel px-3 py-1.5 rounded-md transition-colors font-mono text-xs">GET /v1/projects</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Documentation Content -->
+        <main class="flex-1 min-w-0 max-w-3xl">
+            
+            <div class="flex items-center gap-2 text-sm text-dev-accent font-mono mb-6 bg-dev-accent/10 inline-flex px-3 py-1 rounded-full border border-dev-accent/20">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                v4.0 API Released
+            </div>
+
+            <h1 class="text-5xl font-black text-white mb-6 tracking-tight leading-tight">Introduction to DevPortal</h1>
+            <p class="text-xl text-dev-muted mb-10 leading-relaxed font-light">
+                DevPortal provides the infrastructure to build, deploy, and scale modern web applications globally. Whether you are building a static site or a complex microservices architecture, we have the tools you need.
+            </p>
+
+            <h2 class="text-2xl font-bold text-white mb-6 pb-2 border-b border-dev-border flex items-center gap-2 group cursor-pointer hover:text-dev-accent transition-colors">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="opacity-0 group-hover:opacity-100 -ml-8 absolute transition-opacity"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Installation
+            </h2>
+            <p class="text-dev-text mb-4 text-base leading-relaxed">
+                The easiest way to interact with DevPortal is using our official Command Line Interface. It requires <code class="bg-dev-panel px-1.5 py-0.5 rounded border border-dev-border font-mono text-sm">Node.js 18</code> or later.
+            </p>
+            
+            <div class="code-block bg-dev-panel border border-dev-border rounded-lg pt-10 pb-4 px-4 mb-10 font-mono text-sm overflow-x-auto shadow-lg shadow-black/20">
+                <div class="flex">
+                    <div class="text-dev-muted select-none text-right pr-4 border-r border-dev-border mr-4 min-w-[2rem]">1</div>
+                    <div>
+                        <span class="text-dev-muted select-none">$ </span>
+                        <span class="text-dev-accent">npm</span>
+                        <span class="text-white"> install -g devportal-cli</span>
+                    </div>
+                </div>
+            </div>
+            
+            <h2 class="text-2xl font-bold text-white mb-6 pb-2 border-b border-dev-border flex items-center gap-2 group cursor-pointer hover:text-dev-accent transition-colors">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="opacity-0 group-hover:opacity-100 -ml-8 absolute transition-opacity"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Authentication
+            </h2>
+            <p class="text-dev-text mb-4 text-base leading-relaxed">
+                All API requests must be authenticated using a Bearer token. You can generate a Personal Access Token in your account settings dashboard under the Security tab.
+            </p>
+            
+            <div class="code-block bg-dev-panel border border-dev-border rounded-lg pt-10 pb-4 px-4 mb-10 font-mono text-sm overflow-x-auto shadow-lg shadow-black/20">
+                <div class="flex">
+                    <div class="text-dev-muted select-none text-right pr-4 border-r border-dev-border mr-4 min-w-[2rem] flex flex-col">
+                        <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <div><span class="text-dev-muted"># Authenticate the CLI interactively</span></div>
+                        <div>
+                            <span class="text-dev-muted select-none">$ </span>
+                            <span class="text-dev-accent">devportal</span>
+                            <span class="text-white"> login</span>
+                        </div>
+                        <div class="h-4"></div>
+                        <div><span class="text-dev-muted"># Or use it via standard cURL</span></div>
+                        <div>
+                            <span class="text-dev-muted select-none">$ </span>
+                            <span class="text-[#79c0ff]">curl</span>
+                            <span class="text-white"> -H </span>
+                            <span class="text-[#a5d6ff]">"Authorization: Bearer YOUR_TOKEN"</span>
+                            <span class="text-white"> https://api.devportal.com/v1/user</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-dev-border">
+                <a href="#" class="text-dev-muted hover:text-dev-accent flex items-center gap-2 transition-colors">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                    Previous: Overview
+                </a>
+                <a href="#" class="text-dev-accent font-bold hover:text-white flex items-center gap-2 transition-colors">
+                    Next: Quickstart Guide
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </a>
+            </div>
+        </main>
+        
+        <!-- On This Page Navigation -->
+        <aside class="w-48 hidden xl:block shrink-0">
+            <h4 class="text-xs font-bold text-dev-text uppercase tracking-wider mb-4">On this page</h4>
+            <ul class="space-y-3 text-sm text-dev-muted border-l border-dev-border pl-4">
+                <li><a href="#" class="text-dev-accent font-bold transition-colors block">Introduction</a></li>
+                <li><a href="#" class="hover:text-dev-text transition-colors block">Installation</a></li>
+                <li><a href="#" class="hover:text-dev-text transition-colors block">Authentication</a></li>
+            </ul>
+        </aside>
+    </div>
+</body>
+</html>

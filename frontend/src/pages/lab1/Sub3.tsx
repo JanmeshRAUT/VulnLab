@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { ShieldAlert, Search, Camera, Heart, Download, Eye, Aperture, ArrowLeft } from 'lucide-react';
+import { getLabSessionId } from '../../utils/sessionId';
 
 interface MediaItem {
   file: string;
@@ -15,18 +16,29 @@ interface MediaItem {
 export default function Lab1Sub3() {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [instanceId, setInstanceId] = useState<string | null>(null);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/lab1/3/media', { withCredentials: true })
-      .then(res => {
-        setMedia(res.data);
-        setLoading(false);
+    const newId = getLabSessionId('lab1', 'sub3', 'default', true);
+    setInstanceId(newId);
+  }, []);
+
+  useEffect(() => {
+    if (instanceId) {
+      axios.get('http://localhost:5000/api/lab1/3/media', { 
+        withCredentials: true,
+        headers: { 'X-Variant-Session-ID': instanceId }
       })
+        .then(res => {
+          setMedia(res.data);
+          setLoading(false);
+        })
       .catch(err => {
         console.error("Failed to load media", err);
         setLoading(false);
       });
-  }, []);
+    }
+  }, [instanceId]);
 
   return (
     <div className="w-full min-h-screen bg-[#0A0A0A] flex flex-col font-sans text-slate-200 relative selection:bg-purple-500/30">
@@ -37,8 +49,8 @@ export default function Lab1Sub3() {
       </Link>
 
       {/* Top Banner (Lab Context) */}
-      <div className="bg-red-600 text-white text-[10px] font-bold uppercase tracking-[0.3em] py-2 text-center flex items-center justify-center gap-2 shadow-lg relative z-50">
-        <ShieldAlert size={14} /> Vulnerable Environment: Lab 1.3 (Path Traversal via Image Loader)
+      <div className="bg-red-600 text-white text-[10px] font-bold uppercase tracking-[0.3em] py-2 px-4 text-center flex flex-col md:flex-row items-center justify-center gap-2 md:gap-8 shadow-lg relative z-50">
+        <div className="flex items-center gap-2"><ShieldAlert size={14} /> Vulnerable Environment: Lab 1.3 (Path Traversal via Image Loader)</div>
       </div>
 
       {/* Dark & Sleek Header */}

@@ -1,6 +1,6 @@
 # TechStore Robots.txt - Technology & Electronics
 User-agent: *
-Disallow: /lab2/1/tech_admin_console
+Disallow: /tech_admin_console
 Disallow: /api/internal
 Disallow: /backend/
 Disallow: /database/
@@ -9,5 +9,5 @@ User-agent: Googlebot
 Disallow: /admin/
 
 # Admin panel hidden in disallow list
-# Attempt to access: /lab2/1/tech_admin_console
+# Attempt to access: /tech_admin_console
 Sitemap: https://techstore.local/sitemap.xml
