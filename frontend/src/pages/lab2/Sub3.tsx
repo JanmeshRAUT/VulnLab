@@ -9,14 +9,17 @@ import AdminPanel from './storefronts/AdminPanel';
 import ShopEase from './storefronts/ShopEase';
 import MarketPro from './storefronts/MarketPro';
 import CartBuddy from './storefronts/CartBuddy';
-import { getLabSessionId } from '../../utils/sessionId';
+import { useLabInstance } from '../../hooks/useLabInstance';
 
 export default function Lab2Sub3() {
   const params = useParams();
   const variantId = params.variantId;
   const splatPath = params['*'] || '';
-  const [instanceId, setInstanceId] = useState<string | null>(null);
   const variant = variantId;
+  const { instanceId, loading: instanceLoading } = useLabInstance({ 
+    labId: '2', 
+    variantId: variantId || '' 
+  });
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -39,21 +42,19 @@ export default function Lab2Sub3() {
     }
   };
 
+  // Ensure role cookie exists
   useEffect(() => {
-    const newId = getLabSessionId('lab2', 'sub3', variantId || 'selection', true);
-    setInstanceId(newId);
-    
-    // Clear the vulnerable role cookie on mount to ensure fresh mock session
-    document.cookie = "role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    document.cookie = "role=; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-  }, [variantId]);
+    if (!document.cookie.includes('role=')) {
+      document.cookie = "role=user; path=/";
+    }
+  }, []);
 
   useEffect(() => {
-    if (variantId && instanceId) {
+    if (variantId && instanceId && !instanceLoading) {
       fetchPath(splatPath, instanceId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [variant, splatPath, instanceId]);
+  }, [variant, splatPath, instanceId, instanceLoading]);
 
   if (!variantId) {
     return (
@@ -156,7 +157,7 @@ export default function Lab2Sub3() {
 
 
   const renderContent = () => {
-    if (loading) {
+    if (loading || instanceLoading) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-white">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-brand-orange"></div>

@@ -17,6 +17,19 @@ oauth.register(
     }
 )
 
+
+def resolve_session_role(email: str) -> str:
+    local_part = (email or '').split('@')[0].lower()
+    if 'super' in local_part or 'root' in local_part:
+        return 'super_admin'
+    if 'admin' in local_part:
+        return 'admin'
+    if 'instructor' in local_part or 'teacher' in local_part:
+        return 'instructor'
+    if 'reviewer' in local_part or 'auditor' in local_part:
+        return 'reviewer'
+    return 'student'
+
 @router.get("/login")
 async def login(request: Request, source: str = 'login', next_url: str = ''):
     """Initiate Google OAuth flow."""
@@ -52,7 +65,7 @@ async def auth_callback(request: Request):
     request.session['user_id'] = f"mock_user_id_{email}"
     request.session['base_identity'] = request.session['user_id']
     request.session['email'] = email
-    request.session['role'] = 'admin' if 'admin' in email.lower() else 'user'
+    request.session['role'] = resolve_session_role(email)
     
     # Redirect to frontend
     frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
@@ -72,11 +85,14 @@ class MockLoginData(BaseModel):
 async def mock_login(request: Request, data: MockLoginData):
     """Mock login endpoint for testing without OAuth."""
     # Ignore password, just mock using email
-    email = data.email
+    email = data.email.strip()
     request.session['user_id'] = f"mock_user_id_{email}"
     request.session['base_identity'] = request.session['user_id']
     request.session['email'] = email
-    request.session['role'] = 'admin' if 'admin' in email.lower() else 'user'
+    if email.lower() in {'admin', 'admin@vulnlab.local'} and data.password == 'admin123':
+        request.session['role'] = 'admin'
+    else:
+        request.session['role'] = resolve_session_role(email)
     
     return {"success": True, "message": "Mock login successful"}
 

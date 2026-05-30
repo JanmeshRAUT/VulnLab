@@ -1,31 +1,17 @@
 import os
-from fastapi import APIRouter, Request, HTTPException, Form
+from fastapi import APIRouter, Request, HTTPException, Form, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from .session_utils import get_or_generate_flag, get_variant_session_id, store_variant_flag
+from .session_utils import get_valid_instance, get_random_flag
 
 router = APIRouter(prefix="/api/lab7", tags=["Lab 7"])
-
-def get_random_flag(request: Request, lab_id: str, variation: str = 'default'):
-    identity_key = request.session.get('user_id') or request.headers.get('X-SSRF-Researcher-GUID')
-
-    if not identity_key:
-        if variation == 'variation_A': return "FLAG{sqli_auth_bypass_alpha}"
-        if variation == 'variation_B': return "FLAG{sqli_auth_bypass_beta}"
-        if variation == 'variation_C': return "FLAG{sqli_auth_bypass_gamma}"
-        return "FLAG{unauthenticated_research_lock}"
-
-    issued_flag = get_or_generate_flag(get_variant_session_id(request, lab_id, variation), lab_id, variation)
-    store_variant_flag(request, lab_id, variation, issued_flag)
-
-    return issued_flag
 
 # -------------------------
 # LAB 7.1: Virtual SQL Injection Protocol (Category Filter)
 # -------------------------
 
 @router.get("/1")
-async def lab7_1(request: Request, category: str = ""):
+async def lab7_1(request: Request, category: str = "", instance: dict = Depends(get_valid_instance)):
     category = category.strip()
     all_products = [
         {'id': 1, 'name': 'Luxury Gift Box', 'category': 'Gifts', 'released': 1},
@@ -45,14 +31,14 @@ async def lab7_1(request: Request, category: str = ""):
         products = [p for p in all_products if p['released'] == 1]
     elif is_bypass:
         products = all_products
-        flag = get_random_flag(request, 'lab7', variation='variation_A')
+        flag = get_random_flag(instance, 'lab7', variation='variation_A')
     else:
         products = [p for p in all_products if p['category'].lower() == category.lower() and p['released'] == 1]
         
     return JSONResponse({'products': products, 'flag': flag, 'category': category})
 
 @router.get("/1/b")
-async def lab7_1_b(request: Request, category: str = ""):
+async def lab7_1_b(request: Request, category: str = "", instance: dict = Depends(get_valid_instance)):
     category = category.strip()
     all_products = [
         {'id': 11, 'name': 'Executive Briefcase', 'category': 'Work', 'released': 1},
@@ -72,14 +58,14 @@ async def lab7_1_b(request: Request, category: str = ""):
         products = [p for p in all_products if p['released'] == 1]
     elif is_bypass:
         products = all_products
-        flag = get_random_flag(request, 'lab7', variation='variation_B')
+        flag = get_random_flag(instance, 'lab7', variation='variation_B')
     else:
         products = [p for p in all_products if p['category'].lower() == category.lower() and p['released'] == 1]
         
     return JSONResponse({'products': products, 'flag': flag, 'category': category})
 
 @router.get("/1/c")
-async def lab7_1_c(request: Request, category: str = ""):
+async def lab7_1_c(request: Request, category: str = "", instance: dict = Depends(get_valid_instance)):
     category = category.strip()
     all_products = [
         {'id': 21, 'name': 'Thermal Trail Bottle', 'category': 'Adventure', 'released': 1},
@@ -99,7 +85,7 @@ async def lab7_1_c(request: Request, category: str = ""):
         products = [p for p in all_products if p['released'] == 1]
     elif is_bypass:
         products = all_products
-        flag = get_random_flag(request, 'lab7', variation='variation_C')
+        flag = get_random_flag(instance, 'lab7', variation='variation_C')
     else:
         products = [p for p in all_products if p['category'].lower() == category.lower() and p['released'] == 1]
         
@@ -113,18 +99,18 @@ class LoginRequest(BaseModel):
     password: str
 
 @router.post("/2/login")
-async def lab7_2_login(request: Request, body: LoginRequest):
-    return process_lab7_2_login(request, body.username, body.password, 'variation_A', 'portal_users')
+async def lab7_2_login(request: Request, body: LoginRequest, instance: dict = Depends(get_valid_instance)):
+    return process_lab7_2_login(body.username, body.password, 'variation_A', 'portal_users', instance)
 
 @router.post("/2/b/login")
-async def lab7_2_b_login(request: Request, body: LoginRequest):
-    return process_lab7_2_login(request, body.username, body.password, 'variation_B', 'staff_accounts')
+async def lab7_2_b_login(request: Request, body: LoginRequest, instance: dict = Depends(get_valid_instance)):
+    return process_lab7_2_login(body.username, body.password, 'variation_B', 'staff_accounts', instance)
 
 @router.post("/2/c/login")
-async def lab7_2_c_login(request: Request, body: LoginRequest):
-    return process_lab7_2_login(request, body.username, body.password, 'variation_C', 'admin_registry')
+async def lab7_2_c_login(request: Request, body: LoginRequest, instance: dict = Depends(get_valid_instance)):
+    return process_lab7_2_login(body.username, body.password, 'variation_C', 'admin_registry', instance)
 
-def process_lab7_2_login(request: Request, username: str, password: str, variation: str, query_label: str):
+def process_lab7_2_login(username: str, password: str, variation: str, query_label: str, instance: dict):
     username = username.strip()
     normalized_username = username.upper().replace("+", " ")
     is_bypass = ("ADMINISTRATOR'--" in normalized_username or "ADMINISTRATOR' --" in normalized_username)
@@ -132,7 +118,7 @@ def process_lab7_2_login(request: Request, username: str, password: str, variati
     query = f"SELECT id, username, role FROM {query_label} WHERE username = '{username}' AND password = '{password}'"
     
     if is_bypass:
-        flag = get_random_flag(request, 'lab7', variation=variation)
+        flag = get_random_flag(instance, 'lab7', variation=variation)
         query = f"SELECT id, username, role FROM {query_label} WHERE username = 'administrator'--"
         return JSONResponse({
             'success': True,

@@ -1,27 +1,14 @@
 import os
-from fastapi import APIRouter, Request, HTTPException
+import hashlib
+from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel
-from .session_utils import get_or_generate_flag, get_variant_session_id, store_variant_flag
+from .session_utils import get_valid_instance, get_random_flag
+import mongodb_client
 
 router = APIRouter(prefix="/api/lab1", tags=["Lab 1"])
 
-def get_random_flag(request: Request, lab_id: str, variation: str = 'default'):
-    """Generate dynamic flag and save to FastAPI session."""
-    identity_key = request.session.get('user_id') or request.headers.get('X-SSRF-Researcher-GUID')
 
-    if not identity_key:
-        # Fallbacks for unauthenticated
-        if lab_id == 'lab1':
-            if variation == 'variation_A': return "FLAG{file_system_traversal_alpha}"
-            if variation == 'variation_B': return "FLAG{directory_enumeration_beta}"
-            if variation == 'variation_C': return "FLAG{path_manipulation_gamma}"
-        return "FLAG{unauthenticated_research_lock}"
-
-    issued_flag = get_or_generate_flag(get_variant_session_id(request, lab_id, variation), lab_id, variation)
-    store_variant_flag(request, lab_id, variation, issued_flag)
-
-    return issued_flag
 
 
 BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -30,7 +17,8 @@ BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # LAB 1.1: DocuVault
 # -------------------------
 @router.get("/1/files")
-async def lab1_1_files():
+async def lab1_1_files(instance: dict = Depends(get_valid_instance)):
+    if instance.get("lab_id") != "1" or instance.get("variant_id") != "1": raise HTTPException(status_code=403, detail="Instance mismatch")
     """Return JSON list of files instead of rendering a template."""
     return [
         'Invoice_2024_001.pdf', 'Invoice_2024_002.pdf', 'Project_Alpha_Specs.docx', 
@@ -42,7 +30,8 @@ async def lab1_1_files():
     ]
 
 @router.get("/1/download")
-async def lab1_1_download(request: Request, file: str):
+async def lab1_1_download(file: str, instance: dict = Depends(get_valid_instance)):
+    if instance.get("lab_id") != "1" or instance.get("variant_id") != "1": raise HTTPException(status_code=403, detail="Instance mismatch")
     """
     VULNERABLE ENDPOINT: Path Traversal
     The 'file' parameter is directly concatenated.
@@ -59,7 +48,7 @@ async def lab1_1_download(request: Request, file: str):
             
             # Inject flag
             if len(lines) >= 4:
-                lines[1] = get_random_flag(request, 'lab1', 'variation_A') + "\n"
+                lines[1] = get_random_flag(instance, 'lab1', 'variation_A') + "\n"
                 lines[2] = "# [ACCESS RESTRICTED]: Proceed to Lab 1.2 for current deliverable.\n"
                 lines[3] = "# [ACCESS RESTRICTED]: Proceed to Lab 1.3 for current deliverable.\n"
             return PlainTextResponse("".join(lines))
@@ -92,7 +81,8 @@ async def lab1_1_download(request: Request, file: str):
 # LAB 1.2: ShopExpress
 # -------------------------
 @router.get("/2/products")
-async def lab1_2_products():
+async def lab1_2_products(instance: dict = Depends(get_valid_instance)):
+    if instance.get("lab_id") != "1" or instance.get("variant_id") != "2": raise HTTPException(status_code=403, detail="Instance mismatch")
     return [
         {
             'id': 1, 'name': 'Eco-Friendly Bamboo Coffee Cup', 'price': 12.99,
@@ -127,7 +117,8 @@ async def lab1_2_products():
     ]
 
 @router.get("/2/image")
-async def lab1_2_image(request: Request, filename: str):
+async def lab1_2_image(filename: str, instance: dict = Depends(get_valid_instance)):
+    if instance.get("lab_id") != "1" or instance.get("variant_id") != "2": raise HTTPException(status_code=403, detail="Instance mismatch")
     """
     VULNERABLE ENDPOINT: Path Traversal via Image Loader
     """
@@ -141,7 +132,7 @@ async def lab1_2_image(request: Request, filename: str):
                 lines = f.readlines()
             if len(lines) >= 4:
                 lines[1] = "# [ACCESS RESTRICTED]: Retrieve from Lab 1.1 deliverables.\n"
-                lines[2] = get_random_flag(request, 'lab1', 'variation_B') + "\n"
+                lines[2] = get_random_flag(instance, 'lab1', 'variation_B') + "\n"
                 lines[3] = "# [ACCESS RESTRICTED]: Proceed to Lab 1.3 for current deliverable.\n"
             return PlainTextResponse("".join(lines))
         except Exception as e:
@@ -163,7 +154,8 @@ async def lab1_2_image(request: Request, filename: str):
 # LAB 1.3: PixelMarket
 # -------------------------
 @router.get("/3/media")
-async def lab1_3_media():
+async def lab1_3_media(instance: dict = Depends(get_valid_instance)):
+    if instance.get("lab_id") != "1" or instance.get("variant_id") != "3": raise HTTPException(status_code=403, detail="Instance mismatch")
     return [
         {'file': 'summer_vacation_001.jpg', 'title': 'Golden Hour Beach', 'author': 'Sarah Jenkins', 'tags': ['Nature', 'Travel'], 'views': '2.4k', 'price': 29},
         {'file': 'office_party_2023.jpg', 'title': 'Corporate Celebration', 'author': 'TechLife Media', 'tags': ['Business', 'Events'], 'views': '1.1k', 'price': 49},
@@ -176,7 +168,8 @@ async def lab1_3_media():
     ]
 
 @router.get("/3/image")
-async def lab1_3_image(request: Request, filename: str):
+async def lab1_3_image(filename: str, instance: dict = Depends(get_valid_instance)):
+    if instance.get("lab_id") != "1" or instance.get("variant_id") != "3": raise HTTPException(status_code=403, detail="Instance mismatch")
     """
     VULNERABLE ENDPOINT: Path Traversal via Image Loader
     """
@@ -191,7 +184,7 @@ async def lab1_3_image(request: Request, filename: str):
             if len(lines) >= 4:
                 lines[1] = "# [ACCESS RESTRICTED]: Retrieve from Lab 1.1 deliverables.\n"
                 lines[2] = "# [ACCESS RESTRICTED]: Retrieve from Lab 1.2 deliverables.\n"
-                lines[3] = get_random_flag(request, 'lab1', 'variation_C') + "\n"
+                lines[3] = get_random_flag(instance, 'lab1', 'variation_C') + "\n"
             return PlainTextResponse("".join(lines))
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { ShieldAlert, Search, Camera, Heart, Download, Eye, Aperture, ArrowLeft } from 'lucide-react';
-import { getLabSessionId } from '../../utils/sessionId';
+import { useLabInstance } from '../../hooks/useLabInstance';
 
 interface MediaItem {
   file: string;
@@ -16,12 +16,11 @@ interface MediaItem {
 export default function Lab1Sub3() {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [instanceId, setInstanceId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const newId = getLabSessionId('lab1', 'sub3', 'default', true);
-    setInstanceId(newId);
-  }, []);
+  
+  const { instanceId, loading: instanceLoading } = useLabInstance({
+    labId: '1',
+    variantId: '3'
+  });
 
   useEffect(() => {
     if (instanceId) {
@@ -43,10 +42,7 @@ export default function Lab1Sub3() {
   return (
     <div className="w-full min-h-screen bg-[#0A0A0A] flex flex-col font-sans text-slate-200 relative selection:bg-purple-500/30">
       
-      {/* Back Button */}
-      <Link to="/labs/1?step=selection" className="fixed bottom-6 right-6 z-[100] bg-slate-900 text-white hover:bg-brand-orange px-5 py-3 rounded-2xl font-bold shadow-2xl flex items-center gap-2 transition-all hover:-translate-y-1">
-        <ArrowLeft size={18} /> Exit Environment
-      </Link>
+
 
       {/* Top Banner (Lab Context) */}
       <div className="bg-red-600 text-white text-[10px] font-bold uppercase tracking-[0.3em] py-2 px-4 text-center flex flex-col md:flex-row items-center justify-center gap-2 md:gap-8 shadow-lg relative z-50">

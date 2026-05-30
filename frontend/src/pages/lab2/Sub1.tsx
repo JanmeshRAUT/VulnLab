@@ -8,7 +8,7 @@ import GadgetShop from './storefronts/GadgetShop';
 import FashionHub from './storefronts/FashionHub';
 import FoodMart from './storefronts/FoodMart';
 import AdminPanel from './storefronts/AdminPanel';
-import { getLabSessionId } from '../../utils/sessionId';
+import { useLabInstance } from '../../hooks/useLabInstance';
 
 export default function Lab2Sub1() {
   const params = useParams();
@@ -133,7 +133,10 @@ export default function Lab2Sub1() {
   }
 
   const variant = variantId;
-  const [instanceId, setInstanceId] = useState<string | null>(null);
+  const { instanceId, loading: instanceLoading } = useLabInstance({ 
+    labId: '2', 
+    variantId: variantId || '' 
+  });
   
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -159,21 +162,16 @@ export default function Lab2Sub1() {
     }
   };
 
-  useEffect(() => {
-    const newId = getLabSessionId('lab2', 'sub1', variantId || 'selection', true);
-    setInstanceId(newId);
-  }, [variantId]);
-
   // Fetch the data when the splat path changes (i.e. user modifies the real URL)
   useEffect(() => {
-    if (variantId && instanceId) {
+    if (variantId && instanceId && !instanceLoading) {
       fetchPath(splatPath, instanceId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [variant, splatPath, instanceId]);
+  }, [variant, splatPath, instanceId, instanceLoading]);
 
   const renderContent = () => {
-    if (loading) {
+    if (loading || instanceLoading) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-white">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-brand-orange"></div>

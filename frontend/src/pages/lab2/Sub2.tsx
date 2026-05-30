@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 import AdminPanel from './storefronts/AdminPanel'; // Reused from Lab 2.1
-import { getLabSessionId } from '../../utils/sessionId';
+import { useLabInstance } from '../../hooks/useLabInstance';
 
 
 export default function Lab2Sub2() {
@@ -95,9 +95,9 @@ export default function Lab2Sub2() {
               </div>
               <h3 className="text-2xl font-bold text-slate-900 mb-2">BlogHub</h3>
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A content publishing platform. Analyze the page source and comments for exposed admin route references.</p>
-              <a href={`http://localhost:5000/api/lab2/2/a/navigate#session=${instanceId}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+              <Link to={`/labs/2/sub2/a`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
-              </a>
+              </Link>
             </div>
             {/* Variant B */}
             <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl transition-all flex flex-col group relative overflow-hidden">
@@ -108,9 +108,9 @@ export default function Lab2Sub2() {
               </div>
               <h3 className="text-2xl font-bold text-slate-900 mb-2">ForumNext</h3>
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A community discussion forum. Search the raw HTML source code for hidden administrative endpoints.</p>
-              <a href={`http://localhost:5000/api/lab2/2/b/navigate#session=${instanceId}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+              <Link to={`/labs/2/sub2/b`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
-              </a>
+              </Link>
             </div>
             {/* Variant C */}
             <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl transition-all flex flex-col group relative overflow-hidden">
@@ -121,9 +121,9 @@ export default function Lab2Sub2() {
               </div>
               <h3 className="text-2xl font-bold text-slate-900 mb-2">DevPortal</h3>
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A developer documentation portal. Investigate the frontend HTML source for leaked admin panel URLs.</p>
-              <a href={`http://localhost:5000/api/lab2/2/c/navigate#session=${instanceId}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+              <Link to={`/labs/2/sub2/c`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -132,15 +132,21 @@ export default function Lab2Sub2() {
   }
 
   const variant = variantId;
+  const { instanceId, loading: instanceLoading } = useLabInstance({ 
+    labId: '2', 
+    variantId: variantId || '' 
+  });
+  
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [instanceId, setInstanceId] = useState<string | null>(null);
 
   // Force redirect to backend static HTML if they navigate here manually (except for /admin)
-  if (variantId && splatPath !== 'admin') {
-    window.location.href = `http://localhost:5000/api/lab2/2/${variantId}/navigate`;
-    return null;
-  }
+  // We must wait for instanceId to be generated before redirecting.
+  useEffect(() => {
+    if (variantId && splatPath !== 'admin' && instanceId && !instanceLoading) {
+      window.location.href = `http://localhost:5000/api/lab2/2/${variantId}/navigate#session=${instanceId}`;
+    }
+  }, [variantId, splatPath, instanceId, instanceLoading]);
 
   const fetchPath = async (path: string, currentInstanceId: string) => {
     setLoading(true);
@@ -162,19 +168,14 @@ export default function Lab2Sub2() {
   };
 
   useEffect(() => {
-    const newId = getLabSessionId('lab2', 'sub2', variantId || 'selection', true);
-    setInstanceId(newId);
-  }, [variantId]);
-
-  useEffect(() => {
-    if (variantId && instanceId) {
+    if (variantId && instanceId && !instanceLoading && splatPath === 'admin') {
       fetchPath(splatPath, instanceId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [variant, splatPath, instanceId]);
+  }, [variant, splatPath, instanceId, instanceLoading]);
 
   const renderContent = () => {
-    if (loading) {
+    if (loading || instanceLoading || (variantId && splatPath !== 'admin')) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-white">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-brand-orange"></div>

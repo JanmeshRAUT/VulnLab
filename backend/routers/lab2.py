@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Request, Response, HTTPException
+from fastapi import APIRouter, Request, Response, HTTPException, Depends
 from fastapi.responses import PlainTextResponse, JSONResponse, HTMLResponse, RedirectResponse
+from routers.session_utils import get_valid_instance, get_random_flag
+import mongodb_client
 import os
 
 router = APIRouter(
@@ -166,7 +168,7 @@ async def lab2_1_navigate(variant: str, path: str = "/"):
     })
 
 @router.delete("/1/{variant}/admin/users/{user_id}")
-async def lab2_1_delete_user(variant: str, user_id: int):
+async def lab2_1_delete_user(variant: str, user_id: int, instance: dict = Depends(get_valid_instance)):
     """
     Simulates a destructive action in the unauthenticated admin panel.
     Solving this action yields the flag.
@@ -176,12 +178,16 @@ async def lab2_1_delete_user(variant: str, user_id: int):
         
     config = VARIANTS_CONFIG[variant]
     
-    # Vulnerability: No Authentication or Authorization checks before deleting!
+    # Track deleted user in instance state to simulate isolation
+    deleted_users = instance.get("state", {}).get("deleted_users", [])
+    if user_id not in deleted_users:
+        deleted_users.append(user_id)
+        mongodb_client.update_instance_state(instance["instance_id"], "deleted_users", deleted_users)
     
     return JSONResponse({
         "success": True,
-        "message": f"User {user_id} deleted successfully.",
-        "flag": config["admin_data"]["flag"]
+        "message": f"User {user_id} deleted successfully. (Isolated to instance {instance['instance_id'][:8]})",
+        "flag": get_random_flag(instance, "lab2", f"1_{variant}")
     })
 
 # ==========================================
@@ -226,16 +232,22 @@ async def lab2_2_navigate(variant: str, path: str):
     return JSONResponse(status_code=404, content={"type": "error", "message": "Path not found"})
 
 @router.delete("/2/{variant}/admin/users/{user_id}")
-async def lab2_2_delete_user(variant: str, user_id: int):
+async def lab2_2_delete_user(variant: str, user_id: int, instance: dict = Depends(get_valid_instance)):
     if variant not in LAB2_2_VARIANTS_CONFIG:
         raise HTTPException(status_code=404, detail="Variant not found")
         
     config = LAB2_2_VARIANTS_CONFIG[variant]
     
+    # Track deleted user in instance state to simulate isolation
+    deleted_users = instance.get("state", {}).get("deleted_users", [])
+    if user_id not in deleted_users:
+        deleted_users.append(user_id)
+        mongodb_client.update_instance_state(instance["instance_id"], "deleted_users", deleted_users)
+    
     return JSONResponse({
         "success": True, 
-        "message": f"User {user_id} deleted successfully.",
-        "flag": config["admin_data"]["flag"]
+        "message": f"User {user_id} deleted successfully. (Isolated to instance)",
+        "flag": get_random_flag(instance, "lab2", f"2_{variant}")
     })
 
 # ==========================================
@@ -273,7 +285,7 @@ async def lab2_3_navigate(variant: str, request: Request, path: str = "/"):
     return JSONResponse(status_code=404, content={"type": "error", "message": "Path not found"})
 
 @router.delete("/3/{variant}/admin/users/{user_id}")
-async def lab2_3_delete_user(variant: str, user_id: int, request: Request):
+async def lab2_3_delete_user(variant: str, user_id: int, request: Request, instance: dict = Depends(get_valid_instance)):
     if variant not in LAB2_3_VARIANTS_CONFIG:
         raise HTTPException(status_code=404, detail="Variant not found")
         
@@ -283,8 +295,13 @@ async def lab2_3_delete_user(variant: str, user_id: int, request: Request):
 
     config = LAB2_3_VARIANTS_CONFIG[variant]
     
+    deleted_users = instance.get("state", {}).get("deleted_users", [])
+    if user_id not in deleted_users:
+        deleted_users.append(user_id)
+        mongodb_client.update_instance_state(instance["instance_id"], "deleted_users", deleted_users)
+    
     return JSONResponse({
         "success": True, 
-        "message": f"User {user_id} deleted successfully.",
-        "flag": config["admin_data"]["flag"]
+        "message": f"User {user_id} deleted successfully. (Isolated to instance)",
+        "flag": get_random_flag(instance, "lab2", f"3_{variant}")
     })

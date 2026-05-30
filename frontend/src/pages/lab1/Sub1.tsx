@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import { getLabSessionId } from '../../utils/sessionId';
+import { useLabInstance } from '../../hooks/useLabInstance';
 import { 
   FolderOpen, Upload, FileText, File as FileIcon, 
   Image as ImageIcon, Archive, MoreVertical, 
@@ -12,12 +12,10 @@ export default function Lab1Sub1() {
   const [files, setFiles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [instanceId, setInstanceId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const newId = getLabSessionId('lab1', 'sub1', 'default', true);
-    setInstanceId(newId);
-  }, []);
+  const { instanceId, loading: instanceLoading } = useLabInstance({
+    labId: '1',
+    variantId: '1'
+  });
 
   useEffect(() => {
     if (instanceId) {
@@ -48,10 +46,7 @@ export default function Lab1Sub1() {
   return (
     <div className="w-full min-h-screen bg-[#f4f7f9] flex font-sans text-slate-800 relative overflow-hidden">
       
-      {/* Back Button */}
-      <Link to="/labs/1?step=selection" className="fixed bottom-6 right-6 z-[100] bg-slate-900 text-white hover:bg-brand-orange px-5 py-3 rounded-2xl font-bold shadow-2xl flex items-center gap-2 transition-all hover:-translate-y-1">
-        <ArrowLeft size={18} /> Exit Environment
-      </Link>
+
 
       {/* Background Ornaments */}
       <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-blue-900/10 to-transparent -z-10 pointer-events-none"></div>

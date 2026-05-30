@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { Coffee, ShoppingCart, ShieldAlert, Check, ArrowLeft } from 'lucide-react';
-import { getLabSessionId } from '../../utils/sessionId';
+import { useLabInstance } from '../../hooks/useLabInstance';
 
 interface Product {
   id: number;
@@ -17,12 +17,11 @@ export default function Lab1Sub2() {
   const [loading, setLoading] = useState(true);
   const [cartCount, setCartCount] = useState(0);
   const [addedItems, setAddedItems] = useState<Record<number, boolean>>({});
-  const [instanceId, setInstanceId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const newId = getLabSessionId('lab1', 'sub2', 'default', true);
-    setInstanceId(newId);
-  }, []);
+  
+  const { instanceId, loading: instanceLoading } = useLabInstance({
+    labId: '1',
+    variantId: '2'
+  });
 
   useEffect(() => {
     if (instanceId) {
@@ -52,10 +51,7 @@ export default function Lab1Sub2() {
   return (
     <div className="w-full min-h-screen bg-[#FDFBF7] flex flex-col font-serif relative text-slate-800 selection:bg-[#8D6E63] selection:text-white">
       
-      {/* Back Button */}
-      <Link to="/labs/1?step=selection" className="fixed bottom-6 right-6 z-[100] bg-slate-900 text-white hover:bg-brand-orange px-5 py-3 rounded-2xl font-bold shadow-2xl flex items-center gap-2 transition-all hover:-translate-y-1">
-        <ArrowLeft size={18} /> Exit Environment
-      </Link>
+
 
       {/* Top Banner (Lab Context) */}
       <div className="bg-red-600 text-white text-xs font-bold font-sans uppercase tracking-[0.2em] py-1.5 px-4 text-center flex flex-col md:flex-row items-center justify-center gap-2 md:gap-6 shadow-sm relative z-50">

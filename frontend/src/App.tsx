@@ -34,6 +34,8 @@ import Lab8Index from './pages/lab8/index';
 import Lab8Sub1 from './pages/lab8/Sub1';
 import Lab8Sub2 from './pages/lab8/Sub2';
 import LabNavigator from './components/LabNavigator';
+import AdminDashboard from './pages/admin';
+import StudentProfile from './pages/admin/StudentProfile';
 import { createPortal } from 'react-dom';
 import { MessageSquare, Flag, X } from 'lucide-react';
 
@@ -146,6 +148,30 @@ function FlagWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const [status, setStatus] = useState<any>(null);
+  const [flagInput, setFlagInput] = useState('');
+
+  const submitFlag = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!flagInput.trim()) return;
+    
+    setStatus({ success: false, message: 'Submitting...' });
+    
+    try {
+      const activeInstanceId = sessionStorage.getItem('active_instance_id');
+      const res = await axios.post('http://localhost:5000/api/instances/submit_flag', {
+        flag: flagInput.trim(),
+        instance_id: activeInstanceId || undefined
+      }, { withCredentials: true });
+      
+      setStatus({ success: res.data.success, message: res.data.message });
+      if (res.data.success) {
+        setFlagInput('');
+      }
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to connect to backend.';
+      setStatus({ success: false, error: errorMsg });
+    }
+  };
 
   if (!location.pathname.includes('/lab')) return null;
 
@@ -162,7 +188,7 @@ function FlagWidget() {
           <button onClick={() => setIsOpen(false)} className="text-xs text-slate-500 hover:text-slate-800 underline">Cancel</button>
         </div>
         
-        <form onSubmit={(e) => { e.preventDefault(); setStatus({ success: false, error: 'API not implemented yet' }); }}>
+        <form onSubmit={submitFlag}>
           <div className="mb-4">
             <label className="block text-xs text-slate-600 font-bold mb-1 uppercase tracking-wider">Lab Objective</label>
             <select className="w-full bg-slate-50 border border-slate-300 text-slate-900 p-2 rounded text-sm focus:outline-none focus:border-brand-orange">
@@ -178,6 +204,8 @@ function FlagWidget() {
               type="text" 
               placeholder="FLAG{...}" 
               required 
+              value={flagInput}
+              onChange={(e) => setFlagInput(e.target.value)}
               className="w-full bg-slate-50 border border-slate-300 text-brand-orange font-mono p-3 rounded-lg text-sm focus:outline-none focus:border-brand-orange focus:ring-1 focus:ring-brand-orange placeholder-slate-400"
             />
           </div>
@@ -230,6 +258,9 @@ function Navigation() {
           
           {auth ? (
             <div className="flex items-center gap-4">
+              {(auth.role === 'super_admin' || auth.role === 'admin' || auth.role === 'instructor' || auth.role === 'reviewer') && (
+                <Link to="/admin" className="text-slate-900 hover:text-brand-orange font-semibold">Admin</Link>
+              )}
               <Link to="/profile" className="text-slate-900 hover:text-brand-orange font-semibold">Profile</Link>
               <span className="bg-brand-orange-50 px-3 py-1 rounded-full text-xs font-bold text-brand-orange border border-orange-200">
                 {auth.email}
@@ -296,13 +327,14 @@ function App() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const step = searchParams.get('step');
+  const isAdminRoute = location.pathname.startsWith('/admin');
   const isLab1SubPath = location.pathname.match(/^\/labs\/1\/sub\d+$/i) !== null;
   const isOtherLabEnvPath = location.pathname.match(/^\/labs\/[2-8]\/sub\d+\/[a-c](?:\/.*)?$/i) !== null;
   const isLabEnvironment = (isLab1SubPath || isOtherLabEnvPath) && (step === 'lab' || !step);
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
-      {!isLabEnvironment && <Navigation />}
+      {!isLabEnvironment && !isAdminRoute && <Navigation />}
       
       <main className="flex-1 w-full">
         <div className="w-full">
@@ -313,6 +345,8 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/help" element={<Help />} />
             <Route path="/labs" element={<Labs />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/students/:studentId" element={<StudentProfile />} />
             <Route path="/labs/1" element={<Lab1Index />} />
             <Route path="/labs/2" element={<Lab2Index />} />
             <Route path="/labs/3" element={<Lab3Index />} />
@@ -369,7 +403,7 @@ function App() {
         </div>
       </main>
 
-      {!isLabEnvironment && <Footer />}
+      {!isLabEnvironment && !isAdminRoute && <Footer />}
       <FlagWidget />
     </div>
   );
