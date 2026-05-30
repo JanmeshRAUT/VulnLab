@@ -1,0 +1,84 @@
+import { LogIn, ShieldCheck, Terminal, Key } from 'lucide-react';
+
+export default function Register() {
+  
+  const handleGoogleRegister = () => {
+    // Redirect to the FastAPI auth endpoint
+    window.location.href = "http://localhost:5000/api/auth/login";
+  };
+
+  return (
+    <div className="flex w-full" style={{ minHeight: 'calc(100vh - 4rem)' }}>
+      {/* Left Panel - Register Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white p-8 sm:p-12">
+        <div className="w-full max-w-md space-y-10">
+          <div className="text-center lg:text-left">
+            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+              Join the Academy
+            </h2>
+            <p className="mt-3 text-slate-600 font-medium">
+              Create your VulnLab account and start learning practical web security today.
+            </p>
+          </div>
+          
+          <div className="space-y-6">
+            <button 
+              onClick={handleGoogleRegister}
+              className="w-full flex justify-center items-center gap-3 py-4 px-4 border border-transparent rounded-xl shadow-md text-lg font-bold text-white bg-brand-orange hover:bg-brand-orange-700 hover:shadow-lg transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-orange transition-all"
+            >
+              <LogIn size={22} /> Sign up with Google
+            </button>
+          </div>
+          
+          <div className="pt-8">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-white text-slate-500 font-medium">Secure Access Portal</span>
+              </div>
+            </div>
+            
+            <p className="mt-8 text-center text-xs text-slate-500 font-medium leading-relaxed">
+              By registering, you agree to our <a href="/terms" className="text-brand-orange hover:text-brand-orange-700 underline">Terms of Service</a> and <a href="/privacy" className="text-brand-orange hover:text-brand-orange-700 underline">Privacy Policy</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel - Branding (Hidden on mobile) */}
+      <div className="hidden lg:flex lg:w-1/2 bg-slate-900 text-white flex-col justify-between p-12 relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-brand-orange rounded-full blur-[120px] opacity-20"></div>
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 bg-blue-600 rounded-full blur-[120px] opacity-10"></div>
+        
+        <div className="relative z-10 flex flex-col items-end text-right">
+          <div className="flex items-center gap-3 text-2xl font-extrabold tracking-tight mb-16">
+            <span>Vuln<span className="text-brand-orange">Lab</span></span>
+            <ShieldCheck size={32} className="text-brand-orange" />
+          </div>
+          
+          <h1 className="text-5xl font-extrabold leading-tight mb-6">
+            Elevate your <br/> <span className="text-brand-orange">security skills.</span>
+          </h1>
+          <p className="text-xl text-slate-400 max-w-md leading-relaxed font-medium">
+            Join thousands of professionals securing the web through immersive, hands-on vulnerability labs.
+          </p>
+        </div>
+
+        <div className="relative z-10 grid grid-cols-2 gap-8 max-w-md self-end text-right border-t border-slate-800 pt-8">
+          <div>
+            <div className="flex justify-end mb-3"><Terminal size={24} className="text-brand-orange" /></div>
+            <h4 className="font-bold mb-1">Live Environments</h4>
+            <p className="text-sm text-slate-400">Instantly spin up isolated target architectures.</p>
+          </div>
+          <div>
+            <div className="flex justify-end mb-3"><Key size={24} className="text-brand-orange" /></div>
+            <h4 className="font-bold mb-1">Cryptographic Flags</h4>
+            <p className="text-sm text-slate-400">Unique deliverables tied to your identity.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

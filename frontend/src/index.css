@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans antialiased min-h-screen;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-brand-orange hover:bg-brand-orange-700 text-white font-bold py-2 px-6 rounded shadow transition-colors;
+  }
+  .btn-secondary {
+    @apply bg-white hover:bg-brand-orange-50 border border-slate-200 text-slate-900 font-bold py-2 px-6 rounded shadow-sm transition-colors;
+  }
+}

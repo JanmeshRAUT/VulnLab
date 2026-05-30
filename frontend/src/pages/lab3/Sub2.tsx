@@ -1,0 +1,153 @@
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, ShieldAlert, Terminal, ShieldCheck } from 'lucide-react';
+
+export default function Lab3Sub2() {
+  const [params, setParams] = useSearchParams();
+  const step = (params.get('step') || 'theory') as 'theory' | 'selection' | 'lab';
+  const selectedVariant = params.get('variant') || 'a';
+
+  const variants: Record<string, { title: string; description: string; tone: string }> = {
+    a: { title: 'SecureShop', description: 'A straightforward store with a simple 2FA journey.', tone: 'blue' },
+    b: { title: 'BankSecure', description: 'A polished banking app with a stricter looking login flow.', tone: 'green' },
+    c: { title: 'CloudDrive', description: 'A cloud service with a more technical account portal.', tone: 'indigo' },
+  };
+
+  const goTo = (nextStep: string, variant?: string) => {
+    const nextParams = new URLSearchParams();
+    nextParams.set('step', nextStep);
+    nextParams.set('variant', variant || selectedVariant);
+    setParams(nextParams);
+  };
+
+  if (step === 'theory') {
+    return (
+      <div className="w-full py-12 px-8">
+          <div className="mb-12 border-b border-slate-200 pb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+            <div>
+              <div className="inline-flex items-center gap-2 text-brand-orange font-bold uppercase tracking-widest text-xs mb-3 bg-brand-orange-50 px-3 py-1 rounded-full border border-orange-200">
+                <ShieldAlert size={14} /> Module 03 · Lab 3.2
+              </div>
+              <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-3">2FA Bypass</h1>
+              <p className="text-lg text-slate-600 font-medium max-w-3xl">
+                Learn how incomplete two-factor logic can be bypassed when the server trusts session state too early.
+              </p>
+            </div>
+            <Link to="/labs/3?step=selection" className="text-slate-500 hover:text-brand-orange font-bold text-sm flex items-center gap-1 transition-colors shrink-0">
+            <ArrowLeft size={16} /> Back to Selection
+          </Link>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            <div className="lg:col-span-2">
+              <div className="bg-slate-900 rounded-2xl p-8 text-slate-300 shadow-lg border border-slate-800 h-full">
+                <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2 border-b border-slate-700 pb-4">
+                  <Terminal size={24} className="text-brand-orange" /> Concept Theory
+                </h2>
+                <h3 className="text-lg font-bold text-white mb-2">What is a broken 2FA flow?</h3>
+                <p className="mb-6 font-medium leading-relaxed text-sm">
+                  A broken 2FA implementation validates the first factor and then stores a partially authenticated session before the second factor is correctly enforced. If downstream pages only check that first step, an attacker can skip the verification step entirely.
+                </p>
+                <h3 className="text-lg font-bold text-white mb-2">How it happens</h3>
+                <p className="mb-6 font-medium leading-relaxed text-sm">
+                  Problems often appear when the application creates session state too early, exposes the verification code through weak channels, or fails to confirm the verified flag before allowing access to sensitive resources.
+                </p>
+                <h3 className="text-lg font-bold text-red-400 mb-2">Security Consequences</h3>
+                <p className="font-medium leading-relaxed text-sm">
+                  Once an attacker can reach an account dashboard without completing the second factor, 2FA becomes a speed bump instead of a protection boundary.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-lg h-full">
+              <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-xl border-b border-slate-700 pb-4">
+                <ShieldCheck size={20} className="text-brand-orange" /> Learning Objectives
+              </h3>
+              <ul className="space-y-4 text-sm font-medium text-slate-300">
+                <li className="flex items-start gap-3"><div className="w-2 h-2 rounded-full bg-brand-orange mt-1.5 flex-shrink-0"></div>Identify where a session becomes trusted too early.</li>
+                <li className="flex items-start gap-3"><div className="w-2 h-2 rounded-full bg-brand-orange mt-1.5 flex-shrink-0"></div>Trace the 2FA flow from login to verification to account access.</li>
+                <li className="flex items-start gap-3"><div className="w-2 h-2 rounded-full bg-brand-orange mt-1.5 flex-shrink-0"></div>Understand why server-side verification is still required after login.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button onClick={() => goTo('selection')} className="bg-brand-orange hover:bg-brand-orange-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-colors flex items-center gap-2 text-lg">
+              Proceed to Variant Selection <ArrowRight size={20} />
+            </button>
+          </div>
+        </div>
+    );
+  }
+
+  if (step === 'selection') {
+    return (
+      <div className="w-full py-12 px-8">
+          <div className="animate-in fade-in slide-in-from-right-8 duration-500">
+            <div className="mb-8 rounded-3xl border border-slate-200 bg-white/80 backdrop-blur px-6 py-5 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div>
+                <div className="flex items-center gap-3 mb-3 flex-wrap">
+                  <span className="inline-flex items-center gap-2 text-brand-orange font-bold uppercase tracking-widest text-xs bg-brand-orange-50 px-3 py-1 rounded-full border border-orange-200">
+                    <ShieldAlert size={14} /> Module 03 · Variant Selection
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">2FA Track</span>
+                </div>
+                <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Select a Target Variant</h2>
+                <p className="text-slate-600 font-medium mt-2 max-w-2xl">Choose a branded target below. The lab theory stays the same while the labels and target presentation change.</p>
+              </div>
+              <button onClick={() => goTo('theory')} className="inline-flex items-center gap-1 text-slate-500 hover:text-brand-orange font-bold text-sm transition-colors shrink-0">
+                <ArrowLeft size={16} /> Back to Theory
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {Object.entries(variants).map(([variantId, variant]) => (
+                <div key={variantId} className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl transition-all flex flex-col group relative overflow-hidden">
+                  <div className={`absolute top-0 right-0 w-32 h-32 rounded-bl-full -z-10 group-hover:scale-110 transition-transform ${variant.tone === 'blue' ? 'bg-blue-50' : variant.tone === 'green' ? 'bg-green-50' : 'bg-indigo-50'}`}></div>
+                  <div className="flex items-start justify-between mb-6">
+                    <div className={`p-4 rounded-xl border ${variant.tone === 'blue' ? 'bg-blue-100 text-blue-600 border-blue-100' : variant.tone === 'green' ? 'bg-green-100 text-green-600 border-green-100' : 'bg-indigo-100 text-indigo-600 border-indigo-100'}`}>
+                      <ShieldCheck size={32} />
+                    </div>
+                    <span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Intermediate</span>
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-900 mb-2">{variant.title}</h3>
+                  <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">{variant.description}</p>
+                  <button onClick={() => goTo('lab', variantId)} className={`inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 text-white font-bold rounded-xl transition-colors ${variant.tone === 'blue' ? 'hover:bg-blue-600' : variant.tone === 'green' ? 'hover:bg-green-600' : 'hover:bg-indigo-600'}`}>
+                    Launch Environment <ArrowRight size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+
+          </div>
+        </div>
+    );
+  }
+
+  const labels = variants;
+
+  return (
+    <div className="w-full min-h-screen bg-slate-50 px-8 py-12 flex items-center justify-center">
+        <div className="max-w-3xl w-full bg-white rounded-3xl border border-slate-200 shadow-xl p-10 text-center">
+          <div className="p-6 bg-blue-100 text-blue-600 rounded-2xl inline-flex mb-6">
+            <ShieldCheck size={40} />
+          </div>
+          <h1 className="text-3xl font-extrabold text-slate-900 mb-3">Lab 3.2: 2FA Bypass</h1>
+          <p className="text-slate-600 text-lg mb-2">
+            Active Variant: <span className="font-black text-brand-orange">{labels[selectedVariant]?.title || labels.a.title}</span>
+          </p>
+          <p className="text-slate-400 text-sm mb-8">
+            This frontend module is a route shell for the 2FA exercise. Use the backend demo at <span className="font-semibold text-brand-orange">/lab3/2</span> for the interactive flow.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button onClick={() => goTo('selection')} className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition-colors">
+              Back to Variant Selection <ArrowLeft size={16} />
+            </button>
+            <Link to="/labs/3" className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-slate-200 text-slate-700 font-bold hover:border-brand-orange hover:text-brand-orange transition-colors">
+              Back to Lab 3
+            </Link>
+          </div>
+        </div>
+      </div>
+  );
+}
