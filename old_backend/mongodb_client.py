@@ -28,27 +28,44 @@ try:
 except ImportError:
     ca = None
 
-client = MongoClient(
-    MONGO_URI,
-    tls=True,                            # explicitly enable TLS
-    tlsCAFile=ca,                        # use certifi bundle for secure SSL/TLS
-    serverSelectionTimeoutMS=10000,
-    connectTimeoutMS=10000,
-    socketTimeoutMS=20000,
-)
+
+def _build_client(uri):
+    client_kwargs = {
+        'serverSelectionTimeoutMS': 3000,
+        'connectTimeoutMS': 3000,
+        'socketTimeoutMS': 20000,
+        'connect': False,
+    }
+
+    if uri.startswith('mongodb+srv://'):
+        client_kwargs['tls'] = True
+        if ca:
+            client_kwargs['tlsCAFile'] = ca
+
+    return MongoClient(uri, **client_kwargs)
+
+
+try:
+    client = _build_client(MONGO_URI)
+except Exception:
+    fallback_uri = os.environ.get('MONGO_FALLBACK_URI', 'mongodb://localhost:27017/')
+    client = _build_client(fallback_uri)
+
 db = client[MONGO_DB]
 
-# ── Ensure indexes ────────────────────────────────────────────────────────────
-try:
-    db.users.create_index([('email', ASCENDING)], unique=True, background=True)
-    db.users.create_index([('username', ASCENDING)], unique=True, background=True)
-    db.users.create_index([('enrollment_id', ASCENDING)], background=True)
-    db.progress.create_index([('email', ASCENDING), ('lab_id', ASCENDING)], background=True)
-    db.progress.create_index([('instance_id', ASCENDING)], background=True)
-    db.enrollments.create_index([('email', ASCENDING), ('lab_id', ASCENDING)], background=True)
-    db.instances.create_index([('instance_id', ASCENDING)], unique=True, background=True)
-except Exception:
-    pass  # indexes may already exist
+def ensure_indexes():
+    """Best-effort index creation that can be run in the background."""
+    try:
+        db.users.create_index([('email', ASCENDING)], unique=True, background=True)
+        db.users.create_index([('username', ASCENDING)], unique=True, background=True)
+        db.users.create_index([('enrollment_id', ASCENDING)], background=True)
+        db.progress.create_index([('email', ASCENDING), ('lab_id', ASCENDING), ('variant_id', ASCENDING)], background=True)
+        db.progress.create_index([('email', ASCENDING), ('lab_id', ASCENDING)], background=True)
+        db.progress.create_index([('instance_id', ASCENDING)], background=True)
+        db.enrollments.create_index([('email', ASCENDING), ('lab_id', ASCENDING)], background=True)
+        db.instances.create_index([('instance_id', ASCENDING)], unique=True, background=True)
+    except Exception:
+        pass  # indexes may already exist or Mongo may be unavailable during boot
 
 # ── User helpers ──────────────────────────────────────────────────────────────
 
@@ -127,59 +144,226 @@ def update_user_access(email, is_approved, role=None):
 
 # ── Progress helpers ──────────────────────────────────────────────────────────
 
+def _variant_objective_count_for_instance(instance: dict, variant_id: str) -> int:
+    records = instance.get('state', {}).get('flag_records', []) if instance else []
+    if not records:
+        return 0
+    if not variant_id:
+        return len(records)
+    suffix = f":{variant_id}"
+    variant_records = [item for item in records if str(item.get('objective_id', '')).endswith(suffix)]
+    return len(variant_records) if variant_records else len(records)
+
+
+def _resolve_variant_id(lab_id: str, section_id: str, instance_id: str = None) -> str:
+    if instance_id:
+        instance = get_instance(instance_id)
+        if instance and instance.get('variant_id'):
+            return str(instance.get('variant_id'))
+    section_text = str(section_id or '')
+    if ':' in section_text:
+        return section_text.split(':', 1)[1] or 'default'
+    return 'default'
+
+
+def _resolve_objective_id(lab_id: str, section_id: str) -> str:
+    text = str(section_id or '').strip()
+    if text:
+        return text
+    return f"{lab_id}:default"
+
 def get_user_progress(email):
-    """Return {lab_id: progress_doc} for a user."""
+    """Return {lab_id: {variant_id: progress_doc}} for a user."""
     docs = db.progress.find({'email': email})
-    return {d['lab_id']: d for d in docs}
+    result = {}
+    for doc in docs:
+        lab_id = doc.get('lab_id')
+        variant_id = doc.get('variant_id') or 'default'
+        if not lab_id:
+            continue
+        result.setdefault(lab_id, {})[variant_id] = doc
+    return result
 
 
 def get_all_users_progress():
-    """Return {email: {lab_id: progress_doc}} for all users."""
+    """Return {email: {lab_id: {variant_id: progress_doc}}} for all users."""
     result = {}
     for doc in db.progress.find({}):
         email = doc.get('email')
         lab_id = doc.get('lab_id')
+        variant_id = doc.get('variant_id') or 'default'
         if email and lab_id:
-            result.setdefault(email, {})[lab_id] = doc
+            result.setdefault(email, {}).setdefault(lab_id, {})[variant_id] = doc
     return result
 
 
 def submit_lab_progress(email, lab_id, section_id, flag, is_solved, note='', instance_id=None):
-    """Upsert progress.
+    """Upsert variant-scoped objective progress.
 
-    If instance_id is provided, progress is fully isolated per-instance.
+    Canonical shape: User -> Lab -> Variant -> Objective.
+    Tracks attempts, solved objectives, completion %, solve time, hint usage, last activity.
     """
-    filter_doc = {'email': email, 'lab_id': lab_id}
-    if instance_id:
-        filter_doc = {
-            'email': email,
-            'lab_id': lab_id,
-            'section_id': section_id,
-            'instance_id': instance_id,
-        }
+    now = time.time()
+    variant_id = _resolve_variant_id(lab_id, section_id, instance_id)
+    objective_id = _resolve_objective_id(lab_id, section_id)
 
-    set_doc = {
+    filter_doc = {
         'email': email,
         'lab_id': lab_id,
-        'section_id': section_id,
-        'flag': flag,
-        'is_solved': is_solved,
-        'note': note,
-        'updated_at': time.time(),
+        'variant_id': variant_id,
+    }
+
+    progress_doc = db.progress.find_one(filter_doc) or {}
+    objectives = dict(progress_doc.get('objectives', {}))
+    objective = dict(objectives.get(objective_id, {}))
+
+    previous_attempts = int(objective.get('attempts', 0))
+    previous_hints = int(objective.get('hint_usage', 0))
+    already_solved = bool(objective.get('is_solved', False))
+
+    objective['objective_id'] = objective_id
+    objective['attempts'] = previous_attempts + 1
+    objective['hint_usage'] = previous_hints
+    objective['last_activity'] = now
+    objective['updated_at'] = now
+    objective['flag'] = flag
+    objective['note'] = note
+    if instance_id:
+        objective['instance_id'] = instance_id
+    if is_solved and not already_solved:
+        objective['is_solved'] = True
+        objective['solved_at'] = now
+        if instance_id:
+            instance = get_instance(instance_id)
+            if instance and instance.get('created_at'):
+                objective['solve_time'] = max(0.0, now - float(instance.get('created_at')))
+    else:
+        objective.setdefault('is_solved', already_solved)
+        objective.setdefault('solved_at', objective.get('solved_at'))
+        if 'solve_time' in objective and objective['solve_time'] is None:
+            objective.pop('solve_time', None)
+
+    objectives[objective_id] = objective
+
+    solved_objectives = sorted([
+        key for key, value in objectives.items()
+        if bool(value.get('is_solved'))
+    ])
+    total_attempts = sum(int(value.get('attempts', 0)) for value in objectives.values())
+
+    total_objectives = len(objectives)
+    if instance_id:
+        instance = get_instance(instance_id)
+        total_objectives = max(total_objectives, _variant_objective_count_for_instance(instance, variant_id))
+
+    completion_percentage = 0.0
+    if total_objectives > 0:
+        completion_percentage = round((len(solved_objectives) / total_objectives) * 100, 1)
+
+    set_doc = {
+        'schema_version': 2,
+        'email': email,
+        'lab_id': lab_id,
+        'variant_id': variant_id,
+        'objectives': objectives,
+        'attempts': total_attempts,
+        'solved_objectives': solved_objectives,
+        'completion_percentage': completion_percentage,
+        'total_objectives': total_objectives,
+        'last_activity': now,
+        'updated_at': now,
     }
     if instance_id:
         set_doc['instance_id'] = instance_id
 
+    # Compatibility fields used by legacy readers.
+    set_doc['section_id'] = objective_id
+    set_doc['flag'] = flag
+    set_doc['is_solved'] = bool(is_solved)
+    set_doc['note'] = note
+
     db.progress.update_one(
         filter_doc,
         {'$set': set_doc},
-        upsert=True
+        upsert=True,
     )
+
+
+def record_hint_usage(email, lab_id, variant_id, objective_id, count=1, instance_id=None):
+    """Increment hint usage for a specific objective in variant-scoped progress."""
+    if not email or not lab_id or not objective_id:
+        return
+
+    now = time.time()
+    normalized_variant = (variant_id or 'default').strip() or 'default'
+    filter_doc = {
+        'email': email,
+        'lab_id': lab_id,
+        'variant_id': normalized_variant,
+    }
+
+    progress_doc = db.progress.find_one(filter_doc) or {}
+    objectives = dict(progress_doc.get('objectives', {}))
+    objective = dict(objectives.get(objective_id, {}))
+
+    objective['objective_id'] = objective_id
+    objective['hint_usage'] = int(objective.get('hint_usage', 0)) + max(1, int(count or 1))
+    objective['last_activity'] = now
+    objective['updated_at'] = now
+    objective.setdefault('attempts', int(objective.get('attempts', 0)))
+    objective.setdefault('is_solved', bool(objective.get('is_solved', False)))
+    if instance_id:
+        objective['instance_id'] = instance_id
+
+    objectives[objective_id] = objective
+    solved_objectives = sorted([
+        key for key, value in objectives.items()
+        if bool(value.get('is_solved'))
+    ])
+    total_attempts = sum(int(value.get('attempts', 0)) for value in objectives.values())
+    total_objectives = max(len(objectives), int(progress_doc.get('total_objectives', 0) or 0))
+    completion_percentage = round((len(solved_objectives) / total_objectives) * 100, 1) if total_objectives else 0.0
+
+    set_doc = {
+        'schema_version': 2,
+        'email': email,
+        'lab_id': lab_id,
+        'variant_id': normalized_variant,
+        'objectives': objectives,
+        'attempts': total_attempts,
+        'solved_objectives': solved_objectives,
+        'completion_percentage': completion_percentage,
+        'total_objectives': total_objectives,
+        'last_activity': now,
+        'updated_at': now,
+    }
+    if instance_id:
+        set_doc['instance_id'] = instance_id
+
+    db.progress.update_one(filter_doc, {'$set': set_doc}, upsert=True)
 
 
 def get_solved_labs_feed():
     """Return all solved progress records."""
-    return list(db.progress.find({'is_solved': True}))
+    docs = list(db.progress.find({}))
+    solved = []
+    for doc in docs:
+        if doc.get('schema_version') == 2:
+            objectives = doc.get('objectives', {})
+            for objective_id, objective in objectives.items():
+                if objective.get('is_solved'):
+                    solved.append({
+                        'email': doc.get('email'),
+                        'lab_id': doc.get('lab_id'),
+                        'variant_id': doc.get('variant_id', 'default'),
+                        'section_id': objective_id,
+                        'flag': objective.get('flag'),
+                        'is_solved': True,
+                        'updated_at': objective.get('updated_at', doc.get('updated_at')),
+                    })
+        elif doc.get('is_solved'):
+            solved.append(doc)
+    return solved
 
 
 # ── Enrollment helpers ────────────────────────────────────────────────────────
@@ -230,10 +414,29 @@ def update_lab_enrollment_status(email, lab_id, status):
     )
 
 
+def log_session_event(instance_id, user_id, event_type, detail=None):
+    """Persist lifecycle session events for admin audit and monitoring."""
+    if not instance_id or not event_type:
+        return
+    now = time.time()
+    doc = {
+        'instance_id': instance_id,
+        'user_id': user_id or 'system',
+        'event_type': str(event_type).upper(),
+        'detail': detail or {},
+        'timestamp': now,
+        'module': 'Sessions',
+    }
+    try:
+        db.session_events.insert_one(doc)
+    except Exception:
+        return
+
+
 # ── Lab Instances helpers ──────────────────────────────────────────────────────
 
-INSTANCE_ACTIVE_TTL_SECONDS = 900
-INSTANCE_TERMINAL_TTL_SECONDS = 900
+INSTANCE_ACTIVE_TTL_SECONDS = 300
+INSTANCE_TERMINAL_TTL_SECONDS = 300
 
 
 def _new_instance_id() -> str:
@@ -356,6 +559,7 @@ def create_instance(user_id, lab_id, variant_id):
         'state': {},  # For isolated lab state (e.g., deleted users)
     }
     db.instances.insert_one(doc)
+    log_session_event(instance_id, user_id, 'CREATED', {'lab_id': lab_id, 'variant_id': variant_id})
     return doc
 
 def get_instance(instance_id):
@@ -390,6 +594,15 @@ def update_instance_status(instance_id, status):
         upsert=False,
     )
 
+    current = get_instance(instance_id)
+    if current:
+        log_session_event(
+            instance_id,
+            current.get('user_id', 'system'),
+            status,
+            {'lab_id': current.get('lab_id'), 'variant_id': current.get('variant_id')},
+        )
+
     # started_at is captured once at first transition out of CREATED.
     if status in {'ACTIVE', 'SOLVED', 'ABANDONED'}:
         db.instances.update_one(
@@ -404,7 +617,71 @@ def update_instance_status(instance_id, status):
             {'$set': {'solved_at': now}},
         )
 
+    if status == 'ABANDONED':
+        cleanup_instance_runtime(instance_id, reason='abandoned')
+    elif status == 'EXPIRED':
+        cleanup_instance_runtime(instance_id, reason='expired')
+
     return result.modified_count > 0
+
+
+def cleanup_instance_runtime(instance_id, reason='expired'):
+    """Cleanup temporary/runtime data and close active objectives for terminal instances."""
+    instance = get_instance(instance_id)
+    if not instance:
+        return False
+
+    now = time.time()
+    flag_records = []
+    closed_objectives = []
+
+    for record in instance.get('state', {}).get('flag_records', []):
+        item = dict(record)
+        if not item.get('solved_status'):
+            item['closed_status'] = True
+            item['closed_at'] = now
+            closed_objectives.append(item.get('objective_id'))
+        flag_records.append(item)
+
+    db.instances.update_one(
+        {'instance_id': instance_id},
+        {
+            '$set': {
+                'state.flag_records': flag_records,
+                'state.active_objectives': [],
+                'state.closed_objectives': [x for x in closed_objectives if x],
+                'state.resources': {
+                    'released': True,
+                    'released_at': now,
+                    'reason': reason,
+                },
+                'cleanup': {
+                    'performed_at': now,
+                    'reason': reason,
+                },
+            },
+            '$unset': {
+                'state.runtime': '',
+                'state.temp_session_data': '',
+                'state.session_cache': '',
+                'state.ephemeral': '',
+            }
+        },
+    )
+
+    # Remove per-instance temporary progress/runtime traces while keeping canonical records.
+    db.progress.update_many(
+        {'instance_id': instance_id},
+        {'$set': {'runtime_closed': True, 'runtime_closed_at': now}},
+    )
+    instance = get_instance(instance_id)
+    log_session_event(
+        instance_id,
+        (instance or {}).get('user_id', 'system'),
+        'CLEANUP',
+        {'reason': reason, 'closed_objectives': len([x for x in closed_objectives if x])},
+    )
+    return True
 
 def heartbeat_instance(instance_id):
     """Update last_seen and transition CREATED -> ACTIVE.
@@ -442,7 +719,7 @@ def heartbeat_instance(instance_id):
 
     return db.instances.find_one({'instance_id': instance_id})
 
-def mark_expired_instances(timeout_seconds=900): # 15 minutes default
+def mark_expired_instances(timeout_seconds=300):  # 5 minutes default
     """Advance lifecycle: ACTIVE/CREATED stale -> ABANDONED -> EXPIRED."""
     now = time.time()
     active_ttl = int(timeout_seconds or INSTANCE_ACTIVE_TTL_SECONDS)
@@ -450,8 +727,8 @@ def mark_expired_instances(timeout_seconds=900): # 15 minutes default
 
     active_cutoff = now - active_ttl
 
-    # 1) Missed heartbeat transitions active sessions to ABANDONED.
-    db.instances.update_many(
+    # 1) Missed heartbeat transitions active sessions to ABANDONED with cleanup.
+    stale_active = list(db.instances.find(
         {
             'status': {'$in': ['CREATED', 'ACTIVE']},
             '$or': [
@@ -459,17 +736,17 @@ def mark_expired_instances(timeout_seconds=900): # 15 minutes default
                 {'expires_at': {'$lt': now}},
             ],
         },
-        {
-            '$set': {
-                'status': 'ABANDONED',
-                'expires_at': _compute_expiry(now, terminal_ttl),
-            }
-        },
-    )
+        {'instance_id': 1},
+    ))
+    for row in stale_active:
+        iid = row.get('instance_id')
+        if not iid:
+            continue
+        update_instance_status(iid, 'ABANDONED')
 
     # 2) Terminal sessions become EXPIRED when their own expiry is reached.
     terminal_cutoff = now - terminal_ttl
-    db.instances.update_many(
+    stale_terminal = list(db.instances.find(
         {
             'status': {'$in': ['ABANDONED', 'SOLVED']},
             '$or': [
@@ -477,13 +754,13 @@ def mark_expired_instances(timeout_seconds=900): # 15 minutes default
                 {'last_seen': {'$lt': terminal_cutoff}},
             ],
         },
-        {
-            '$set': {
-                'status': 'EXPIRED',
-                'expires_at': now,
-            }
-        },
-    )
+        {'instance_id': 1},
+    ))
+    for row in stale_terminal:
+        iid = row.get('instance_id')
+        if not iid:
+            continue
+        update_instance_status(iid, 'EXPIRED')
 
 def update_instance_state(instance_id, key, value):
     """Set a custom state variable for an instance (e.g. tracking deleted users)."""

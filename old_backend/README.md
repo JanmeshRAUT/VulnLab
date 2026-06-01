@@ -17,7 +17,7 @@ VulneCom is a purpose-built Flask application that simulates a real-world e-comm
 
 ## 🛠️ Technology Stack
 
-- **Backend**: Python 3.9+ / Flask
+- **Backend**: Python 3.9+ / FastAPI
 - **Database**: MongoDB (Primary), SQLite (Legacy/Local)
 - **Authentication**: Google OAuth 2.0 Integration
 - **Infrastructure**: Vercel ready (Serverless compatible)
@@ -69,7 +69,7 @@ pip install -r requirements.txt
 
 ### Step 4: Run the Application
 ```bash
-python main.py
+python fast_main.py
 ```
 
 ## 🔐 Security Disclaimer

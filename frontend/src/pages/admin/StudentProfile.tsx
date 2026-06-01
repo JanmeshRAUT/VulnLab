@@ -72,6 +72,7 @@ export default function StudentProfile() {
   const solvedLabs = useMemo(() => profile.solved_labs || [], [profile.solved_labs]);
   const unsolvedLabs = useMemo(() => profile.unsolved_labs || [], [profile.unsolved_labs]);
   const abandonedLabs = useMemo(() => profile.abandoned_labs || [], [profile.abandoned_labs]);
+  const progressReports = useMemo(() => profile.progress_reports || [], [profile.progress_reports]);
 
   return (
     <AdminShell title="Student Profile" subtitle={student.full_name || 'Student profile view'} activeSection="students">
@@ -145,6 +146,35 @@ export default function StudentProfile() {
               <div className="space-y-3">{(profile.session_history || []).map((session: any) => <div key={session.instance_id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><div className="flex items-start justify-between gap-3 mb-2"><div><div className="font-bold text-slate-900">{session.lab}</div><div className="text-xs text-slate-500 font-mono">{session.instance_id}</div></div><Badge value={session.status} tone={session.status === 'SOLVED' ? 'green' : session.status === 'ABANDONED' ? 'red' : session.status === 'EXPIRED' ? 'slate' : 'orange'} /></div><div className="text-sm text-slate-500 font-medium">Started {session.started_time} · Last activity {session.last_activity}</div></div>)}</div>
             </SectionCard>
           </div>
+
+          <SectionCard title="Progress Reports" subtitle="Variant and objective progress across lifecycle-aware tracking">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="text-xs uppercase tracking-widest text-slate-400 font-bold">
+                  <tr>
+                    <th className="py-3 pr-4">Lab</th>
+                    <th className="py-3 pr-4">Variant</th>
+                    <th className="py-3 pr-4">Attempts</th>
+                    <th className="py-3 pr-4">Solved Objectives</th>
+                    <th className="py-3 pr-4">Completion</th>
+                    <th className="py-3 pr-4">Last Activity</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {progressReports.map((row: any, index: number) => (
+                    <tr key={`${row.lab_id}-${row.variant_id}-${index}`} className="hover:bg-slate-50/80">
+                      <td className="py-4 pr-4 font-semibold text-slate-900">{row.lab_title}</td>
+                      <td className="py-4 pr-4 text-slate-700">{row.variant_id || 'default'}</td>
+                      <td className="py-4 pr-4 text-slate-700">{row.attempts || 0}</td>
+                      <td className="py-4 pr-4 text-slate-700">{row.solved_objectives || 0}/{row.objective_count || 0}</td>
+                      <td className="py-4 pr-4"><Badge value={`${row.completion_percentage || 0}%`} tone={Number(row.completion_percentage || 0) >= 70 ? 'green' : Number(row.completion_percentage || 0) > 0 ? 'amber' : 'slate'} /></td>
+                      <td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{row.last_activity || row.updated_at}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </SectionCard>
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <SectionCard title="Solved Labs" subtitle="Challenges this student has completed"><div className="space-y-3">{solvedLabs.map((item: any, index: number) => <div key={index} className="rounded-xl border border-slate-200 bg-slate-50 p-3 font-semibold text-slate-900">{item.lab_title}</div>)}</div></SectionCard>

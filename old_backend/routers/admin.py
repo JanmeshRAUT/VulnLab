@@ -16,13 +16,15 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 ADMIN_ROLES = {"super_admin", "admin", "instructor", "reviewer"}
 PERMISSION_CATEGORIES = [
-    "Manage Students",
+    "Manage Users",
     "Manage Labs",
     "Manage Variants",
+    "Manage Sessions",
+    "View Reports",
+    "Manage Students",
     "Create Labs",
     "Edit Labs",
     "Delete Labs",
-    "View Reports",
     "Manage Roles",
     "Manage Access Control",
     "View Sessions",
@@ -30,12 +32,19 @@ PERMISSION_CATEGORIES = [
     "Platform Settings",
 ]
 
+PERMISSION_ALIASES = {
+    "Manage Students": "Manage Users",
+    "View Sessions": "Manage Sessions",
+}
+
 DEFAULT_ROLE_DEFINITIONS = {
     "super_admin": PERMISSION_CATEGORIES,
     "admin": [
+        "Manage Users",
         "Manage Students",
         "Manage Labs",
         "Manage Variants",
+        "Manage Sessions",
         "Create Labs",
         "Edit Labs",
         "View Reports",
@@ -44,9 +53,11 @@ DEFAULT_ROLE_DEFINITIONS = {
         "Export Reports",
     ],
     "instructor": [
+        "Manage Users",
         "Manage Students",
         "Manage Labs",
         "Manage Variants",
+        "Manage Sessions",
         "Create Labs",
         "Edit Labs",
         "View Reports",
@@ -111,6 +122,13 @@ class AccessMutationRequest(BaseModel):
     student_id: str
     lab_ids: list[str] = Field(default_factory=list)
     category: Optional[str] = None
+    permission: str = "Allowed"
+
+
+class VariantAccessMutationRequest(BaseModel):
+    student_id: str
+    lab_id: str
+    variant_ids: list[str] = Field(default_factory=list)
     permission: str = "Allowed"
 
 
@@ -194,7 +212,13 @@ def role_permissions(role: str) -> list[str]:
 
 def has_permission(role: str, permission: str) -> bool:
     normalized = normalize_role(role)
-    return normalized == "super_admin" or permission in role_permissions(normalized)
+    allowed = role_permissions(normalized)
+    canonical_permission = PERMISSION_ALIASES.get(permission, permission)
+    return (
+        normalized == "super_admin"
+        or permission in allowed
+        or canonical_permission in allowed
+    )
 
 
 def require_permission(request: Request, permission: str) -> dict[str, str]:
@@ -269,6 +293,20 @@ def aggregate_students() -> list[dict[str, Any]]:
         if email:
             progress_by_email[email].append(doc)
 
+    def progress_totals(docs: list[dict[str, Any]]) -> tuple[int, int]:
+        attempted_total = 0
+        solved_total = 0
+        for item in docs:
+            if item.get("schema_version") == 2:
+                objectives = item.get("objectives", {})
+                attempted_total += sum(int(obj.get("attempts", 0)) for obj in objectives.values())
+                solved_total += len([obj for obj in objectives.values() if obj.get("is_solved")])
+            else:
+                attempted_total += 1
+                if item.get("is_solved"):
+                    solved_total += 1
+        return attempted_total, solved_total
+
     if not raw_users:
         students = []
         for entry in DEFAULT_STUDENTS:
@@ -303,8 +341,7 @@ def aggregate_students() -> list[dict[str, Any]]:
         full_name = str(doc.get("full_name") or username.replace(".", " ").title())
         student_id = str(doc.get("user_id") or doc.get("student_id") or doc.get("_id") or email)
         user_progress = progress_by_email.get(email, [])
-        attempted = len(user_progress)
-        solved = len([item for item in user_progress if item.get("is_solved")])
+        attempted, solved = progress_totals(user_progress)
         current_sessions = len([
             item for item in instances
             if item["status"] in {"CREATED", "ACTIVE"} and email in {str(item.get("student", "")).lower()}
@@ -364,15 +401,31 @@ def aggregate_access_matrix(students: list[dict[str, Any]]) -> dict[str, Any]:
             access_lookup[(student_id, lab_id)] = str(doc.get("permission", "Allowed"))
 
     rows = []
+    variant_docs = safe_find("variant_access", sort=[("updated_at", -1)])
+    variant_lookup: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    for doc in variant_docs:
+        student_id = str(doc.get("student_id") or doc.get("email") or "").lower()
+        lab_id = str(doc.get("lab_id") or "")
+        if not student_id or not lab_id:
+            continue
+        variant_lookup[(student_id, lab_id)].append(
+            {
+                "variant_id": str(doc.get("variant_id", "default")),
+                "permission": str(doc.get("permission", "Allowed")),
+            }
+        )
+
     for student in students:
         permissions = []
         student_key = str(student["email"]).lower()
         for lab in labs:
+            variant_permissions = variant_lookup.get((student_key, lab["lab_id"]), [])
             permissions.append(
                 {
                     "lab_id": lab["lab_id"],
                     "lab_title": lab["title"],
                     "permission": access_lookup.get((student_key, lab["lab_id"]), "Locked"),
+                    "variants": variant_permissions,
                 }
             )
         rows.append({"student_id": student["student_id"], "student_name": student["full_name"], "username": student["username"], "permissions": permissions})
@@ -392,7 +445,16 @@ def build_activity_feed(students: list[dict[str, Any]], sessions: list[dict[str,
 def build_overview(students: list[dict[str, Any]], sessions: list[dict[str, Any]], progress_docs: list[dict[str, Any]], roles: list[dict[str, Any]]) -> dict[str, Any]:
     labs = get_lab_catalog()
     total_variants = sum(lab["variant_count"] for lab in labs)
-    solved_by_lab = Counter(str(doc.get("lab_id", "")) for doc in progress_docs if doc.get("is_solved"))
+    solved_by_lab = Counter()
+    for doc in progress_docs:
+        lab_id = str(doc.get("lab_id", ""))
+        if not lab_id:
+            continue
+        if doc.get("schema_version") == 2:
+            objectives = doc.get("objectives", {})
+            solved_by_lab[lab_id] += len([obj for obj in objectives.values() if obj.get("is_solved")])
+        elif doc.get("is_solved"):
+            solved_by_lab[lab_id] += 1
     top_students = sorted(students, key=lambda item: (item["performance_score"], item["completion_percentage"]), reverse=True)[:5]
     most_solved_labs = sorted(
         [
@@ -436,11 +498,36 @@ def build_reports(students: list[dict[str, Any]], sessions: list[dict[str, Any]]
         solved_count = len([item for item in related_sessions if item["status"] == "SOLVED"])
         total_count = len(related_sessions)
         completion_rate = round((solved_count / total_count) * 100, 1) if total_count else 0.0
-        average_solve_time = round(11.5 + lab["variant_count"] * 1.7, 1)
-        lab_reports.append({"lab_id": lab["lab_id"], "title": lab["title"], "completion_rate": completion_rate, "average_solve_time": average_solve_time, "most_difficult": max(0, 100 - completion_rate), "most_failed": max(0, total_count - solved_count)})
+        solve_minutes = []
+        for row in safe_find("instances", query={"lab_id": lab["lab_id"], "status": "SOLVED"}):
+            created_at = row.get("created_at")
+            solved_at = row.get("solved_at")
+            if created_at and solved_at:
+                solve_minutes.append(max(0.0, (float(solved_at) - float(created_at)) / 60.0))
+        average_solve_time = round(sum(solve_minutes) / len(solve_minutes), 1) if solve_minutes else 0.0
+        lab_reports.append({"lab_id": lab["lab_id"], "title": lab["title"], "completion_rate": completion_rate, "average_solve_time": average_solve_time, "most_difficult": max(0, 100 - completion_rate), "most_failed": max(0, total_count - solved_count), "solve_count": solved_count, "attempt_count": total_count})
+
+    most_solved_labs = sorted(
+        [{"lab_id": item["lab_id"], "title": item["title"], "solved_count": item["solve_count"]} for item in lab_reports],
+        key=lambda item: item["solved_count"],
+        reverse=True,
+    )[:5]
+
+    hardest_labs = sorted(
+        [{"lab_id": item["lab_id"], "title": item["title"], "difficulty_score": item["most_difficult"], "completion_rate": item["completion_rate"]} for item in lab_reports],
+        key=lambda item: item["difficulty_score"],
+        reverse=True,
+    )[:5]
+
+    solved_time_values = [item["average_solve_time"] for item in lab_reports if item["average_solve_time"] > 0]
+    average_solve_time_overall = round(sum(solved_time_values) / len(solved_time_values), 1) if solved_time_values else 0.0
+
     return {
         "student_reports": student_reports,
         "lab_reports": lab_reports,
+        "most_solved_labs": most_solved_labs,
+        "hardest_labs": hardest_labs,
+        "average_solve_time": average_solve_time_overall,
         "system_reports": {
             "active_users": len([student for student in students if student["status"] == "Active"]),
             "session_trends": {
@@ -463,15 +550,34 @@ def build_reports(students: list[dict[str, Any]], sessions: list[dict[str, Any]]
 
 def build_audit_logs() -> list[dict[str, Any]]:
     docs = safe_find("audit_logs", sort=[("timestamp", -1)])
+    audit_rows = []
     if docs:
-        return [
+        audit_rows = [
             {"user": doc.get("user", "system"), "role": doc.get("role", "system"), "action": doc.get("action", "Action"), "module": doc.get("module", "Platform"), "timestamp": ts_to_iso(float(doc.get("timestamp", now_ts()))), "ip_address": doc.get("ip_address", "127.0.0.1")}
             for doc in docs
         ]
-    return [
-        {"user": item["user"], "role": item["role"], "action": item["action"], "module": item["module"], "timestamp": ts_to_iso(now_ts() - item["timestamp_offset_minutes"] * 60), "ip_address": item["ip"]}
-        for item in DEFAULT_AUDIT
+
+    session_events = safe_find("session_events", sort=[("timestamp", -1)])
+    session_rows = [
+        {
+            "user": event.get("user_id", "system"),
+            "role": "system",
+            "action": f"Session {str(event.get('event_type', 'EVENT')).title()}",
+            "module": "Sessions",
+            "timestamp": ts_to_iso(float(event.get("timestamp", now_ts()))),
+            "ip_address": "127.0.0.1",
+        }
+        for event in session_events[:200]
     ]
+
+    if not audit_rows and not session_rows:
+        audit_rows = [
+            {"user": item["user"], "role": item["role"], "action": item["action"], "module": item["module"], "timestamp": ts_to_iso(now_ts() - item["timestamp_offset_minutes"] * 60), "ip_address": item["ip"]}
+            for item in DEFAULT_AUDIT
+        ]
+
+    combined = audit_rows + session_rows
+    return sorted(combined, key=lambda item: item["timestamp"], reverse=True)
 
 
 def build_notifications(sessions: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -511,11 +617,6 @@ def ensure_role_seed() -> None:
             {"name": role_name},
             {"name": role_name, "description": f"Default {role_name.replace('_', ' ')} role", "permissions": permissions, "is_default": True, "updated_at": timestamp},
         )
-
-
-@router.on_event("startup")
-async def startup_seed_roles() -> None:
-    ensure_role_seed()
 
 
 @router.get("/dashboard")
@@ -573,12 +674,42 @@ async def get_student_profile(request: Request, student_key: str):
     progress_docs = [doc for doc in safe_find("progress", sort=[("updated_at", -1)]) if str(doc.get("email", "")).lower() == target["email"]]
 
     lab_history = []
+    progress_reports = []
     solved_labs = []
     unsolved_labs = []
     for doc in progress_docs:
         lab = labs.get(str(doc.get("lab_id", "")), {"title": str(doc.get("lab_id", "Unknown Lab"))})
-        item = {"lab_id": str(doc.get("lab_id")), "lab_title": lab["title"], "is_solved": bool(doc.get("is_solved")), "updated_at": ts_to_iso(float(doc.get("updated_at", now_ts()))) }
+        if doc.get("schema_version") == 2:
+            objectives = doc.get("objectives", {})
+            solved_count = len([obj for obj in objectives.values() if obj.get("is_solved")])
+            objective_count = max(int(doc.get("total_objectives", 0) or 0), len(objectives))
+            item = {
+                "lab_id": str(doc.get("lab_id")),
+                "lab_title": lab["title"],
+                "variant_id": str(doc.get("variant_id", "default")),
+                "is_solved": solved_count > 0,
+                "solved_objectives": solved_count,
+                "objective_count": objective_count,
+                "completion_percentage": float(doc.get("completion_percentage", 0.0) or 0.0),
+                "attempts": int(doc.get("attempts", 0) or 0),
+                "last_activity": ts_to_iso(float(doc.get("last_activity", doc.get("updated_at", now_ts())))),
+                "updated_at": ts_to_iso(float(doc.get("updated_at", now_ts()))),
+            }
+        else:
+            item = {
+                "lab_id": str(doc.get("lab_id")),
+                "lab_title": lab["title"],
+                "variant_id": "default",
+                "is_solved": bool(doc.get("is_solved")),
+                "solved_objectives": 1 if bool(doc.get("is_solved")) else 0,
+                "objective_count": 1,
+                "completion_percentage": 100.0 if bool(doc.get("is_solved")) else 0.0,
+                "attempts": 1,
+                "last_activity": ts_to_iso(float(doc.get("updated_at", now_ts()))),
+                "updated_at": ts_to_iso(float(doc.get("updated_at", now_ts()))),
+            }
         lab_history.append(item)
+        progress_reports.append(item)
         (solved_labs if item["is_solved"] else unsolved_labs).append(item)
 
     abandoned_labs = [session for session in sessions if session["status"] in {"ABANDONED", "EXPIRED"}]
@@ -592,6 +723,7 @@ async def get_student_profile(request: Request, student_key: str):
             "personal_information": {"student_id": target["student_id"], "full_name": target["full_name"], "username": target["username"], "email": target["email"], "registration_date": target["registration_date"], "last_login": target["last_login"], "status": target["status"], "role": target["assigned_role"]},
             "activity_timeline": activity_timeline,
             "lab_history": lab_history,
+            "progress_reports": progress_reports,
             "session_history": sessions,
             "solved_labs": solved_labs,
             "unsolved_labs": unsolved_labs,
@@ -709,7 +841,7 @@ async def delete_role(request: Request, role_name: str):
 
 @router.get("/sessions")
 async def list_sessions(request: Request, status: str = Query(default="")):
-    require_permission(request, "View Sessions")
+    require_permission(request, "Manage Sessions")
     sessions = aggregate_instances()
     if status:
         sessions = [session for session in sessions if session["status"].lower() == status.lower()]
@@ -717,12 +849,12 @@ async def list_sessions(request: Request, status: str = Query(default="")):
 
 
 def update_session_status(instance_id: str, status: str) -> None:
-    safe_upsert("instances", {"instance_id": instance_id}, {"instance_id": instance_id, "status": status, "last_seen": now_ts()})
+    mongodb_client.update_instance_status(instance_id, status)
 
 
 @router.post("/sessions/{instance_id}/expire")
 async def force_expire_session(request: Request, instance_id: str, data: SessionActionRequest):
-    identity = require_permission(request, "View Sessions")
+    identity = require_permission(request, "Manage Sessions")
     update_session_status(instance_id, "EXPIRED")
     safe_insert("audit_logs", {"user": identity["email"], "role": identity["role"], "action": "Session Terminated", "module": "Sessions", "timestamp": now_ts(), "ip_address": request.client.host if request.client else "127.0.0.1"})
     return {"success": True, "status": "EXPIRED", "reason": data.reason}
@@ -730,7 +862,7 @@ async def force_expire_session(request: Request, instance_id: str, data: Session
 
 @router.post("/sessions/{instance_id}/terminate")
 async def terminate_session(request: Request, instance_id: str, data: SessionActionRequest):
-    identity = require_permission(request, "View Sessions")
+    identity = require_permission(request, "Manage Sessions")
     update_session_status(instance_id, "ABANDONED")
     safe_insert("audit_logs", {"user": identity["email"], "role": identity["role"], "action": "Session Terminated", "module": "Sessions", "timestamp": now_ts(), "ip_address": request.client.host if request.client else "127.0.0.1"})
     return {"success": True, "status": "ABANDONED", "reason": data.reason}
@@ -738,7 +870,7 @@ async def terminate_session(request: Request, instance_id: str, data: SessionAct
 
 @router.post("/sessions/{instance_id}/reset")
 async def reset_session(request: Request, instance_id: str, data: SessionActionRequest):
-    identity = require_permission(request, "View Sessions")
+    identity = require_permission(request, "Manage Sessions")
     try:
         mongodb_client.db.instances.update_one({"instance_id": instance_id}, {"$set": {"status": "CREATED", "state": {}, "last_seen": now_ts()}})
     except Exception:
@@ -753,6 +885,37 @@ async def get_reports(request: Request):
     students = aggregate_students()
     sessions = aggregate_instances()
     return build_reports(students, sessions)
+
+
+@router.post("/access/variants/assign")
+async def assign_variants(request: Request, data: VariantAccessMutationRequest):
+    identity = require_permission(request, "Manage Variants")
+    timestamp = now_ts()
+    permission = data.permission.title()
+    for variant_id in data.variant_ids:
+        safe_upsert(
+            "variant_access",
+            {
+                "student_id": data.student_id.lower(),
+                "lab_id": data.lab_id,
+                "variant_id": str(variant_id),
+            },
+            {
+                "student_id": data.student_id.lower(),
+                "lab_id": data.lab_id,
+                "variant_id": str(variant_id),
+                "permission": permission,
+                "updated_at": timestamp,
+            },
+        )
+    safe_insert("audit_logs", {"user": identity["email"], "role": identity["role"], "action": "Variants Assigned", "module": "Access Control", "timestamp": timestamp, "ip_address": request.client.host if request.client else "127.0.0.1"})
+    return {"success": True, "permission": permission, "count": len(data.variant_ids)}
+
+
+@router.post("/access/variants/restrict")
+async def restrict_variants(request: Request, data: VariantAccessMutationRequest):
+    data.permission = "Restricted"
+    return await assign_variants(request, data)
 
 
 @router.get("/reports/export")

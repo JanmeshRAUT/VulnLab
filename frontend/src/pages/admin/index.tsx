@@ -62,6 +62,17 @@ export default function AdminDashboard() {
   const [range, setRange] = useState(searchParams.get('range') || 'weekly');
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [opNotice, setOpNotice] = useState<{ text: string; tone: 'green' | 'red' } | null>(null);
+
+  const [accessAction, setAccessAction] = useState('Grant Lab Access');
+  const [accessPermission, setAccessPermission] = useState('Allowed');
+  const [selectedStudent, setSelectedStudent] = useState('');
+  const [selectedLabsCsv, setSelectedLabsCsv] = useState('');
+  const [selectedVariantsCsv, setSelectedVariantsCsv] = useState('');
+
+  const [roleName, setRoleName] = useState('');
+  const [roleDescription, setRoleDescription] = useState('');
+  const [rolePermission, setRolePermission] = useState('Manage Users');
 
   useEffect(() => {
     setActiveSection(searchParams.get('section') || 'overview');
@@ -78,24 +89,33 @@ export default function AdminDashboard() {
     setSearchParams(params, { replace: true });
   }, [activeSection, query, filterStatus, filterRole, filterCategory, range, setSearchParams]);
 
+  const fetchDashboard = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get('http://localhost:5000/api/admin/dashboard', {
+        params: { q: query, status: filterStatus, role: filterRole, category: filterCategory, range },
+        withCredentials: true,
+      });
+      setData(res.data);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
-    setLoading(true);
-    axios.get('http://localhost:5000/api/admin/dashboard', {
-      params: { q: query, status: filterStatus, role: filterRole, category: filterCategory, range },
-      withCredentials: true,
-    })
-      .then(res => {
-        if (mounted) {
-          setData(res.data);
-          setLoading(false);
-        }
-      })
+    fetchDashboard()
       .catch(() => {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
   }, [query, filterStatus, filterRole, filterCategory, range]);
+
+  useEffect(() => {
+    if (!opNotice) return;
+    const timer = window.setTimeout(() => setOpNotice(null), 2400);
+    return () => clearTimeout(timer);
+  }, [opNotice]);
 
   const overview = data?.overview || {};
   const students = data?.students || [];
@@ -104,12 +124,96 @@ export default function AdminDashboard() {
   const roles = data?.roles || [];
   const sessions = data?.sessions || [];
   const reports = data?.reports || { student_reports: [], lab_reports: [], system_reports: {}, export_options: [] };
+  const mostSolvedLabs = reports.most_solved_labs || [];
+  const hardestLabs = reports.hardest_labs || [];
+  const avgSolveTime = reports.average_solve_time || 0;
   const auditLogs = data?.audit_logs || [];
   const notifications = data?.notifications || [];
   const stats = data?.statistics || [];
 
   const visibleStudents = useMemo(() => students.slice(0, 12), [students]);
   const visibleSessions = useMemo(() => sessions.slice(0, 12), [sessions]);
+
+  const submitAccessAction = async () => {
+    const student = selectedStudent.trim().toLowerCase();
+    const labIds = selectedLabsCsv.split(',').map(item => item.trim()).filter(Boolean);
+    const variantIds = selectedVariantsCsv.split(',').map(item => item.trim()).filter(Boolean);
+
+    if (!student || labIds.length === 0) {
+      setOpNotice({ text: 'Select student and at least one lab.', tone: 'red' });
+      return;
+    }
+
+    try {
+      if (accessAction === 'Assign Variants' || accessAction === 'Restrict Variants') {
+        if (variantIds.length === 0) {
+          setOpNotice({ text: 'Provide one or more variant IDs for variant actions.', tone: 'red' });
+          return;
+        }
+        const endpoint = accessAction === 'Assign Variants'
+          ? 'http://localhost:5000/api/admin/access/variants/assign'
+          : 'http://localhost:5000/api/admin/access/variants/restrict';
+        await axios.post(endpoint, {
+          student_id: student,
+          lab_id: labIds[0],
+          variant_ids: variantIds,
+          permission: accessPermission,
+        }, { withCredentials: true });
+      } else {
+        const endpoint = accessAction === 'Grant Lab Access' || accessAction === 'Grant Category Access'
+          ? 'http://localhost:5000/api/admin/access/grant'
+          : 'http://localhost:5000/api/admin/access/revoke';
+        await axios.post(endpoint, {
+          student_id: student,
+          lab_ids: labIds,
+          permission: accessPermission,
+        }, { withCredentials: true });
+      }
+
+      setOpNotice({ text: 'Access control updated.', tone: 'green' });
+      await fetchDashboard();
+    } catch {
+      setOpNotice({ text: 'Access update failed.', tone: 'red' });
+    }
+  };
+
+  const saveRole = async () => {
+    if (!roleName.trim()) {
+      setOpNotice({ text: 'Role name is required.', tone: 'red' });
+      return;
+    }
+    try {
+      await axios.post('http://localhost:5000/api/admin/roles', {
+        name: roleName,
+        description: roleDescription,
+        permissions: [rolePermission],
+        is_default: false,
+      }, { withCredentials: true });
+      setOpNotice({ text: 'Role saved.', tone: 'green' });
+      setRoleName('');
+      setRoleDescription('');
+      await fetchDashboard();
+    } catch {
+      setOpNotice({ text: 'Role save failed.', tone: 'red' });
+    }
+  };
+
+  const runSessionAction = async (instanceId: string, action: 'expire' | 'terminate' | 'reset') => {
+    const endpointMap: Record<string, string> = {
+      expire: 'expire',
+      terminate: 'terminate',
+      reset: 'reset',
+    };
+    try {
+      await axios.post(`http://localhost:5000/api/admin/sessions/${encodeURIComponent(instanceId)}/${endpointMap[action]}`, {
+        reason: 'Admin console action',
+      }, { withCredentials: true });
+      setOpNotice({ text: `Session ${action} executed.`, tone: 'green' });
+      await fetchDashboard();
+    } catch {
+      setOpNotice({ text: `Session ${action} failed.`, tone: 'red' });
+    }
+  };
 
   const downloadReport = async (format: string) => {
     const res = await axios.get('http://localhost:5000/api/admin/reports/export', {
@@ -194,6 +298,12 @@ export default function AdminDashboard() {
               <button onClick={() => window.location.reload()} className="btn-primary inline-flex items-center gap-2 text-sm"><RefreshCcw size={16} /> Refresh</button>
             </div>
           </div>
+
+          {opNotice && (
+            <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold ${opNotice.tone === 'green' ? 'border-green-200 bg-green-50 text-green-700' : 'border-red-200 bg-red-50 text-red-700'}`}>
+              {opNotice.text}
+            </div>
+          )}
         </div>
 
         {loading && (
@@ -262,9 +372,12 @@ export default function AdminDashboard() {
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <div className="text-sm font-bold text-slate-900 mb-2">Bulk Actions</div>
                   <div className="grid grid-cols-1 gap-3">
-                    <select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"><option>Grant Lab Access</option><option>Revoke Lab Access</option><option>Grant Category Access</option><option>Revoke Category Access</option></select>
-                    <select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"><option>Allowed</option><option>Restricted</option><option>Locked</option><option>Hidden</option></select>
-                    <button className="btn-primary inline-flex items-center justify-center gap-2 text-sm"><ShieldCheck size={16} /> Apply Change</button>
+                    <select value={selectedStudent} onChange={e => setSelectedStudent(e.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"><option value="">Select student</option>{students.map((student: any) => <option key={student.student_id} value={student.email}>{student.full_name} ({student.email})</option>)}</select>
+                    <select value={accessAction} onChange={e => setAccessAction(e.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"><option>Grant Lab Access</option><option>Revoke Lab Access</option><option>Grant Category Access</option><option>Revoke Category Access</option><option>Assign Variants</option><option>Restrict Variants</option></select>
+                    <select value={accessPermission} onChange={e => setAccessPermission(e.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"><option>Allowed</option><option>Restricted</option><option>Locked</option><option>Hidden</option></select>
+                    <input value={selectedLabsCsv} onChange={e => setSelectedLabsCsv(e.target.value)} placeholder="Lab IDs (comma separated, e.g. lab-7,lab-8)" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none" />
+                    <input value={selectedVariantsCsv} onChange={e => setSelectedVariantsCsv(e.target.value)} placeholder="Variant IDs (for variant actions, e.g. A,B,C)" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none" />
+                    <button onClick={submitAccessAction} className="btn-primary inline-flex items-center justify-center gap-2 text-sm"><ShieldCheck size={16} /> Apply Change</button>
                   </div>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -295,10 +408,10 @@ export default function AdminDashboard() {
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="text-sm font-bold text-slate-900 mb-4">Create Custom Role</div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-                <input placeholder="Role name" className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none" />
-                <input placeholder="Description" className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none" />
-                <select className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none"><option>Manage Students</option><option>View Reports</option><option>Manage Access Control</option></select>
-                <button className="btn-primary text-sm inline-flex items-center justify-center gap-2"><UserCheck size={16} /> Save Role</button>
+                <input value={roleName} onChange={e => setRoleName(e.target.value)} placeholder="Role name" className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none" />
+                <input value={roleDescription} onChange={e => setRoleDescription(e.target.value)} placeholder="Description" className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none" />
+                <select value={rolePermission} onChange={e => setRolePermission(e.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none"><option>Manage Users</option><option>Manage Labs</option><option>Manage Variants</option><option>Manage Sessions</option><option>View Reports</option></select>
+                <button onClick={saveRole} className="btn-primary text-sm inline-flex items-center justify-center gap-2"><UserCheck size={16} /> Save Role</button>
               </div>
             </div>
           </SectionCard>
@@ -310,7 +423,7 @@ export default function AdminDashboard() {
               <table className="w-full text-left text-sm">
                 <thead className="text-xs uppercase tracking-widest text-slate-400 font-bold"><tr><th className="py-3 pr-4">Instance ID</th><th className="py-3 pr-4">Student</th><th className="py-3 pr-4">Lab</th><th className="py-3 pr-4">Variant</th><th className="py-3 pr-4">Status</th><th className="py-3 pr-4">Started</th><th className="py-3 pr-4">Last Activity</th><th className="py-3 pr-4">Solved Time</th><th className="py-3 pr-4">Expiration</th><th className="py-3 pr-4 text-right">Actions</th></tr></thead>
                 <tbody className="divide-y divide-slate-100">
-                  {visibleSessions.map((session: any) => <tr key={session.instance_id} className="hover:bg-slate-50/80"><td className="py-4 pr-4 font-mono text-xs text-slate-500">{session.instance_id}</td><td className="py-4 pr-4 font-semibold text-slate-900">{session.student}</td><td className="py-4 pr-4 text-slate-700">{session.lab}</td><td className="py-4 pr-4 text-slate-700">{session.variant}</td><td className="py-4 pr-4"><Badge value={session.status} tone={session.status === 'SOLVED' ? 'green' : session.status === 'ABANDONED' ? 'red' : session.status === 'EXPIRED' ? 'slate' : 'orange'} /></td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.started_time}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.last_activity}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.solved_time || '-'}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.expiration_time}</td><td className="py-4 pr-4 text-right whitespace-nowrap"><div className="inline-flex items-center gap-2"><button className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">View Session</button><button className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">Force Expire</button><button className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">Terminate</button><button className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">Reset</button></div></td></tr>)}
+                  {visibleSessions.map((session: any) => <tr key={session.instance_id} className="hover:bg-slate-50/80"><td className="py-4 pr-4 font-mono text-xs text-slate-500">{session.instance_id}</td><td className="py-4 pr-4 font-semibold text-slate-900">{session.student}</td><td className="py-4 pr-4 text-slate-700">{session.lab}</td><td className="py-4 pr-4 text-slate-700">{session.variant}</td><td className="py-4 pr-4"><Badge value={session.status} tone={session.status === 'SOLVED' ? 'green' : session.status === 'ABANDONED' ? 'red' : session.status === 'EXPIRED' ? 'slate' : 'orange'} /></td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.started_time}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.last_activity}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.solved_time || '-'}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.expiration_time}</td><td className="py-4 pr-4 text-right whitespace-nowrap"><div className="inline-flex items-center gap-2"><button onClick={() => navigator.clipboard?.writeText(session.instance_id)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">View Session</button><button onClick={() => runSessionAction(session.instance_id, 'expire')} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">Force Expire</button><button onClick={() => runSessionAction(session.instance_id, 'terminate')} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">Terminate</button><button onClick={() => runSessionAction(session.instance_id, 'reset')} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">Reset</button></div></td></tr>)}
                 </tbody>
               </table>
             </div>
@@ -322,7 +435,34 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
               <MetricCard title="Student Reports" value={reports.student_reports.length || 0} hint="Solved labs, unsolved labs, progress" icon={Users} tone="orange" />
               <MetricCard title="Lab Reports" value={reports.lab_reports.length || 0} hint="Completion and solve-time analytics" icon={BarChart3} tone="green" />
-              <MetricCard title="System Reports" value={reports.system_reports?.platform_usage_statistics?.total_sessions || 0} hint="Active users and usage statistics" icon={Activity} tone="slate" />
+              <MetricCard title="Avg Solve Time" value={`${avgSolveTime} min`} hint="Average completion time across solved labs" icon={Clock3} tone="slate" />
+            </div>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div className="text-sm font-bold text-slate-900 mb-4">Most Solved Labs</div>
+                <div className="space-y-3">
+                  {mostSolvedLabs.slice(0, 6).map((item: any) => (
+                    <div key={item.lab_id} className="rounded-xl border border-slate-200 bg-white p-4 flex items-center justify-between gap-3">
+                      <div className="font-bold text-slate-900">{item.title}</div>
+                      <Badge value={`${item.solved_count} solves`} tone="green" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div className="text-sm font-bold text-slate-900 mb-4">Hardest Labs</div>
+                <div className="space-y-3">
+                  {hardestLabs.slice(0, 6).map((item: any) => (
+                    <div key={item.lab_id} className="rounded-xl border border-slate-200 bg-white p-4 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="font-bold text-slate-900">{item.title}</div>
+                        <div className="text-xs text-slate-500">Completion {item.completion_rate}%</div>
+                      </div>
+                      <Badge value={`${item.difficulty_score}%`} tone="red" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">

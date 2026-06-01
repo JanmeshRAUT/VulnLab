@@ -30,6 +30,7 @@ def current_user_identity(request: Request) -> str:
 @router.post("/launch")
 async def launch_instance(req: LaunchRequest, request: Request):
     """Generate a new unique instance ID and mark it CREATED."""
+    mongodb_client.mark_expired_instances()
     user_id = current_user_identity(request)
     
     instance = mongodb_client.create_instance(
@@ -53,6 +54,7 @@ async def launch_instance(req: LaunchRequest, request: Request):
 @router.post("/{instance_id}/heartbeat")
 async def heartbeat_instance(instance_id: str, request: Request):
     """Update last_seen for the instance. Transitions CREATED -> ACTIVE."""
+    mongodb_client.mark_expired_instances()
     # Ensure it belongs to current user
     user_id = current_user_identity(request)
     instance = mongodb_client.get_instance(instance_id)
@@ -79,6 +81,7 @@ async def heartbeat_instance(instance_id: str, request: Request):
 @router.post("/{instance_id}/event")
 async def handle_instance_event(instance_id: str, req: EventRequest, request: Request):
     """Handle explicit events like tab close (abandon) or solve."""
+    mongodb_client.mark_expired_instances()
     user_id = current_user_identity(request)
     instance = mongodb_client.get_instance(instance_id)
     
@@ -151,6 +154,14 @@ async def submit_flag_for_instance(instance_id: str, req: InstanceFlagSubmitRequ
 
     stored_flag = (record.get("flag_value") or "").strip()
     if flag != stored_flag:
+        mongodb_client.submit_lab_progress(
+            email,
+            instance["lab_id"],
+            objective_id,
+            flag,
+            False,
+            instance_id=instance_id,
+        )
         return JSONResponse(status_code=400, content={"success": False, "error": "Invalid flag for this objective."})
 
     mongodb_client.submit_lab_progress(
