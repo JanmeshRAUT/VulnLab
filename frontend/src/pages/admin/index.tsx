@@ -92,7 +92,7 @@ export default function AdminDashboard() {
   const fetchDashboard = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:5000/api/admin/dashboard', {
+      const res = await axios.get('http://localhost:8000/api/admin/dashboard', {
         params: { q: query, status: filterStatus, role: filterRole, category: filterCategory, range },
         withCredentials: true,
       });
@@ -151,8 +151,8 @@ export default function AdminDashboard() {
           return;
         }
         const endpoint = accessAction === 'Assign Variants'
-          ? 'http://localhost:5000/api/admin/access/variants/assign'
-          : 'http://localhost:5000/api/admin/access/variants/restrict';
+          ? 'http://localhost:8000/api/admin/access/variants/assign'
+          : 'http://localhost:8000/api/admin/access/variants/restrict';
         await axios.post(endpoint, {
           student_id: student,
           lab_id: labIds[0],
@@ -161,8 +161,8 @@ export default function AdminDashboard() {
         }, { withCredentials: true });
       } else {
         const endpoint = accessAction === 'Grant Lab Access' || accessAction === 'Grant Category Access'
-          ? 'http://localhost:5000/api/admin/access/grant'
-          : 'http://localhost:5000/api/admin/access/revoke';
+          ? 'http://localhost:8000/api/admin/access/grant'
+          : 'http://localhost:8000/api/admin/access/revoke';
         await axios.post(endpoint, {
           student_id: student,
           lab_ids: labIds,
@@ -183,7 +183,7 @@ export default function AdminDashboard() {
       return;
     }
     try {
-      await axios.post('http://localhost:5000/api/admin/roles', {
+      await axios.post('http://localhost:8000/api/admin/roles', {
         name: roleName,
         description: roleDescription,
         permissions: [rolePermission],
@@ -205,7 +205,7 @@ export default function AdminDashboard() {
       reset: 'reset',
     };
     try {
-      await axios.post(`http://localhost:5000/api/admin/sessions/${encodeURIComponent(instanceId)}/${endpointMap[action]}`, {
+      await axios.post(`http://localhost:8000/api/admin/sessions/${encodeURIComponent(instanceId)}/${endpointMap[action]}`, {
         reason: 'Admin console action',
       }, { withCredentials: true });
       setOpNotice({ text: `Session ${action} executed.`, tone: 'green' });
@@ -216,7 +216,7 @@ export default function AdminDashboard() {
   };
 
   const downloadReport = async (format: string) => {
-    const res = await axios.get('http://localhost:5000/api/admin/reports/export', {
+    const res = await axios.get('http://localhost:8000/api/admin/reports/export', {
       params: { format, scope: activeSection },
       withCredentials: true,
       responseType: 'blob',

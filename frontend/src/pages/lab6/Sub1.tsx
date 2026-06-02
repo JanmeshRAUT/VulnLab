@@ -30,7 +30,7 @@ export default function Lab6Sub1() {
       formData.append('productId', productId);
       formData.append(config.param, storeId);
       
-      const res = await axios.post(`http://localhost:5000${config.endpoint}`, formData, {
+      const res = await axios.post(`http://localhost:8000${config.endpoint}`, formData, {
         withCredentials: true,
         headers: {
           'Content-Type': 'multipart/form-data'

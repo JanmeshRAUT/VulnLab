@@ -25,7 +25,7 @@ export default function Lab1Sub2() {
 
   useEffect(() => {
     if (instanceId) {
-      axios.get('http://localhost:5000/api/lab1/2/products', { 
+      axios.get('http://localhost:8000/api/lab1/2/products', { 
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': instanceId }
       })
@@ -138,7 +138,7 @@ export default function Lab1Sub2() {
                   {/* VULNERABLE IMAGE LOADING */}
                   <div className="w-full h-80 bg-[#F5F2EC] flex items-center justify-center p-10 overflow-hidden relative group-hover:bg-[#EFEBE1] transition-colors">
                     <img 
-                      src={`http://localhost:5000/api/lab1/2/image?filename=${product.image}`}
+                      src={`http://localhost:8000/api/lab1/2/image?filename=${product.image}`}
                       alt={product.name}
                       className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform duration-700 ease-out drop-shadow-xl"
                       loading="lazy"

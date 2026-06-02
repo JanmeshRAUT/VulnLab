@@ -30,7 +30,7 @@ export default function AdminPanel({ variant, data }: AdminPanelProps) {
     try {
       const labModule = variant.includes('_') ? variant.split('_')[0] : '1';
       const actualVariant = variant.includes('_') ? variant.split('_')[1] : variant;
-      const res = await axios.delete(`http://localhost:5000/api/lab2/${labModule}/${actualVariant}/admin/users/${userId}`, { withCredentials: true });
+      const res = await axios.delete(`http://localhost:8000/api/lab2/${labModule}/${actualVariant}/admin/users/${userId}`, { withCredentials: true });
       if (res.data.success) {
         setUsers(users.filter(u => u.id !== userId));
         setFlagModal({ show: true, flag: res.data.flag });

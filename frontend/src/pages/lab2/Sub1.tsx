@@ -146,7 +146,7 @@ export default function Lab2Sub1() {
     
     try {
       // Send the request to the FastAPI backend based on the splat URL
-      const res = await axios.get(`http://localhost:5000/api/lab2/1/${variant}/navigate?path=/${encodeURIComponent(path)}`, {
+      const res = await axios.get(`http://localhost:8000/api/lab2/1/${variant}/navigate?path=/${encodeURIComponent(path)}`, {
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': currentInstanceId }
       });

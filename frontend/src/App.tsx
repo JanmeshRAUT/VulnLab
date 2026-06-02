@@ -4,6 +4,7 @@ import axios from 'axios';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Profile from './pages/Profile';
 import Help from './pages/Help';
 import Labs from './pages/Labs';
 import Lab1Index from './pages/lab1/index';
@@ -60,7 +61,7 @@ function ChatbotWidget() {
     setMessages(prev => [...prev, { role: 'bot', text: 'Thinking...' }]);
     
     try {
-      const res = await axios.post('http://localhost:5000/api/chatbot', { message: q, path: window.location.pathname });
+      const res = await axios.post('http://localhost:8000/api/chatbot', { message: q, path: window.location.pathname });
       setMessages(prev => {
         const newMsg = [...prev];
         newMsg.pop();
@@ -158,7 +159,7 @@ function FlagWidget() {
     
     try {
       const activeInstanceId = sessionStorage.getItem('active_instance_id');
-      const res = await axios.post('http://localhost:5000/api/instances/submit_flag', {
+      const res = await axios.post('http://localhost:8000/api/instances/submit_flag', {
         flag: flagInput.trim(),
         instance_id: activeInstanceId || undefined
       }, { withCredentials: true });
@@ -236,7 +237,7 @@ function Navigation() {
   const [auth, setAuth] = useState<any>(null);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/auth/status', { withCredentials: true })
+    axios.get('http://localhost:8000/api/auth/status', { withCredentials: true })
       .then(res => {
         if (res.data.is_authenticated) {
           setAuth(res.data);
@@ -262,10 +263,18 @@ function Navigation() {
                 <Link to="/admin" className="text-slate-900 hover:text-brand-orange font-semibold">Admin</Link>
               )}
               <Link to="/profile" className="text-slate-900 hover:text-brand-orange font-semibold">Profile</Link>
-              <span className="bg-brand-orange-50 px-3 py-1 rounded-full text-xs font-bold text-brand-orange border border-orange-200">
-                {auth.email}
-              </span>
-              <a href="#" className="text-slate-500 hover:text-slate-900 font-bold text-sm">Log Out</a>
+              <div className="w-8 h-8 rounded-full bg-brand-orange text-white flex items-center justify-center font-bold text-sm uppercase shadow-sm" title={auth.email}>
+                {auth.full_name ? auth.full_name.charAt(0) : auth.email.charAt(0)}
+              </div>
+              <button 
+                onClick={async () => {
+                  await axios.post('http://localhost:8000/api/auth/logout', {}, { withCredentials: true });
+                  window.location.href = '/login';
+                }}
+                className="text-slate-500 hover:text-slate-900 font-bold text-sm bg-transparent border-none cursor-pointer"
+              >
+                Log Out
+              </button>
             </div>
           ) : (
             <div className="flex items-center gap-3">
@@ -343,6 +352,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/help" element={<Help />} />
             <Route path="/labs" element={<Labs />} />
             <Route path="/admin" element={<AdminDashboard />} />

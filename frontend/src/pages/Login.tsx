@@ -1,4 +1,4 @@
-import { LogIn, ShieldCheck, Terminal, Key } from 'lucide-react';
+import { LogIn, ShieldCheck, Terminal, Key, Eye, EyeOff } from 'lucide-react';
 
 import { useState } from 'react';
 import axios from 'axios';
@@ -7,21 +7,26 @@ import { useNavigate } from 'react-router-dom';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleMockLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     try {
-      await axios.post('http://localhost:5000/api/auth/mock-login', {
+      await axios.post('http://localhost:8000/api/auth/login/local', {
         email,
         password
       }, { withCredentials: true });
-      // Redirect to home/labs after successful mock login
+      // Redirect to home/labs after successful login
       window.location.href = '/labs';
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setError(err.response?.data?.detail || 'Invalid email or password.');
       setLoading(false);
     }
   };
@@ -73,7 +78,12 @@ export default function Login() {
             </p>
           </div>
           
-          <form onSubmit={handleMockLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
+            {error && (
+              <div className="p-3 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-semibold">
+                {error}
+              </div>
+            )}
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">Email / Username</label>
               <input 
@@ -87,21 +97,60 @@ export default function Login() {
             </div>
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">Password</label>
-              <input 
-                type="password" 
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-orange outline-none"
-                required
-              />
+              <div className="relative">
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full p-3 pr-10 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-orange outline-none"
+                  required
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between text-sm font-medium">
+              <label className="flex items-center gap-2 cursor-pointer text-slate-600 hover:text-slate-900">
+                <input 
+                  type="checkbox" 
+                  checked={rememberMe}
+                  onChange={e => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 text-brand-orange rounded border-slate-300 focus:ring-brand-orange outline-none"
+                />
+                Remember me
+              </label>
+              <a href="#" className="text-brand-orange hover:text-brand-orange-700">Forgot password?</a>
             </div>
             <button 
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center items-center gap-3 py-4 px-4 mt-4 border border-transparent rounded-xl shadow-md text-lg font-bold text-white bg-brand-orange hover:bg-brand-orange-700 hover:shadow-lg transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-orange transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex justify-center items-center gap-3 py-4 px-4 mt-4 border border-transparent rounded-xl shadow-md text-lg font-bold text-white bg-slate-800 hover:bg-slate-900 hover:shadow-lg transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <LogIn size={22} /> {loading ? 'Signing in...' : 'Sign In (Mock)'}
+              <Terminal size={22} /> {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+            
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-white text-slate-500 font-medium">Or continue with</span>
+              </div>
+            </div>
+
+            <button 
+              type="button"
+              onClick={() => window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/login`}
+              className="w-full flex justify-center items-center gap-3 py-4 px-4 border border-transparent rounded-xl shadow-md text-lg font-bold text-white bg-brand-orange hover:bg-brand-orange-700 hover:shadow-lg transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-orange transition-all"
+            >
+              <LogIn size={22} /> Sign in with Google
             </button>
           </form>
           

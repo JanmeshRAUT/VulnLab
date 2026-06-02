@@ -17,7 +17,7 @@ export function useLabInstance({ labId, variantId }: UseLabInstanceOptions) {
     const initInstance = async () => {
       try {
         // Always request a new instance from the backend on mount
-        const res = await axios.post('http://localhost:5000/api/instances/launch', {
+        const res = await axios.post('http://localhost:8000/api/instances/launch', {
           lab_id: labId,
           variant_id: variantId,
         }, { withCredentials: true });
@@ -53,7 +53,7 @@ export function useLabInstance({ labId, variantId }: UseLabInstanceOptions) {
       if (abandoned) return;
       abandoned = true;
 
-      const eventUrl = `http://localhost:5000/api/instances/${instanceId}/event`;
+      const eventUrl = `http://localhost:8000/api/instances/${instanceId}/event`;
       const payload = JSON.stringify({ type: 'abandon' });
 
       if (navigator.sendBeacon) {
@@ -80,7 +80,7 @@ export function useLabInstance({ labId, variantId }: UseLabInstanceOptions) {
     const sendHeartbeat = () => {
       if (heartbeatInFlight) return;
       heartbeatInFlight = true;
-      axios.post(`http://localhost:5000/api/instances/${instanceId}/heartbeat`, {}, { withCredentials: true })
+      axios.post(`http://localhost:8000/api/instances/${instanceId}/heartbeat`, {}, { withCredentials: true })
         .catch(err => console.warn('Heartbeat failed:', err))
         .finally(() => {
           heartbeatInFlight = false;

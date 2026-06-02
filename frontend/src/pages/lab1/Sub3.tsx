@@ -24,7 +24,7 @@ export default function Lab1Sub3() {
 
   useEffect(() => {
     if (instanceId) {
-      axios.get('http://localhost:5000/api/lab1/3/media', { 
+      axios.get('http://localhost:8000/api/lab1/3/media', { 
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': instanceId }
       })
@@ -144,7 +144,7 @@ export default function Lab1Sub3() {
                   <div className={`w-full ${heightClass} relative overflow-hidden bg-black flex items-center justify-center`}>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"></div>
                     <img 
-                      src={`http://localhost:5000/api/lab1/3/image?filename=${item.file}`}
+                      src={`http://localhost:8000/api/lab1/3/image?filename=${item.file}`}
                       alt={item.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                       loading="lazy"
@@ -165,7 +165,7 @@ export default function Lab1Sub3() {
                       
                       <div>
                         <a 
-                          href={`http://localhost:5000/api/lab1/3/image?filename=${item.file}`}
+                          href={`http://localhost:8000/api/lab1/3/image?filename=${item.file}`}
                           target="_blank"
                           rel="noreferrer"
                           className="w-full bg-white text-black font-bold text-sm py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors shadow-lg"

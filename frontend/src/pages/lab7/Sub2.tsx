@@ -26,7 +26,7 @@ export default function Lab7Sub2() {
     setError('');
     
     try {
-      const res = await axios.post(`http://localhost:5000${config.endpoint}`, { username, password }, {
+      const res = await axios.post(`http://localhost:8000${config.endpoint}`, { username, password }, {
         withCredentials: true
       });
       setResult(res.data);

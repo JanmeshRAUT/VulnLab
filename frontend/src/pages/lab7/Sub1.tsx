@@ -29,7 +29,7 @@ export default function Lab7Sub1() {
 
   const fetchProducts = async (cat: string, currentInstanceId: string) => {
     try {
-      const res = await axios.get(`http://localhost:5000${endpoint}?category=${encodeURIComponent(cat)}`, {
+      const res = await axios.get(`http://localhost:8000${endpoint}?category=${encodeURIComponent(cat)}`, {
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': currentInstanceId }
       });

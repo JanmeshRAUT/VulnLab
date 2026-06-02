@@ -144,14 +144,14 @@ export default function Lab2Sub2() {
   // We must wait for instanceId to be generated before redirecting.
   useEffect(() => {
     if (variantId && splatPath !== 'admin' && instanceId && !instanceLoading) {
-      window.location.href = `http://localhost:5000/api/lab2/2/${variantId}/navigate#session=${instanceId}`;
+      window.location.href = `http://localhost:8000/api/lab2/2/${variantId}/navigate#session=${instanceId}`;
     }
   }, [variantId, splatPath, instanceId, instanceLoading]);
 
   const fetchPath = async (path: string, currentInstanceId: string) => {
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:5000/api/lab2/2/${variant}/navigate?path=/${encodeURIComponent(path)}`, {
+      const res = await axios.get(`http://localhost:8000/api/lab2/2/${variant}/navigate?path=/${encodeURIComponent(path)}`, {
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': currentInstanceId }
       });

@@ -26,7 +26,7 @@ export default function Lab2Sub3() {
   const fetchPath = async (path: string, currentInstanceId: string) => {
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:5000/api/lab2/3/${variant}/navigate?path=/${encodeURIComponent(path)}`, { 
+      const res = await axios.get(`http://localhost:8000/api/lab2/3/${variant}/navigate?path=/${encodeURIComponent(path)}`, { 
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': currentInstanceId }
       });

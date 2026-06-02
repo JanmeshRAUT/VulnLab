@@ -25,7 +25,7 @@ export default function Lab8Sub1() {
     setResult(null);
     
     try {
-      const res = await axios.post(`http://localhost:5000/api/lab8/1/detect`, { payload: inputVal, variant }, {
+      const res = await axios.post(`http://localhost:8000/api/lab8/1/detect`, { payload: inputVal, variant }, {
         withCredentials: true
       });
       setResult(res.data);
