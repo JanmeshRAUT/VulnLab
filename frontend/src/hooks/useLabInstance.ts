@@ -1,30 +1,81 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { LAB_ROUTES } from '../config/labRoutes';
 
-interface UseLabInstanceOptions {
+export function clearInstance(slug: string) {
+  localStorage.removeItem(`instance:${slug}`);
+  sessionStorage.removeItem('active_instance_id');
+}
+
+interface UseLabInstanceLegacyOptions {
   labId: string;
   variantId: string;
 }
 
-export function useLabInstance({ labId, variantId }: UseLabInstanceOptions) {
+export function useLabInstance(options: string | UseLabInstanceLegacyOptions) {
   const [instanceId, setInstanceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const heartbeatIntervalRef = useRef<number | null>(null);
+
+  let slug: string | undefined;
+  if (typeof options === 'string') {
+    slug = options;
+  } else if (options && options.labId && options.variantId) {
+    slug = Object.keys(LAB_ROUTES).find(key => 
+      LAB_ROUTES[key].labId === options.labId && LAB_ROUTES[key].variantId === options.variantId
+    );
+  }
+
+  const storageKey = slug ? `instance:${slug}` : null;
 
   useEffect(() => {
     let active = true;
 
     const initInstance = async () => {
       try {
+        if (storageKey) {
+          const existingId = localStorage.getItem(storageKey);
+          if (existingId) {
+            try {
+              const res = await axios.post(`http://localhost:8000/api/instances/${existingId}/heartbeat`, {}, { withCredentials: true });
+              if (res.data.instance_status !== 'SOLVED' && res.data.instance_status !== 'ABANDONED') {
+                if (active) {
+                  setInstanceId(existingId);
+                  sessionStorage.setItem('active_instance_id', existingId);
+                  document.cookie = `instance_id=${existingId}; path=/; max-age=86400`;
+                  setLoading(false);
+                }
+                return; // Successfully reused instance
+              } else {
+                if (slug) clearInstance(slug);
+              }
+            } catch (err: any) {
+              if (err.response?.status === 404 || err.response?.status === 400) {
+                if (slug) clearInstance(slug);
+              }
+            }
+          }
+        }
+
+        const labConfig = slug ? LAB_ROUTES[slug] : undefined;
+        if (!labConfig) {
+          throw new Error(`No configuration found for lab slug: ${slug}`);
+        }
+
         // Always request a new instance from the backend on mount
         const res = await axios.post('http://localhost:8000/api/instances/launch', {
-          lab_id: labId,
-          variant_id: variantId,
+          lab_id: labConfig.labId,
+          variant_id: labConfig.variantId,
         }, { withCredentials: true });
 
         if (active && res.data.instance_id) {
-          setInstanceId(res.data.instance_id);
-          sessionStorage.setItem('active_instance_id', res.data.instance_id);
+          const newInstanceId = res.data.instance_id;
+          setInstanceId(newInstanceId);
+          sessionStorage.setItem('active_instance_id', newInstanceId);
+          if (storageKey) {
+            localStorage.setItem(storageKey, newInstanceId);
+          }
+          document.cookie = `instance_id=${newInstanceId}; path=/; max-age=86400`;
           setLoading(false);
         }
       } catch (err) {
@@ -33,14 +84,14 @@ export function useLabInstance({ labId, variantId }: UseLabInstanceOptions) {
       }
     };
 
-    if (variantId) {
+    if (slug) {
       initInstance();
     }
 
     return () => {
       active = false;
     };
-  }, [labId, variantId]);
+  }, [slug, storageKey]);
 
   // Setup Heartbeat and BeforeUnload
   useEffect(() => {
@@ -52,6 +103,8 @@ export function useLabInstance({ labId, variantId }: UseLabInstanceOptions) {
     const sendAbandon = () => {
       if (abandoned) return;
       abandoned = true;
+
+      if (slug) clearInstance(slug);
 
       const eventUrl = `http://localhost:8000/api/instances/${instanceId}/event`;
       const payload = JSON.stringify({ type: 'abandon' });
@@ -81,7 +134,17 @@ export function useLabInstance({ labId, variantId }: UseLabInstanceOptions) {
       if (heartbeatInFlight) return;
       heartbeatInFlight = true;
       axios.post(`http://localhost:8000/api/instances/${instanceId}/heartbeat`, {}, { withCredentials: true })
-        .catch(err => console.warn('Heartbeat failed:', err))
+        .then(res => {
+          if (res.data.instance_status === 'SOLVED' || res.data.instance_status === 'ABANDONED') {
+            if (slug) clearInstance(slug);
+          }
+        })
+        .catch(err => {
+          console.warn('Heartbeat failed:', err);
+          if (err.response?.status === 404 && slug) {
+            clearInstance(slug);
+          }
+        })
         .finally(() => {
           heartbeatInFlight = false;
         });
@@ -128,7 +191,7 @@ export function useLabInstance({ labId, variantId }: UseLabInstanceOptions) {
       // Covers SPA navigation away from lab view.
       sendAbandon();
     };
-  }, [instanceId]);
+  }, [instanceId, slug]);
 
   return { instanceId, loading };
 }

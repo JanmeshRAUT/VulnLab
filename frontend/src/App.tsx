@@ -339,7 +339,8 @@ function App() {
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isLab1SubPath = location.pathname.match(/^\/labs\/1\/sub\d+$/i) !== null;
   const isOtherLabEnvPath = location.pathname.match(/^\/labs\/[2-8]\/sub\d+\/[a-c](?:\/.*)?$/i) !== null;
-  const isLabEnvironment = (isLab1SubPath || isOtherLabEnvPath) && (step === 'lab' || !step);
+  const isSemanticLabPath = location.pathname.match(/^\/labs\/[a-z-]+(\/[a-z0-9-]+)+$/i) !== null;
+  const isLabEnvironment = (isLab1SubPath || isOtherLabEnvPath || isSemanticLabPath) && (step === 'lab' || !step);
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
@@ -368,25 +369,38 @@ function App() {
             
             <Route element={<LabNavigator />}>
               {/* Lab 1 Modules */}
-              <Route path="/labs/1/sub1" element={<Lab1Sub1 />} />
-              <Route path="/labs/1/sub2" element={<Lab1Sub2 />} />
-              <Route path="/labs/1/sub3" element={<Lab1Sub3 />} />
+              <Route path="/labs/path-traversal/docuvault/*" element={<Lab1Sub1 />} />
+              <Route path="/labs/path-traversal/shopexpress/*" element={<Lab1Sub2 />} />
+              <Route path="/labs/path-traversal/pixelmarket/*" element={<Lab1Sub3 />} />
               
               {/* Lab 2 Modules (with variants) */}
-              <Route path="/labs/2/sub1" element={<Lab2Sub1 />} />
-              <Route path="/labs/2/sub1/:variantId" element={<Lab2Sub1 />} />
-              <Route path="/labs/2/sub1/:variantId/*" element={<Lab2Sub1 />} />
-              <Route path="/labs/2/sub2" element={<Lab2Sub2 />} />
-              <Route path="/labs/2/sub2/:variantId" element={<Lab2Sub2 />} />
-              <Route path="/labs/2/sub2/:variantId/*" element={<Lab2Sub2 />} />
-              <Route path="/labs/2/sub3" element={<Lab2Sub3 />} />
-              <Route path="/labs/2/sub3/:variantId" element={<Lab2Sub3 />} />
-              <Route path="/labs/2/sub3/:variantId/*" element={<Lab2Sub3 />} />
-              <Route path="/labs/2/sub4/:variantId" element={<Lab2Sub4 />} />
-              <Route path="/labs/2/sub5/:variantId" element={<Lab2Sub5 />} />
+              <Route path="/labs/broken-auth" element={<Lab2Sub1 />} />
+              <Route path="/labs/broken-auth/gadgetshop/*" element={<Lab2Sub1 variantIdProp="1a" />} />
+              <Route path="/labs/broken-auth/bookstore/*" element={<Lab2Sub1 variantIdProp="1b" />} />
+              <Route path="/labs/broken-auth/techzone/*" element={<Lab2Sub1 variantIdProp="1c" />} />
+              
+              <Route path="/labs/broken-auth-hidden" element={<Lab2Sub2 />} />
+              <Route path="/labs/broken-auth-hidden/BlogHub/*" element={<Lab2Sub2 variantIdProp="2a" />} />
+              <Route path="/labs/broken-auth-hidden/ForumNext/*" element={<Lab2Sub2 variantIdProp="2b" />} />
+              <Route path="/labs/broken-auth-hidden/DevPortal/*" element={<Lab2Sub2 variantIdProp="2c" />} />
+              <Route path="/labs/broken-auth-cookies" element={<Lab2Sub3 />} />
+              <Route path="/labs/broken-auth/shopease/*" element={<Lab2Sub3 variantIdProp="3a" />} />
+              <Route path="/labs/broken-auth/marketpro/*" element={<Lab2Sub3 variantIdProp="3b" />} />
+              <Route path="/labs/broken-auth/cartbuddy/*" element={<Lab2Sub3 variantIdProp="3c" />} />
+              <Route path="/labs/broken-auth-idor" element={<Lab2Sub4 />} />
+              <Route path="/labs/broken-auth/idor-blog/*" element={<Lab2Sub4 variantIdProp="4a" />} />
+              <Route path="/labs/broken-auth/idor-shop/*" element={<Lab2Sub4 variantIdProp="4b" />} />
+              <Route path="/labs/broken-auth/idor-support/*" element={<Lab2Sub4 variantIdProp="4c" />} />
+              <Route path="/labs/broken-auth-level5" element={<Lab2Sub5 />} />
+              <Route path="/labs/broken-auth/saasdesk/*" element={<Lab2Sub5 variantIdProp="5a" />} />
+              <Route path="/labs/broken-auth/cloudpanel/*" element={<Lab2Sub5 variantIdProp="5b" />} />
+              <Route path="/labs/broken-auth/workflowx/*" element={<Lab2Sub5 variantIdProp="5c" />} />
 
               {/* Lab 3 Modules */}
               <Route path="/labs/3/sub1" element={<Lab3Sub1 />} />
+              <Route path="/labs/brute-force/secureshop/*" element={<Lab3Sub1 variantIdProp="a" />} />
+              <Route path="/labs/brute-force/vaultmart/*" element={<Lab3Sub1 variantIdProp="b" />} />
+              <Route path="/labs/brute-force/alphacart/*" element={<Lab3Sub1 variantIdProp="c" />} />
               <Route path="/labs/3/sub2" element={<Lab3Sub2 />} />
 
               {/* Lab 4 Modules */}
@@ -398,12 +412,17 @@ function App() {
               <Route path="/labs/5/sub2/:variantId" element={<Lab5Sub2 />} />
               
               {/* Lab 6 Modules */}
-              <Route path="/labs/6/sub1/:variantId" element={<Lab6Sub1 />} />
+              <Route path="/labs/command-injection/megamart/*" element={<Lab6Sub1 variantIdProp="a" />} />
+              <Route path="/labs/command-injection/autoparts-pro/*" element={<Lab6Sub1 variantIdProp="b" />} />
+              <Route path="/labs/command-injection/tech-tools/*" element={<Lab6Sub1 variantIdProp="c" />} />
               
               {/* Lab 7 Modules */}
-              <Route path="/labs/7/sub1/:variantId" element={<Lab7Sub1 />} />
-              <Route path="/labs/7/sub2/:variantId" element={<Lab7Sub2 />} />
-              <Route path="/labs/7/sub2" element={<Lab7Sub2 />} />
+              <Route path="/labs/sql-injection/gift-shop/*" element={<Lab7Sub1 variantIdProp="a" />} />
+              <Route path="/labs/sql-injection/book-store/*" element={<Lab7Sub1 variantIdProp="b" />} />
+              <Route path="/labs/sql-injection/tech-shop/*" element={<Lab7Sub1 variantIdProp="c" />} />
+              <Route path="/labs/sql-injection/blind-a/*" element={<Lab7Sub2 variantIdProp="a" />} />
+              <Route path="/labs/sql-injection/blind-b/*" element={<Lab7Sub2 variantIdProp="b" />} />
+              <Route path="/labs/sql-injection/blind-c/*" element={<Lab7Sub2 variantIdProp="c" />} />
               
               {/* Lab 8 Modules */}
               <Route path="/labs/8/sub1/:variantId" element={<Lab8Sub1 />} />

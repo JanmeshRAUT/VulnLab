@@ -121,7 +121,7 @@ export default function Lab1Index() {
                 Target a corporate document management system. Evaluate the platform's security mechanisms surrounding file retrieval and determine if the implemented boundaries are robust.
               </p>
               
-              <Link to="/labs/1/sub1" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-blue-600 text-white font-bold rounded-xl transition-colors">
+              <Link to="/labs/path-traversal/docuvault" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-blue-600 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </Link>
             </div>
@@ -144,7 +144,7 @@ export default function Lab1Index() {
                 Target an eco-friendly coffee shop. Analyze how product images are handled and fetched by the web server, and assess the underlying architecture for security flaws.
               </p>
               
-              <Link to="/labs/1/sub2" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-[#8d6e63] text-white font-bold rounded-xl transition-colors">
+              <Link to="/labs/path-traversal/shopexpress" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-[#8d6e63] text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </Link>
             </div>
@@ -167,7 +167,7 @@ export default function Lab1Index() {
                 Target a premium stock photography marketplace. Investigate the API endpoints handling media requests and test for directory traversal flaws.
               </p>
               
-              <Link to="/labs/1/sub3" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-purple-600 text-white font-bold rounded-xl transition-colors">
+              <Link to="/labs/path-traversal/pixelmarket" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-purple-600 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </Link>
             </div>

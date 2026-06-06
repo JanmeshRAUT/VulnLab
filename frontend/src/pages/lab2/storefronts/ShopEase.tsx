@@ -72,7 +72,7 @@ export default function ShopEase() {
 
           <div className="flex items-center gap-6">
             {role === 'admin' && (
-              <Link to="/labs/2/sub3/a/admin" className="hidden md:flex flex-col items-center gap-1 text-red-500 hover:text-red-600 transition-colors group">
+              <Link to="/labs/broken-auth/shopease/admin" className="hidden md:flex flex-col items-center gap-1 text-red-500 hover:text-red-600 transition-colors group">
                 <div className="relative">
                   <ShieldCheck size={22} className="group-hover:scale-110 transition-transform" />
                 </div>

@@ -5,14 +5,14 @@ import {
   ArrowLeft, ArrowRight, ShieldAlert, Globe, BookOpen, AlertTriangle
 } from 'lucide-react';
 import GadgetShop from './storefronts/GadgetShop';
-import FashionHub from './storefronts/FashionHub';
-import FoodMart from './storefronts/FoodMart';
+import BookStore from './storefronts/BookStore';
+import TechZone from './storefronts/TechZone';
 import AdminPanel from './storefronts/AdminPanel';
 import { useLabInstance } from '../../hooks/useLabInstance';
 
-export default function Lab2Sub1() {
+export default function Lab2Sub1({ variantIdProp }: { variantIdProp?: string }) {
   const params = useParams();
-  const variantId = params.variantId;
+  const variantId = variantIdProp || params.variantId;
   const splatPath = params['*'] || '';
 
   // If no variant is selected, show the Variant Selection UI
@@ -32,7 +32,7 @@ export default function Lab2Sub1() {
               <p className="text-slate-600 font-medium mt-2 max-w-2xl">Choose a branded target below. The flow stays consistent while the story, colors, and entry point change.</p>
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-4 shrink-0">
-              <Link to="/labs/2?step=selection" className="inline-flex items-center justify-center gap-1 bg-white border border-slate-200 text-slate-600 hover:text-brand-orange hover:border-brand-orange/30 px-4 py-2.5 rounded-xl font-bold text-sm transition-colors shrink-0 shadow-sm">
+              <Link to="/labs" className="inline-flex items-center justify-center gap-1 bg-white border border-slate-200 text-slate-600 hover:text-brand-orange hover:border-brand-orange/30 px-4 py-2.5 rounded-xl font-bold text-sm transition-colors shrink-0 shadow-sm">
                 <ArrowLeft size={16} /> Back
               </Link>
             </div>
@@ -94,9 +94,9 @@ export default function Lab2Sub1() {
                 <div className="p-4 bg-blue-100 text-blue-600 rounded-xl border border-blue-100"><Globe size={32} /></div>
                 <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Beginner</span>
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">TechStore</h3>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">GadgetShop</h3>
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">An electronics retail store. Analyze how the platform discloses sensitive paths to web crawlers via robots.txt.</p>
-              <Link to="/labs/2/sub1/a" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+              <Link to="/labs/broken-auth/gadgetshop" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </Link>
             </div>
@@ -107,9 +107,9 @@ export default function Lab2Sub1() {
                 <div className="p-4 bg-[#ffebf0] text-[#ff3366] rounded-xl border border-[#ffd1dc]"><Globe size={32} /></div>
                 <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Beginner</span>
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">FashionHub</h3>
-              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A modern clothing apparel store. Investigate the robots.txt for hidden administrative pages left by developers.</p>
-              <Link to="/labs/2/sub1/b" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">BookStore</h3>
+              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A modern bookstore platform. Investigate the robots.txt for hidden administrative pages left by developers.</p>
+              <Link to="/labs/broken-auth/bookstore" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </Link>
             </div>
@@ -120,9 +120,9 @@ export default function Lab2Sub1() {
                 <div className="p-4 bg-green-100 text-green-600 rounded-xl border border-green-200"><Globe size={32} /></div>
                 <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Beginner</span>
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">FoodMart</h3>
-              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A grocery delivery service. Assess what restricted directories are exposed via the public crawler configuration file.</p>
-              <Link to="/labs/2/sub1/c" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">TechZone</h3>
+              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">An IT equipment supplier. Assess what restricted directories are exposed via the public crawler configuration file.</p>
+              <Link to="/labs/broken-auth/techzone" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </Link>
             </div>
@@ -184,8 +184,8 @@ export default function Lab2Sub1() {
     // Plain text (like robots.txt)
     if (typeof response.data === 'string' || response.headers['content-type']?.includes('text/plain')) {
       return (
-        <div className="min-h-screen bg-white p-8">
-          <pre className="text-slate-800 font-mono text-sm whitespace-pre-wrap">{response.data}</pre>
+        <div className="fixed inset-0 z-[9999] bg-white p-4 overflow-auto m-0">
+          <pre className="text-black font-mono text-[13px] leading-relaxed whitespace-pre-wrap m-0">{response.data}</pre>
         </div>
       );
     }
@@ -196,9 +196,9 @@ export default function Lab2Sub1() {
     if (data.type === 'storefront') {
       return (
         <div className="w-full h-full relative">
-          {variant === 'a' && <GadgetShop />}
-          {variant === 'b' && <FashionHub />}
-          {variant === 'c' && <FoodMart />}
+          {variant === '1a' && <GadgetShop />}
+          {variant === '1b' && <BookStore />}
+          {variant === '1c' && <TechZone />}
         </div>
       );
     }

@@ -105,7 +105,7 @@ export default function Lab2Index() {
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
                 Discover unauthenticated admin panels leaked via robots.txt and sitemap configurations.
               </p>
-              <Link to="/labs/2/sub1" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-red-600 text-white font-bold rounded-xl transition-colors">
+              <Link to="/labs/broken-auth" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-red-600 text-white font-bold rounded-xl transition-colors">
                 Select Variant <ArrowRight size={18} />
               </Link>
             </div>
@@ -121,7 +121,7 @@ export default function Lab2Index() {
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
                 Find administrative endpoints exposed within frontend source code comments and logic.
               </p>
-              <Link to="/labs/2/sub2" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-blue-600 text-white font-bold rounded-xl transition-colors">
+              <Link to="/labs/broken-auth-hidden" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-blue-600 text-white font-bold rounded-xl transition-colors">
                 Select Variant <ArrowRight size={18} />
               </Link>
             </div>
@@ -137,7 +137,7 @@ export default function Lab2Index() {
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
                 Escalate privileges by modifying client-side session cookies that improperly store user roles.
               </p>
-              <Link to="/labs/2/sub3" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-orange-600 text-white font-bold rounded-xl transition-colors">
+              <Link to="/labs/broken-auth-cookies" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-orange-600 text-white font-bold rounded-xl transition-colors">
                 Select Variant <ArrowRight size={18} />
               </Link>
             </div>
@@ -153,8 +153,8 @@ export default function Lab2Index() {
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
                 Access unauthorized user accounts by manipulating direct object references in API calls.
               </p>
-              <Link to="/labs/2/sub4/a" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-purple-600 text-white font-bold rounded-xl transition-colors">
-                Launch Environment <ArrowRight size={18} />
+              <Link to="/labs/broken-auth-idor" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-purple-600 text-white font-bold rounded-xl transition-colors">
+                Select Variant <ArrowRight size={18} />
               </Link>
             </div>
 
@@ -165,12 +165,12 @@ export default function Lab2Index() {
                 <div className="p-4 bg-slate-100 text-slate-800 rounded-xl"><Lock size={32} /></div>
                 <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Advanced</span>
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Lab 2.5: Role Bypass</h3>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">Lab 2.5: IDOR DOM Exposure</h3>
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
-                Exploit multi-stage logic flaws to achieve persistent unauthorized role assignment.
+                Exploit IDOR to access an unauthorized profile where a sensitive password is leaked directly inside the HTML DOM.
               </p>
-              <Link to="/labs/2/sub5/a" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
-                Launch Environment <ArrowRight size={18} />
+              <Link to="/labs/broken-auth-level5" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+                Select Variant <ArrowRight size={18} />
               </Link>
             </div>
             

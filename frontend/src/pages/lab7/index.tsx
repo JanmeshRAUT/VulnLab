@@ -92,7 +92,7 @@ export default function Lab7Index() {
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
                 Use SQL injection on a product category filter to access unreleased or hidden items.
               </p>
-              <Link to="/labs/7/sub1/a" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-purple-600 text-white font-bold rounded-xl transition-colors">
+              <Link to="/labs/sql-injection/gift-shop" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-purple-600 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </Link>
             </div>
@@ -107,7 +107,7 @@ export default function Lab7Index() {
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
                 Exploit an insecure login form to access an administrative dashboard without knowing the password.
               </p>
-              <Link to="/labs/7/sub2/a" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-pink-600 text-white font-bold rounded-xl transition-colors">
+              <Link to="/labs/sql-injection/corp-login" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-pink-600 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </Link>
             </div>

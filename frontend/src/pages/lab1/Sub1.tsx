@@ -1,24 +1,24 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useLabInstance } from '../../hooks/useLabInstance';
+import { InstanceContext, useInstance } from '../../contexts/InstanceContext';
 import { 
   FolderOpen, Upload, FileText, File as FileIcon, 
   Image as ImageIcon, Archive, MoreVertical, 
-  Lightbulb, Share2, Folders, ShieldAlert, Eye, ArrowLeft
+  Lightbulb, Share2, Folder, ShieldAlert, Eye
 } from 'lucide-react';
 
-export default function Lab1Sub1() {
+function Lab1Sub1Content() {
   const [files, setFiles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const { instanceId, loading: instanceLoading } = useLabInstance({
-    labId: '1',
-    variantId: '1'
-  });
+  const { instanceId } = useInstance();
 
   useEffect(() => {
     if (instanceId) {
+      document.cookie = `instance_id=${instanceId}; path=/; max-age=86400; SameSite=Lax`;
+      
       axios.get('http://localhost:8000/api/lab1/1/files', { 
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': instanceId }
@@ -73,7 +73,7 @@ export default function Lab1Sub1() {
           <nav className="flex flex-col gap-2 flex-1">
             <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 ml-3">Menu</div>
             <a href="#" className="flex items-center gap-3 px-4 py-3 bg-blue-50/50 text-blue-700 rounded-xl font-semibold transition-colors border border-blue-100/50">
-              <Folders size={18} /> My Documents
+              <Folder size={18} /> My Documents
             </a>
             <a href="#" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-800 rounded-xl font-medium transition-colors">
               <Share2 size={18} /> Shared with Me
@@ -206,5 +206,17 @@ export default function Lab1Sub1() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function Lab1Sub1() {
+  const { topic, variant } = useParams<{ topic: string; variant: string }>();
+  const slug = topic && variant ? `${topic}/${variant}` : 'path-traversal/docuvault';
+  const instanceState = useLabInstance(slug);
+
+  return (
+    <InstanceContext.Provider value={instanceState}>
+      <Lab1Sub1Content />
+    </InstanceContext.Provider>
   );
 }

@@ -19,6 +19,28 @@ async def create_instance(user_id: str, lab_id: str, variant_id: str):
     now = time.time()
     instance_id = _new_instance_id()
     
+    state_data = {}
+    if lab_id == "2" and variant_id.startswith("5"):
+        import string
+        import random
+        chars = "".join(random.choices(string.ascii_uppercase + string.digits, k=5))
+        state_data["admin_password"] = f"{chars}-Admin"
+    elif lab_id == "3" and variant_id.startswith("1"):
+        import random
+        import os
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        try:
+            with open(os.path.join(base_dir, "old_backend", "data", "wordlists", "usernames.txt"), "r") as f:
+                usernames = [line.strip() for line in f if line.strip()]
+            with open(os.path.join(base_dir, "old_backend", "data", "wordlists", "passwords.txt"), "r") as f:
+                passwords = [line.strip() for line in f if line.strip()]
+            state_data["target_username"] = random.choice(usernames)
+            state_data["target_password"] = random.choice(passwords)
+        except Exception as e:
+            state_data["target_username"] = "admin"
+            state_data["target_password"] = "password123"
+        state_data["lab_flag"] = _new_flag_value()
+
     doc = {
         'instance_id': instance_id,
         'user_id': user_id,
@@ -30,10 +52,34 @@ async def create_instance(user_id: str, lab_id: str, variant_id: str):
         'solved_at': None,
         'last_seen': now,
         'expires_at': _compute_expiry(now, INSTANCE_ACTIVE_TTL_SECONDS),
-        'state': {},
+        'state': state_data,
     }
     await db.instances.insert_one(doc)
     return doc
+
+async def update_instance_state(instance_id: str, new_state: dict):
+    db = get_database()
+    await db.instances.update_one(
+        {'instance_id': instance_id},
+        {'$set': {'state': new_state}}
+    )
+    return True
+
+async def cleanup_expired_instances():
+    db = get_database()
+    now = time.time()
+    await db.instances.update_many(
+        {
+            'status': {'$in': ['CREATED', 'ACTIVE']},
+            'expires_at': {'$lt': now}
+        },
+        {
+            '$set': {
+                'status': 'EXPIRED'
+            }
+        }
+    )
+    return True
 
 async def get_instance(instance_id: str):
     db = get_database()

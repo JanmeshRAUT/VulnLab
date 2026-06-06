@@ -3,9 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { ShieldAlert, ArrowLeft, Terminal, Server } from 'lucide-react';
 
-export default function Lab6Sub1() {
-  const { variantId } = useParams<{ variantId: string }>();
-  const variant = variantId || 'a';
+export default function Lab6Sub1({ variantIdProp }: { variantIdProp?: string }) {
+  const params = useParams();
+  const variantId = variantIdProp || params.variantId || 'a';
   
   const [productId, setProductId] = useState('1');
   const [storeId, setStoreId] = useState('1001');
@@ -17,8 +17,7 @@ export default function Lab6Sub1() {
     b: { name: 'AutoParts Pro', storeLabel: 'Location ID', endpoint: '/api/lab6/1/b/check-stock', param: 'locationId' },
     c: { name: 'PharmaCare', storeLabel: 'Branch ID', endpoint: '/api/lab6/1/c/check-stock', param: 'branchId' }
   };
-
-  const config = labels[variant];
+  const config = labels[variantId];
 
   const checkStock = async (e: React.FormEvent) => {
     e.preventDefault();

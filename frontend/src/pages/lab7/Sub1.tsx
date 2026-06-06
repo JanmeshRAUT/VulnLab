@@ -4,9 +4,10 @@ import axios from 'axios';
 import { ShieldAlert, ArrowLeft, Search, Terminal } from 'lucide-react';
 import { getLabSessionId } from '../../utils/sessionId';
 
-export default function Lab7Sub1() {
-  const { variantId } = useParams<{ variantId: string }>();
-  const variant = variantId || 'a';
+export default function Lab7Sub1({ variantIdProp }: { variantIdProp?: string }) {
+  const params = useParams();
+  const variantId = variantIdProp || params.variantId;
+  const splatPath = params['*'] || '';
   
   const [category, setCategory] = useState('');
   const [products, setProducts] = useState<any[]>([]);
@@ -17,9 +18,7 @@ export default function Lab7Sub1() {
     b: '/api/lab7/1/b',
     c: '/api/lab7/1/c'
   };
-
-  const endpoint = endpoints[variant];
-
+  const endpoint = endpoints[variantId || 'a'];
   const [instanceId, setInstanceId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,7 +45,7 @@ export default function Lab7Sub1() {
     if (instanceId) {
       fetchProducts('', instanceId);
     }
-  }, [variant, instanceId]);
+  }, [variantId, instanceId]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

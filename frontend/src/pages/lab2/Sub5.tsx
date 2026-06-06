@@ -1,16 +1,74 @@
-import { Link, useSearchParams } from 'react-router-dom';
-import { Terminal, ArrowRight, ArrowLeft, ShieldAlert, FileSearch, Layers } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
+import axios from 'axios';
+import { 
+  ArrowLeft, ArrowRight, ShieldAlert, FileSearch, Terminal, GraduationCap
+} from 'lucide-react';
+import { useLabInstance } from '../../hooks/useLabInstance';
+import UniversityPortal from './storefronts/UniversityPortal';
 
-export default function Lab2Sub5() {
+export default function Lab2Sub5({ variantIdProp }: { variantIdProp?: string }) {
   const [params, setParams] = useSearchParams();
-  const step = (params.get('step') || 'theory') as 'theory' | 'selection' | 'lab';
-  const selectedVariant = params.get('variant') || 'a';
+  const routeParams = useParams();
+  const variantId = variantIdProp || routeParams.variantId;
+  
+  const isLabEnvironment = !!variantId;
+  const selectedVariant = variantId || params.get('variant') || 'a';
+  const step = isLabEnvironment ? 'lab' : ((params.get('step') || 'theory') as 'theory' | 'selection' | 'lab');
+
+  const { instanceId, loading: instanceLoading } = useLabInstance({ 
+    labId: '2', 
+    variantId: variantId || '' 
+  });
 
   const goTo = (nextStep: string, variant?: string) => {
     const p = new URLSearchParams();
     p.set('step', nextStep);
     p.set('variant', variant || selectedVariant);
     setParams(p);
+  };
+
+  const handleLaunch = async (e: React.MouseEvent, slug: string, variant: string) => {
+    e.preventDefault();
+    try {
+      const storageKey = `instance:broken-auth/${slug}`;
+      const existing = localStorage.getItem(storageKey);
+      let newInstanceId = existing;
+      
+      // Try to heartbeat existing instance first
+      if (existing) {
+        try {
+          await axios.post(`http://localhost:8000/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
+        } catch (err) {
+          newInstanceId = null; // Heartbeat failed, need a new instance
+        }
+      }
+
+      // If no valid instance exists, create a new one
+      if (!newInstanceId) {
+        const res = await axios.post('http://localhost:8000/api/instances/launch', {
+          lab_id: '2',
+          variant_id: variant,
+        }, { withCredentials: true });
+        newInstanceId = res.data.instance_id;
+      }
+      
+      if (newInstanceId) {
+        sessionStorage.setItem('active_instance_id', newInstanceId);
+        localStorage.setItem(storageKey, newInstanceId);
+        document.cookie = `instance_id=${newInstanceId}; path=/; max-age=86400`;
+        
+        // Clear previous authentication state to ensure fresh login
+        localStorage.removeItem(`token_${variant}`);
+        localStorage.removeItem(`role_${variant}`);
+        localStorage.removeItem(`username_${variant}`);
+        
+        window.open(`/labs/broken-auth/${slug}`, '_blank');
+      }
+    } catch (error) {
+      console.error("Failed to launch instance:", error);
+      alert("Failed to launch lab environment. Is the backend running?");
+    }
   };
 
   if (step === 'theory') {
@@ -21,9 +79,9 @@ export default function Lab2Sub5() {
             <div className="inline-flex items-center gap-2 text-brand-orange font-bold uppercase tracking-widest text-xs mb-3 bg-brand-orange-50 px-3 py-1 rounded-full border border-orange-200">
               <ShieldAlert size={14} /> Module 02 · Lab 2.5
             </div>
-            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-3">Role Bypass</h1>
+            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-3">IDOR DOM Data Exposure</h1>
             <p className="text-lg text-slate-600 font-medium max-w-3xl">
-              Exploit multi-stage logic flaws in registration and workflow APIs to achieve persistent, unauthorized administrator role assignment.
+              Exploit Insecure Direct Object References (IDOR) to access an unauthorized profile where a sensitive password is inadvertently leaked directly inside the HTML DOM.
             </p>
           </div>
           <Link to="/labs/2?step=selection" className="text-slate-500 hover:text-brand-orange font-bold text-sm flex items-center gap-1 transition-colors shrink-0">
@@ -37,18 +95,26 @@ export default function Lab2Sub5() {
                 <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2 border-b border-slate-700 pb-4">
                   <Terminal size={24} className="text-brand-orange" /> Concept Theory
                 </h2>
-                <h3 className="text-lg font-bold text-white mb-2">What is Multi-Stage Role Bypass?</h3>
+                <h3 className="text-lg font-bold text-white mb-2">What is DOM Data Exposure?</h3>
                 <p className="mb-6 font-medium leading-relaxed text-sm">
-                  Role bypass vulnerabilities arise when an application uses multi-step workflows — such as account registration — to assign user roles, but fails to enforce consistent authorization checks at each and every step of the process.
+                  Sometimes, developers build web pages by rendering raw HTML templates on the backend. When doing this, they may include sensitive information inside hidden elements on the page (like a password enclosed in a `&lt;span class="hidden"&gt;` or `display: none` div). While invisible to the average user, an attacker can simply "View Source" or inspect the Document Object Model (DOM) to uncover the secret.
                 </p>
                 <h3 className="text-lg font-bold text-white mb-2">How it Happens</h3>
                 <p className="mb-6 font-medium leading-relaxed text-sm">
-                  During step one, the server may issue a short-lived elevated "setup" token. If this token is not properly invalidated after use, or if a later endpoint accepts it without re-verifying the user's actual role, an attacker can replay or manipulate this token to permanently elevate their account permissions.
+                  An application might fetch an account profile via <code className="bg-slate-700 px-1.5 py-0.5 rounded text-slate-200">/profile?id=student</code> and lack proper authorization checks (IDOR). If an attacker changes the parameter to <code className="bg-slate-700 px-1.5 py-0.5 rounded text-slate-200">?id=admin</code>, the backend renders the admin's profile HTML. Even if the password is "hidden" by CSS rules, it still exists in the raw HTML response.
                 </p>
-                <h3 className="text-lg font-bold text-red-400 mb-2">Security Consequences</h3>
+                <h3 className="text-lg font-bold text-white mb-2">The Attack Flow</h3>
                 <p className="font-medium leading-relaxed text-sm">
-                  A successful role bypass results in a regular user permanently holding administrator access. Unlike session cookie manipulation, this attack modifies the server-side role assignment — the elevated access persists across sessions, password changes, and full re-authentication.
+                  Log into the student portal. Manipulate the IDOR vulnerability in the URL or request parameters to fetch the administrator's profile. Inspect the resulting HTML source code to extract their hidden password. Log out, then log back in using the stolen administrator credentials to compromise the dashboard.
                 </p>
+                <div className="mt-4 bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+                  <h4 className="text-sm font-bold text-brand-orange mb-1">Mock Credentials</h4>
+                  <p className="text-sm font-medium text-slate-300">
+                    Use the following student credentials to log in: <br/>
+                    Username: <code className="bg-slate-700 px-1.5 py-0.5 rounded text-slate-200">wiener</code> <br/>
+                    Password: <code className="bg-slate-700 px-1.5 py-0.5 rounded text-slate-200">peter</code>
+                  </p>
+                </div>
               </div>
             </div>
             <div className="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-lg h-full">
@@ -56,9 +122,10 @@ export default function Lab2Sub5() {
                 <FileSearch size={20} className="text-brand-orange" /> Learning Objectives
               </h3>
               <ul className="space-y-4 text-sm font-medium text-slate-300">
-                <li className="flex items-start gap-3"><div className="w-2 h-2 rounded-full bg-brand-orange mt-1.5 flex-shrink-0"></div>Map all requests in a multi-step workflow using DevTools.</li>
-                <li className="flex items-start gap-3"><div className="w-2 h-2 rounded-full bg-brand-orange mt-1.5 flex-shrink-0"></div>Identify intermediate tokens and their lifecycle vulnerabilities.</li>
-                <li className="flex items-start gap-3"><div className="w-2 h-2 rounded-full bg-brand-orange mt-1.5 flex-shrink-0"></div>Replay or modify requests to achieve persistent role escalation.</li>
+                <li className="flex items-start gap-3"><div className="w-2 h-2 rounded-full bg-brand-orange mt-1.5 flex-shrink-0"></div>Manipulate ID parameters to trigger IDOR and access unauthorized profiles.</li>
+                <li className="flex items-start gap-3"><div className="w-2 h-2 rounded-full bg-brand-orange mt-1.5 flex-shrink-0"></div>Use browser developer tools to inspect the DOM and source code.</li>
+                <li className="flex items-start gap-3"><div className="w-2 h-2 rounded-full bg-brand-orange mt-1.5 flex-shrink-0"></div>Identify and extract sensitive information hidden by CSS.</li>
+                <li className="flex items-start gap-3"><div className="w-2 h-2 rounded-full bg-brand-orange mt-1.5 flex-shrink-0"></div>Perform account takeover using leaked credentials.</li>
               </ul>
             </div>
           </div>
@@ -82,75 +149,71 @@ export default function Lab2Sub5() {
                 <span className="inline-flex items-center gap-2 text-brand-orange font-bold uppercase tracking-widest text-xs bg-brand-orange-50 px-3 py-1 rounded-full border border-orange-200">
                   <ShieldAlert size={14} /> Module 02 · Variants
                 </span>
-                <span className="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Role Bypass Track</span>
+                <span className="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">IDOR Track</span>
               </div>
               <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Select a Target Variant</h2>
-              <p className="text-slate-600 font-medium mt-2 max-w-2xl">Choose a branded target below. The flow stays consistent while the story, colors, and entry point change.</p>
+              <p className="text-slate-600 font-medium mt-2 max-w-2xl">Choose a Student Management Portal below. Log in as a student, use IDOR to load the admin's profile, inspect the DOM to steal their password, and finally log in as an administrator.</p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
-
               <button onClick={() => goTo('theory')} className="inline-flex items-center gap-1 text-slate-500 hover:text-brand-orange font-bold text-sm transition-colors shrink-0">
               <ArrowLeft size={16} /> Back to Theory
               </button>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl transition-all flex flex-col group relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+            {/* Variant A */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all flex flex-col group relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-indigo-100 to-transparent rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
               <div className="flex items-start justify-between mb-6">
-                <div className="p-4 bg-slate-100 text-slate-700 rounded-xl border border-slate-100"><Layers size={32} /></div>
-                <span className="bg-slate-100 text-slate-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Variant A</span>
+                <div className="p-4 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-100"><GraduationCap size={32} /></div>
+                <span className="bg-indigo-50 text-indigo-600 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest border border-indigo-100">Variant A</span>
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">SaaSDesk</h3>
-              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A SaaS helpdesk platform. Walk through the account setup flow and intercept requests to achieve a persistent admin role.</p>
-              <button onClick={() => goTo('lab', 'a')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+              <h3 className="text-2xl font-black text-slate-900 mb-2">EduPortal</h3>
+              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">The Operating System for Higher Education. A premium, unified platform connecting students, faculty, and administration with a sleek corporate design.</p>
+              <button onClick={(e) => handleLaunch(e, 'saasdesk', '5a')} className="mt-auto w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
                 Launch Environment <ArrowRight size={18} />
               </button>
             </div>
-            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl transition-all flex flex-col group relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+            
+            {/* Variant B */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all flex flex-col group relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
               <div className="flex items-start justify-between mb-6">
-                <div className="p-4 bg-cyan-100 text-cyan-700 rounded-xl border border-cyan-100"><Layers size={32} /></div>
-                <span className="bg-cyan-100 text-cyan-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Variant B</span>
+                <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100"><GraduationCap size={32} /></div>
+                <span className="bg-blue-50 text-blue-600 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest border border-blue-100">Variant B</span>
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">CloudPanel</h3>
-              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A cloud infrastructure dashboard. Exploit registration workflow logic to permanently escalate your account privileges.</p>
-              <button onClick={() => goTo('lab', 'b')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+              <h3 className="text-2xl font-black text-slate-900 mb-2">AcademyLink</h3>
+              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">Your bridge to success. A bright, modern, and bubbly student dashboard for accessing grades, schedules, and important announcements.</p>
+              <button onClick={(e) => handleLaunch(e, 'cloudpanel', '5b')} className="mt-auto w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2">
                 Launch Environment <ArrowRight size={18} />
               </button>
             </div>
-            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl transition-all flex flex-col group relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+            
+            {/* Variant C */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all flex flex-col group relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
               <div className="flex items-start justify-between mb-6">
-                <div className="p-4 bg-teal-100 text-teal-700 rounded-xl border border-teal-100"><Layers size={32} /></div>
-                <span className="bg-teal-100 text-teal-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Variant C</span>
+                <div className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100"><GraduationCap size={32} /></div>
+                <span className="bg-emerald-50 text-emerald-600 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-100">Variant C</span>
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">WorkflowX</h3>
-              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A business workflow automation tool. Replay intermediate tokens from the multi-step onboarding to assign admin role.</p>
-              <button onClick={() => goTo('lab', 'c')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
-                Launch Environment <ArrowRight size={18} />
+              <h3 className="text-2xl font-black text-slate-900 mb-2">CampusConnect</h3>
+              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">Next-Generation University Management. A clean, enterprise-grade application for authorized personnel and enrolled students only.</p>
+              <button onClick={(e) => handleLaunch(e, 'workflowx', '5c')} className="mt-auto w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-200 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">
+                Initialize <ArrowRight size={18} />
               </button>
             </div>
           </div>
-
-
         </div>
       </div>
     );
   }
+  
+  if (step === 'lab' && variantId) {
+    if (instanceLoading) {
+      return <div className="flex items-center justify-center min-h-screen bg-slate-50"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div></div>;
+    }
+    return <UniversityPortal variantId={variantId} instanceId={instanceId || ''} />;
+  }
 
-  const labels: Record<string, string> = { a: 'SaaSDesk', b: 'CloudPanel', c: 'WorkflowX' };
-  return (
-    <div className="p-8 flex items-center justify-center min-h-screen bg-slate-50 text-slate-800">
-        <div className="text-center">
-        <div className="p-6 bg-slate-200 text-slate-700 rounded-2xl inline-flex mb-6"><ShieldAlert size={40} /></div>
-        <h1 className="text-3xl font-extrabold text-slate-900 mb-3">Lab 2.5: Role Bypass</h1>
-        <p className="text-slate-600 text-lg mb-2">Active Variant: <span className="font-black text-brand-orange">{labels[selectedVariant]}</span></p>
-        <p className="text-slate-400 text-sm mb-8">Connect the vulnerable backend to this component.</p>
-        <button onClick={() => goTo('selection')} className="text-slate-500 hover:text-brand-orange font-bold text-sm flex items-center gap-1 transition-colors mx-auto">
-          <ArrowLeft size={16} /> Back to Variant Selection
-        </button>
-        </div>
-      </div>
-  );
+  return null;
 }

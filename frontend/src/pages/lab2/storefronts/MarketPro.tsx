@@ -120,7 +120,7 @@ export default function MarketPro() {
               <Users size={16} /> Suppliers
             </a>
             {role === 'admin' && (
-              <Link to="/labs/2/sub3/b/admin" className="ml-auto py-3 px-4 bg-red-100/50 hover:bg-red-100 text-red-700 rounded-t-lg transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider border-b-2 border-red-500">
+              <Link to="/labs/broken-auth/marketpro/admin" className="ml-auto py-3 px-4 bg-red-100/50 hover:bg-red-100 text-red-700 rounded-t-lg transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider border-b-2 border-red-500">
                 Administration Portal
               </Link>
             )}

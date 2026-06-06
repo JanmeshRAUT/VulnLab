@@ -3,9 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, Terminal, Key } from 'lucide-react';
 
-export default function Lab7Sub2() {
-  const { variantId } = useParams<{ variantId: string }>();
-  const variant = variantId || 'a';
+export default function Lab7Sub2({ variantIdProp }: { variantIdProp?: string }) {
+  const { variantId: paramVariantId } = useParams<{ variantId: string }>();
+  const variant = variantIdProp || paramVariantId || 'a';
   
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

@@ -11,9 +11,9 @@ import MarketPro from './storefronts/MarketPro';
 import CartBuddy from './storefronts/CartBuddy';
 import { useLabInstance } from '../../hooks/useLabInstance';
 
-export default function Lab2Sub3() {
+export default function Lab2Sub3({ variantIdProp }: { variantIdProp?: string }) {
   const params = useParams();
-  const variantId = params.variantId;
+  const variantId = variantIdProp || params.variantId;
   const splatPath = params['*'] || '';
   const variant = variantId;
   const { instanceId, loading: instanceLoading } = useLabInstance({ 
@@ -41,14 +41,12 @@ export default function Lab2Sub3() {
       setLoading(false);
     }
   };
-
-  // Ensure role cookie exists
+  // Clear role cookie on fresh entry so the user is forced to sign in
   useEffect(() => {
-    if (!document.cookie.includes('role=')) {
-      document.cookie = "role=user; path=/";
+    if (variantId) {
+      document.cookie = "role=; path=/; max-age=0";
     }
-  }, []);
-
+  }, [variantId]);
   useEffect(() => {
     if (variantId && instanceId && !instanceLoading) {
       fetchPath(splatPath, instanceId);
@@ -121,7 +119,7 @@ export default function Lab2Sub3() {
                 </div>
                 <h3 className="text-2xl font-bold text-slate-900 mb-2">ShopEase</h3>
                 <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A general e-commerce store. Inspect session cookies set on login and attempt to escalate your role to admin.</p>
-                <Link to={`/labs/2/sub3/a`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+                <Link to={`/labs/broken-auth/shopease`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                   Launch Environment <ArrowRight size={18} />
                 </Link>
               </div>
@@ -133,7 +131,7 @@ export default function Lab2Sub3() {
                 </div>
                 <h3 className="text-2xl font-bold text-slate-900 mb-2">MarketPro</h3>
                 <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A wholesale marketplace. Find and manipulate the cookie that stores your user authorization level.</p>
-                <Link to={`/labs/2/sub3/b`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+                <Link to={`/labs/broken-auth/marketpro`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                   Launch Environment <ArrowRight size={18} />
                 </Link>
               </div>
@@ -145,7 +143,7 @@ export default function Lab2Sub3() {
                 </div>
                 <h3 className="text-2xl font-bold text-slate-900 mb-2">CartBuddy</h3>
                 <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A budget shopping app. Exploit the insecure client-side role storage to access the admin dashboard.</p>
-                <Link to={`/labs/2/sub3/c`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+                <Link to={`/labs/broken-auth/cartbuddy`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                   Launch Environment <ArrowRight size={18} />
                 </Link>
               </div>
@@ -172,9 +170,9 @@ export default function Lab2Sub3() {
     if (data && data.type === 'storefront') {
       return (
         <div className="w-full h-full relative">
-          {variant === 'a' && <ShopEase />}
-          {variant === 'b' && <MarketPro />}
-          {variant === 'c' && <CartBuddy />}
+          {variant === '3a' && <ShopEase />}
+          {variant === '3b' && <MarketPro />}
+          {variant === '3c' && <CartBuddy />}
         </div>
       );
     }
@@ -194,7 +192,7 @@ export default function Lab2Sub3() {
                     </div>
                     <h1 className="text-3xl font-black text-slate-900 mb-4">Access Denied</h1>
                     <p className="text-slate-600 font-medium">{data?.message || "You do not have permission to access this resource."}</p>
-                    <Link to={`/labs/2/sub3/${variant}`} className="mt-8 inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-xl transition-colors">
+                    <Link to={`/labs/2`} className="mt-8 inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-xl transition-colors">
                         <ArrowLeft size={18} /> Return to Storefront
                     </Link>
                 </div>

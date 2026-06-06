@@ -1,4 +1,4 @@
-import { Shield, Lock, Database, Code, Key, Search, ChevronRight, FileUp, TerminalSquare, Smartphone } from 'lucide-react';
+import { Shield, Lock, Database, Code, Key, Search, ChevronRight, FileUp, SquareTerminal, Smartphone } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Labs() {
@@ -54,7 +54,7 @@ export default function Labs() {
       category: 'Injection',
       difficulty: 'Advanced',
       status: 'Available',
-      icon: <TerminalSquare size={24} className="text-green-500" />,
+      icon: <SquareTerminal size={24} className="text-green-500" />,
       desc: 'Inject system commands through application-controlled input.'
     },
     {

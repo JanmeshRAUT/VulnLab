@@ -15,11 +15,20 @@ async def launch(req: LaunchRequest):
 @router.post("/{instance_id}/heartbeat")
 async def heartbeat(instance_id: str):
     instance = await heartbeat_instance(instance_id)
-    if not instance:
-        raise HTTPException(status_code=404, detail="Instance not found or terminal")
+    if not instance or instance.get("status") not in ["CREATED", "ACTIVE"]:
+        raise HTTPException(status_code=404, detail="Instance not found, expired, or terminal")
     return {"status": "ok", "instance_status": instance.get("status")}
 
 from pydantic import BaseModel
+
+class EventRequest(BaseModel):
+    type: str
+
+@router.post("/{instance_id}/event")
+async def handle_event(instance_id: str, req: EventRequest):
+    if req.type == "abandon":
+        await update_instance_status(instance_id, "ABANDONED")
+    return {"status": "ok"}
 
 class LegacyFlagSubmitRequest(BaseModel):
     flag: str

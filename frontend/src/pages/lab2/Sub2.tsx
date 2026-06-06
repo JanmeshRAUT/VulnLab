@@ -2,17 +2,53 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { 
-  ArrowLeft, ArrowRight, ShieldAlert, Monitor, BookOpen, AlertTriangle
+  ArrowLeft, ArrowRight, ShieldAlert, Monitor, BookOpen, AlertTriangle, FileCode2, Globe
 } from 'lucide-react';
 
 import AdminPanel from './storefronts/AdminPanel'; // Reused from Lab 2.1
 import { useLabInstance } from '../../hooks/useLabInstance';
 
-
-export default function Lab2Sub2() {
+export default function Lab2Sub2({ variantIdProp }: { variantIdProp?: string }) {
   const params = useParams();
-  const variantId = params.variantId;
+  const variantId = variantIdProp || params.variantId;
   const splatPath = params['*'] || '';
+
+  const handleLaunch = async (e: React.MouseEvent, slug: string, variant: string) => {
+    e.preventDefault();
+    try {
+      const storageKey = `instance:broken-auth-hidden/${slug}`;
+      const existing = localStorage.getItem(storageKey);
+      let newInstanceId = existing;
+      
+      // Try to heartbeat existing instance first
+      if (existing) {
+        try {
+          await axios.post(`http://localhost:8000/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
+        } catch (e) {
+          newInstanceId = null; // Heartbeat failed, need a new instance
+        }
+      }
+
+      // If no valid instance exists, create a new one
+      if (!newInstanceId) {
+        const res = await axios.post('http://localhost:8000/api/instances/launch', {
+          lab_id: '2',
+          variant_id: variant,
+        }, { withCredentials: true });
+        newInstanceId = res.data.instance_id;
+      }
+      
+      if (newInstanceId) {
+        sessionStorage.setItem('active_instance_id', newInstanceId);
+        localStorage.setItem(storageKey, newInstanceId);
+        document.cookie = `instance_id=${newInstanceId}; path=/; max-age=86400`;
+        window.open(`/labs/broken-auth-hidden/${slug}`, '_blank');
+      }
+    } catch (error) {
+      console.error("Failed to launch instance:", error);
+      alert("Failed to launch lab environment. Is the backend running?");
+    }
+  };
 
   // If no variant is selected, show the Variant Selection UI
   if (!variantId) {
@@ -95,9 +131,9 @@ export default function Lab2Sub2() {
               </div>
               <h3 className="text-2xl font-bold text-slate-900 mb-2">BlogHub</h3>
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A content publishing platform. Analyze the page source and comments for exposed admin route references.</p>
-              <Link to={`/labs/2/sub2/a`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+              <button onClick={(e) => handleLaunch(e, 'BlogHub', '2a')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
-              </Link>
+              </button>
             </div>
             {/* Variant B */}
             <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl transition-all flex flex-col group relative overflow-hidden">
@@ -108,9 +144,9 @@ export default function Lab2Sub2() {
               </div>
               <h3 className="text-2xl font-bold text-slate-900 mb-2">ForumNext</h3>
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A community discussion forum. Search the raw HTML source code for hidden administrative endpoints.</p>
-              <Link to={`/labs/2/sub2/b`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+              <button onClick={(e) => handleLaunch(e, 'ForumNext', '2b')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
-              </Link>
+              </button>
             </div>
             {/* Variant C */}
             <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl transition-all flex flex-col group relative overflow-hidden">
@@ -121,9 +157,9 @@ export default function Lab2Sub2() {
               </div>
               <h3 className="text-2xl font-bold text-slate-900 mb-2">DevPortal</h3>
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A developer documentation portal. Investigate the frontend HTML source for leaked admin panel URLs.</p>
-              <Link to={`/labs/2/sub2/c`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+              <button onClick={(e) => handleLaunch(e, 'DevPortal', '2c')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -140,13 +176,7 @@ export default function Lab2Sub2() {
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Force redirect to backend static HTML if they navigate here manually (except for /admin)
-  // We must wait for instanceId to be generated before redirecting.
-  useEffect(() => {
-    if (variantId && splatPath !== 'admin' && instanceId && !instanceLoading) {
-      window.location.href = `http://localhost:8000/api/lab2/2/${variantId}/navigate#session=${instanceId}`;
-    }
-  }, [variantId, splatPath, instanceId, instanceLoading]);
+  // Removed the window.location.href redirect because Vite proxy handles the root path
 
   const fetchPath = async (path: string, currentInstanceId: string) => {
     setLoading(true);
@@ -175,7 +205,7 @@ export default function Lab2Sub2() {
   }, [variant, splatPath, instanceId, instanceLoading]);
 
   const renderContent = () => {
-    if (loading || instanceLoading || (variantId && splatPath !== 'admin')) {
+    if (loading || instanceLoading) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-white">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-brand-orange"></div>

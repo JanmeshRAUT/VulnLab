@@ -25,6 +25,8 @@ export default function Lab1Sub2() {
 
   useEffect(() => {
     if (instanceId) {
+      document.cookie = `instance_id=${instanceId}; path=/; max-age=86400; SameSite=Lax`;
+      
       axios.get('http://localhost:8000/api/lab1/2/products', { 
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': instanceId }

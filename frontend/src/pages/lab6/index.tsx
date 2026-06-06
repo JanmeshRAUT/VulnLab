@@ -92,7 +92,7 @@ export default function Lab6Index() {
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
                 Exploit a stock checking feature that improperly concatenates user input into a system shell command. Includes 3 variations.
               </p>
-              <Link to="/labs/6/sub1/a" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-purple-600 text-white font-bold rounded-xl transition-colors">
+              <Link to="/labs/command-injection/megamart" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-purple-600 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </Link>
             </div>

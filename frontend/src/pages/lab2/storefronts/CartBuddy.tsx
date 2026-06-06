@@ -112,7 +112,7 @@ export default function CartBuddy() {
           <a href="#" className="hover:text-yellow-600 transition-colors">Tech Gadgets</a>
           <a href="#" className="hover:text-yellow-600 transition-colors">Home Decor</a>
           {role === 'admin' && (
-            <Link to="/labs/2/sub3/c/admin" className="ml-auto text-xs font-bold text-red-600 bg-red-100 px-3 py-1 rounded-full hover:bg-red-200 transition-colors">Admin Settings</Link>
+            <Link to="/labs/broken-auth/cartbuddy/admin" className="ml-auto text-xs font-bold text-red-600 bg-red-100 px-3 py-1 rounded-full hover:bg-red-200 transition-colors">Admin Settings</Link>
           )}
         </div>
       </header>
