@@ -9,7 +9,7 @@ export interface LabRouteConfig {
 export const LAB_ROUTES: Record<string, LabRouteConfig> = {
   // Lab 1: Path Traversal
   'path-traversal/docuvault':         { labId: '1', variantId: '1', title: 'Basic Path Traversal', labTitle: 'Lab 1: Path Traversal' },
-  'path-traversal/shopexpress':       { labId: '1', variantId: '2', title: 'Path Traversal (Absolute Path)', labTitle: 'Lab 1: Path Traversal' },
+  'path-traversal/shopexpress':       { labId: '1', variantId: '2', title: 'Bean&Brew', labTitle: 'Lab 1: Path Traversal' },
   'path-traversal/pixelmarket':       { labId: '1', variantId: '3', title: 'Path Traversal (Stripped Non-Recursive)', labTitle: 'Lab 1: Path Traversal' },
 
   // Lab 2: Broken Authentication & Admin Panels

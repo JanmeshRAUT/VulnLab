@@ -66,14 +66,14 @@ export default function Lab1Sub2() {
           <div className="w-10 h-10 rounded-full bg-[#2C1E16] text-[#FDFBF7] flex items-center justify-center">
             <Coffee size={20} />
           </div>
-          <span>Bean <span className="font-light italic text-[#8D6E63]">&</span> Brew</span>
+          <span>Bean&Brew</span>
         </div>
         
         <div className="flex items-center gap-10 text-xs font-bold font-sans uppercase tracking-[0.15em]">
           <nav className="hidden md:flex gap-10 text-[#5D4037]">
             <a href="#" className="text-[#2C1E16] relative after:content-[''] after:absolute after:-bottom-2 after:left-0 after:w-full after:h-0.5 after:bg-[#8D6E63]">Shop</a>
-            <a href="#" className="hover:text-[#8D6E63] transition-colors relative after:content-[''] after:absolute after:-bottom-2 after:left-0 after:w-0 hover:after:w-full after:h-0.5 after:bg-[#8D6E63] after:transition-all">Our Story</a>
-            <a href="#" className="hover:text-[#8D6E63] transition-colors relative after:content-[''] after:absolute after:-bottom-2 after:left-0 after:w-0 hover:after:w-full after:h-0.5 after:bg-[#8D6E63] after:transition-all">Brew Guides</a>
+            <a href="#our-story" className="hover:text-[#8D6E63] transition-colors relative after:content-[''] after:absolute after:-bottom-2 after:left-0 after:w-0 hover:after:w-full after:h-0.5 after:bg-[#8D6E63] after:transition-all">Our Story</a>
+            <a href="#brew-guides" className="hover:text-[#8D6E63] transition-colors relative after:content-[''] after:absolute after:-bottom-2 after:left-0 after:w-0 hover:after:w-full after:h-0.5 after:bg-[#8D6E63] after:transition-all">Brew Guides</a>
           </nav>
           <button className="bg-[#2C1E16] hover:bg-[#4E342E] text-[#FDFBF7] px-6 py-3 rounded-full shadow-lg shadow-[#2C1E16]/20 transition-all hover:-translate-y-0.5 flex items-center gap-3 group">
             <ShoppingCart size={16} className="group-hover:scale-110 transition-transform" /> 
@@ -184,6 +184,39 @@ export default function Lab1Sub2() {
             })}
           </div>
         )}
+
+        <section id="our-story" className="border-t border-[#E8E3D9] pt-16 mt-8">
+          <div className="max-w-4xl">
+            <h3 className="text-3xl font-black text-[#2C1E16] font-serif tracking-tight mb-4">Our Story</h3>
+            <p className="text-[#6D4C41] text-lg leading-relaxed">
+              Bean &amp; Brew began as a small community roastery focused on sustainable sourcing and mindful design.
+              Every product in our shop is selected to reduce waste while elevating your daily coffee ritual.
+            </p>
+          </div>
+        </section>
+
+        <section id="brew-guides" className="border-t border-[#E8E3D9] pt-16 mt-12 pb-8">
+          <div className="max-w-4xl">
+            <h3 className="text-3xl font-black text-[#2C1E16] font-serif tracking-tight mb-4">Brew Guides</h3>
+            <p className="text-[#6D4C41] text-lg leading-relaxed mb-6">
+              Learn practical techniques for pour-over, french press, and cold brew with simple, repeatable steps.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="rounded-2xl border border-[#E8E3D9] bg-white p-4">
+                <div className="text-xs font-bold uppercase tracking-[0.2em] text-[#8D6E63] mb-2">Guide 01</div>
+                <div className="font-bold text-[#2C1E16]">Perfect Pour-Over</div>
+              </div>
+              <div className="rounded-2xl border border-[#E8E3D9] bg-white p-4">
+                <div className="text-xs font-bold uppercase tracking-[0.2em] text-[#8D6E63] mb-2">Guide 02</div>
+                <div className="font-bold text-[#2C1E16]">French Press Basics</div>
+              </div>
+              <div className="rounded-2xl border border-[#E8E3D9] bg-white p-4">
+                <div className="text-xs font-bold uppercase tracking-[0.2em] text-[#8D6E63] mb-2">Guide 03</div>
+                <div className="font-bold text-[#2C1E16]">Smooth Cold Brew</div>
+              </div>
+            </div>
+          </div>
+        </section>
 
       </div>
     </div>

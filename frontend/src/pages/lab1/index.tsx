@@ -139,7 +139,7 @@ export default function Lab1Index() {
                 </span>
               </div>
               
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Lab 1.2: Bean & Brew</h3>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">Lab 1.2: Bean&Brew</h3>
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
                 Target an eco-friendly coffee shop. Analyze how product images are handled and fetched by the web server, and assess the underlying architecture for security flaws.
               </p>
