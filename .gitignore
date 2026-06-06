@@ -1,2 +1,4 @@
 
 backend/.env
+.venv/
+backend/.venv/
