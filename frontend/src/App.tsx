@@ -9,6 +9,8 @@ import Help from './pages/Help';
 import Labs from './pages/Labs';
 import Lab1Index from './pages/lab1/index';
 import Lab1Sub1 from './pages/lab1/Sub1';
+import Lab1SharedWithMe from './pages/lab1/Sub1Shared';
+import Lab1Archives from './pages/lab1/Sub1Archives';
 import Lab1Sub2 from './pages/lab1/Sub2';
 import Lab1Sub3 from './pages/lab1/Sub3';
 import Lab2Index from './pages/lab2/index';
@@ -165,9 +167,6 @@ function FlagWidget() {
       }, { withCredentials: true });
       
       setStatus({ success: res.data.success, message: res.data.message });
-      if (res.data.success) {
-        setFlagInput('');
-      }
     } catch (err: any) {
       const errorMsg = err.response?.data?.error || 'Failed to connect to backend.';
       setStatus({ success: false, error: errorMsg });
@@ -369,6 +368,8 @@ function App() {
             
             <Route element={<LabNavigator />}>
               {/* Lab 1 Modules */}
+              <Route path="/labs/path-traversal/docuvault/archives/*" element={<Lab1Archives />} />
+              <Route path="/labs/path-traversal/docuvault/shared-with-me/*" element={<Lab1SharedWithMe />} />
               <Route path="/labs/path-traversal/docuvault/*" element={<Lab1Sub1 />} />
               <Route path="/labs/path-traversal/shopexpress/*" element={<Lab1Sub2 />} />
               <Route path="/labs/path-traversal/pixelmarket/*" element={<Lab1Sub3 />} />

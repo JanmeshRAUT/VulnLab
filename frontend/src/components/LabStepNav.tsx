@@ -18,7 +18,7 @@ const LAB_SEQUENCE: StepEntry[] = [
   { path: '/labs/1', step: 'info',      label: 'Lab 1 · Overview',           breadcrumb: ['Labs', 'Lab 1', 'Overview'] },
   { path: '/labs/1', step: 'selection', label: 'Lab 1 · Target Selection',   breadcrumb: ['Labs', 'Lab 1', 'Select Target'] },
   { path: '/labs/1/sub1',               label: 'Lab 1.1 · DocuVault',         breadcrumb: ['Labs', 'Lab 1', 'Lab 1.1'] },
-  { path: '/labs/1/sub2',               label: 'Lab 1.2 · Bean & Brew',       breadcrumb: ['Labs', 'Lab 1', 'Lab 1.2'] },
+  { path: '/labs/1/sub2',               label: 'Lab 1.2 · Bean&Brew',        breadcrumb: ['Labs', 'Lab 1', 'Lab 1.2'] },
   { path: '/labs/1/sub3',               label: 'Lab 1.3 · PixelMarket',       breadcrumb: ['Labs', 'Lab 1', 'Lab 1.3'] },
 
   // ── Lab 2 ──────────────────────────────────────────────────────────────────

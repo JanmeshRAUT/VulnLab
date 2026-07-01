@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useLabInstance } from '../../hooks/useLabInstance';
 import { InstanceContext, useInstance } from '../../contexts/InstanceContext';
 import { 
@@ -75,12 +75,12 @@ function Lab1Sub1Content() {
             <a href="#" className="flex items-center gap-3 px-4 py-3 bg-blue-50/50 text-blue-700 rounded-xl font-semibold transition-colors border border-blue-100/50">
               <Folder size={18} /> My Documents
             </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-800 rounded-xl font-medium transition-colors">
+            <Link to="/labs/path-traversal/docuvault/shared-with-me" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-800 rounded-xl font-medium transition-colors">
               <Share2 size={18} /> Shared with Me
-            </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-800 rounded-xl font-medium transition-colors">
+            </Link>
+            <Link to="/labs/path-traversal/docuvault/archives" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-800 rounded-xl font-medium transition-colors">
               <Archive size={18} /> Archives
-            </a>
+            </Link>
           </nav>
           
           {/* Vuln Banner */}
