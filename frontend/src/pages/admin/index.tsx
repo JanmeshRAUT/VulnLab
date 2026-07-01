@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowRight, BarChart3, BadgeCheck, Clock3, Download, GraduationCap, RefreshCcw, Search, ShieldCheck, Sparkles, Activity, AlertTriangle, Users, UserCheck, Lock } from 'lucide-react';
+import { ArrowRight, BarChart3, BadgeCheck, Clock3, Download, GraduationCap, RefreshCcw, Search, ShieldCheck, Sparkles, Activity, AlertTriangle, Users, UserCheck, Lock, X, CheckSquare, Square, FileText } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import AdminShell from './AdminShell';
 
 const SECTIONS = ['overview', 'students', 'access', 'roles', 'sessions', 'reports', 'audit', 'notifications'] as const;
@@ -63,16 +65,21 @@ export default function AdminDashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [opNotice, setOpNotice] = useState<{ text: string; tone: 'green' | 'red' } | null>(null);
+  const [previewPDF, setPreviewPDF] = useState<{uri: string, name: string} | null>(null);
+  const formatDate = (dateString: string) => dateString ? dateString.split(' ')[0].split('T')[0] : '-';
 
   const [accessAction, setAccessAction] = useState('Grant Lab Access');
   const [accessPermission, setAccessPermission] = useState('Allowed');
   const [selectedStudent, setSelectedStudent] = useState('');
-  const [selectedLabsCsv, setSelectedLabsCsv] = useState('');
-  const [selectedVariantsCsv, setSelectedVariantsCsv] = useState('');
+  const [selectedLabs, setSelectedLabs] = useState<Set<string>>(new Set());
+  const [selectedVariants, setSelectedVariants] = useState<Set<string>>(new Set());
+  const [showLabModal, setShowLabModal] = useState(false);
 
   const [roleName, setRoleName] = useState('');
   const [roleDescription, setRoleDescription] = useState('');
   const [rolePermission, setRolePermission] = useState('Manage Users');
+  const [assignRoleUser, setAssignRoleUser] = useState('');
+  const [assignRoleName, setAssignRoleName] = useState('');
 
   useEffect(() => {
     setActiveSection(searchParams.get('section') || 'overview');
@@ -136,8 +143,8 @@ export default function AdminDashboard() {
 
   const submitAccessAction = async () => {
     const student = selectedStudent.trim().toLowerCase();
-    const labIds = selectedLabsCsv.split(',').map(item => item.trim()).filter(Boolean);
-    const variantIds = selectedVariantsCsv.split(',').map(item => item.trim()).filter(Boolean);
+    const labIds = Array.from(selectedLabs);
+    const variantIds = Array.from(selectedVariants);
 
     if (!student || labIds.length === 0) {
       setOpNotice({ text: 'Select student and at least one lab.', tone: 'red' });
@@ -172,8 +179,144 @@ export default function AdminDashboard() {
 
       setOpNotice({ text: 'Access control updated.', tone: 'green' });
       await fetchDashboard();
+      } catch {
+        setOpNotice({ text: 'Access update failed.', tone: 'red' });
+      }
+    };
+
+  const downloadPDF = (student: any) => {
+    const doc = new jsPDF();
+    const name = student.full_name || student.name || 'UNKNOWN SUBJECT';
+    const progress = student.completion_percentage ?? student.learning_progress ?? 0;
+    const solved = student.total_labs_solved ?? student.solved_labs ?? 0;
+    const unsolved = student.total_labs_unsolved ?? student.unsolved_labs ?? 0;
+    const attempted = student.total_labs_attempted ?? (solved + unsolved);
+    const successRate = student.success_rate ?? 0;
+    
+    // Set global font
+    doc.setFont('courier', 'normal');
+    
+    // ----------------------------------------------------
+    // HEADER: Cyber Report Theme
+    // ----------------------------------------------------
+    doc.setFillColor(15, 23, 42); // slate-900
+    doc.rect(0, 0, 210, 35, 'F');
+    
+    doc.setTextColor(249, 115, 22); // brand orange
+    doc.setFontSize(22);
+    doc.setFont('courier', 'bold');
+    doc.text('CYBERSECURITY LAB PLATFORM', 105, 18, { align: 'center' });
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont('courier', 'normal');
+    doc.text('AUTOMATED THREAT & INTELLIGENCE REPORTING SYSTEM', 105, 26, { align: 'center' });
+    
+    // Timestamp & Classification
+    doc.setTextColor(220, 38, 38); // red-600
+    doc.setFontSize(12);
+    doc.setFont('courier', 'bold');
+    doc.text('CLASSIFICATION: CONFIDENTIAL / INTERNAL ONLY', 14, 45);
+    
+    doc.setTextColor(100, 116, 139);
+    doc.setFontSize(10);
+    doc.setFont('courier', 'normal');
+    doc.text(`DATE GENERATED: ${new Date().toISOString()}`, 14, 52);
+    doc.text(`REPORT ID: REP-${Math.random().toString(36).substring(2, 10).toUpperCase()}`, 14, 57);
+    
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, 62, 196, 62);
+    
+    // ----------------------------------------------------
+    // SECTION 1: SUBJECT DOSSIER (Student Info)
+    // ----------------------------------------------------
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(14);
+    doc.setFont('courier', 'bold');
+    doc.text('>> SUBJECT DOSSIER', 14, 72);
+    
+    autoTable(doc, {
+      startY: 78,
+      body: [
+        ['FULL NAME', name, 'USERNAME', student.username || 'N/A'],
+        ['EMAIL', student.email || 'N/A', 'SYSTEM ID', student.student_id || 'N/A'],
+        ['ROLE', student.assigned_role || 'N/A', 'STATUS', student.status || 'UNKNOWN'],
+        ['REGISTERED', formatDate(student.registration_date) || 'N/A', 'LAST LOGIN', formatDate(student.last_login) || 'N/A']
+      ],
+      theme: 'plain',
+      styles: { font: 'courier', fontSize: 10, cellPadding: 3, textColor: [15, 23, 42] },
+      columnStyles: {
+        0: { fontStyle: 'bold', textColor: [100, 116, 139], cellWidth: 40 },
+        1: { cellWidth: 50 },
+        2: { fontStyle: 'bold', textColor: [100, 116, 139], cellWidth: 40 },
+        3: { cellWidth: 50 }
+      }
+    });
+    
+    // ----------------------------------------------------
+    // SECTION 2: PERFORMANCE METRICS
+    // ----------------------------------------------------
+    let currentY = (doc as any).lastAutoTable?.finalY + 15 || 120;
+    
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(14);
+    doc.setFont('courier', 'bold');
+    doc.text('>> PERFORMANCE & ENGAGEMENT METRICS', 14, currentY);
+    
+    autoTable(doc, {
+      startY: currentY + 6,
+      head: [['METRIC', 'VALUE', 'EVALUATION']],
+      body: [
+        ['Overall Progress', `${progress}%`, progress > 0 ? 'ACTIVE' : 'NO DATA'],
+        ['Total Labs Attempted', attempted.toString(), attempted > 0 ? 'ACTIVE' : 'NO DATA'],
+        ['Successfully Solved', solved.toString(), solved > 0 ? 'VERIFIED' : 'PENDING'],
+        ['Unsolved/Pending', unsolved.toString(), unsolved > 0 ? 'REQUIRES ATTENTION' : 'CLEAR'],
+        ['Overall Success Rate', `${successRate}%`, successRate > 75 ? 'EXCELLENT' : successRate > 40 ? 'AVERAGE' : 'CRITICAL'],
+        ['Active Sessions', (student.current_active_sessions || 0).toString(), 'MONITORING']
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], font: 'courier', fontStyle: 'bold' },
+      styles: { font: 'courier', fontSize: 10, cellPadding: 5, lineColor: [226, 232, 240] },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 70 },
+        1: { halign: 'center', cellWidth: 40 },
+        2: { cellWidth: 'auto' }
+      }
+    });
+    
+
+    // ----------------------------------------------------
+    // FOOTER: System Signature
+    // ----------------------------------------------------
+    const finalY = (doc as any).lastAutoTable?.finalY + 30 || 220;
+    
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, finalY, 196, finalY);
+    
+    doc.setFontSize(10);
+    doc.setFont('courier', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('END OF REPORT // SYSTEM AUTOMATED GENERATION', 105, finalY + 10, { align: 'center' });
+    doc.text('MODERN ECOMMERCE VULNLAB INSTANCE', 105, finalY + 15, { align: 'center' });
+    
+    const pdfBlob = doc.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    setPreviewPDF({ uri: pdfUrl, name: `REP_${student.student_id}.pdf` });
+  };
+
+  const assignRoleAction = async () => {
+    if (!assignRoleUser || !assignRoleName) return;
+    try {
+      await axios.post('http://localhost:8000/api/admin/roles/assign', {
+        student_id: assignRoleUser,
+        role: assignRoleName,
+      }, { withCredentials: true });
+      setOpNotice({ text: 'Role assigned successfully.', tone: 'green' });
+      setAssignRoleUser('');
+      setAssignRoleName('');
+      await fetchDashboard();
     } catch {
-      setOpNotice({ text: 'Access update failed.', tone: 'red' });
+      setOpNotice({ text: 'Failed to assign role.', tone: 'red' });
     }
   };
 
@@ -353,12 +496,12 @@ export default function AdminDashboard() {
         )}
 
         {!loading && activeSection === 'students' && (
-          <SectionCard title="Student Management" subtitle="Inspect students, manage lifecycle, and open detailed performance profiles" action={<div className="inline-flex items-center gap-2 text-sm font-semibold text-brand-orange"><Users size={16} /> {students.length} students</div>}>
+          <SectionCard title="Student Management" subtitle="Inspect students, manage lifecycle, and open detailed performance profiles" action={<div className="flex items-center gap-4"><label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm"><Search size={14} className="text-slate-400" /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search students..." className="w-32 bg-transparent text-xs font-medium outline-none placeholder:text-slate-400" /></label><div className="inline-flex items-center gap-2 text-sm font-semibold text-brand-orange"><Users size={16} /> {students.length} students</div></div>}>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="text-xs uppercase tracking-widest text-slate-400 font-bold"><tr><th className="py-3 pr-4">Name</th><th className="py-3 pr-4">Username</th><th className="py-3 pr-4">Email</th><th className="py-3 pr-4">Registered</th><th className="py-3 pr-4">Last Login</th><th className="py-3 pr-4">Status</th><th className="py-3 pr-4">Role</th><th className="py-3 pr-4">Attempted</th><th className="py-3 pr-4">Solved</th><th className="py-3 pr-4">Success</th><th className="py-3 pr-4">Active Sessions</th><th className="py-3 pr-4 text-right">Actions</th></tr></thead>
+                <thead className="text-xs uppercase tracking-widest text-slate-400 font-bold"><tr><th className="py-3 pr-4">Name</th><th className="py-3 pr-4">Username</th><th className="py-3 pr-4">Email</th><th className="py-3 pr-4">Enrollment ID</th><th className="py-3 pr-4">Last Login</th><th className="py-3 pr-4">Status</th><th className="py-3 pr-4">Role</th><th className="py-3 pr-4">Attempted</th><th className="py-3 pr-4">Solved</th><th className="py-3 pr-4">Success</th><th className="py-3 pr-4">Active Sessions</th><th className="py-3 pr-4 text-right">Actions</th></tr></thead>
                 <tbody className="divide-y divide-slate-100">
-                  {visibleStudents.map((student: any) => <tr key={student.student_id} className="hover:bg-slate-50/80"><td className="py-4 pr-4 font-bold text-slate-900">{student.full_name}</td><td className="py-4 pr-4 text-slate-600">{student.username}</td><td className="py-4 pr-4 text-slate-600">{student.email}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{student.registration_date}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{student.last_login}</td><td className="py-4 pr-4"><Badge value={student.status} tone={student.status === 'Active' ? 'green' : student.status === 'Suspended' ? 'red' : 'slate'} /></td><td className="py-4 pr-4"><Badge value={student.assigned_role} tone="orange" /></td><td className="py-4 pr-4 font-semibold text-slate-700">{student.total_labs_attempted}</td><td className="py-4 pr-4 font-semibold text-slate-700">{student.total_labs_solved}</td><td className="py-4 pr-4 font-semibold text-slate-700">{student.success_rate}%</td><td className="py-4 pr-4 font-semibold text-slate-700">{student.current_active_sessions}</td><td className="py-4 pr-4 text-right"><Link to={`/admin/students/${encodeURIComponent(student.student_id)}`} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">View Profile <ArrowRight size={14} /></Link></td></tr>)}
+                  {visibleStudents.map((student: any) => <tr key={student.student_id} className="hover:bg-slate-50/80"><td className="py-4 pr-4 font-bold text-slate-900">{student.full_name}</td><td className="py-4 pr-4 text-slate-600">{student.username}</td><td className="py-4 pr-4 text-slate-600">{student.email}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap font-mono text-[10px] uppercase">{String(student.student_id).substring(0, 8)}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{formatDate(student.last_login)}</td><td className="py-4 pr-4"><Badge value={student.status} tone={student.status === 'Active' ? 'green' : student.status === 'Suspended' ? 'red' : 'slate'} /></td><td className="py-4 pr-4"><Badge value={student.assigned_role} tone="orange" /></td><td className="py-4 pr-4 font-semibold text-slate-700">{student.total_labs_attempted}</td><td className="py-4 pr-4 font-semibold text-slate-700">{student.total_labs_solved}</td><td className="py-4 pr-4 font-semibold text-slate-700">{student.success_rate}%</td><td className="py-4 pr-4 font-semibold text-slate-700">{student.current_active_sessions}</td><td className="py-4 pr-4 text-right"><div className="inline-flex items-center gap-2 justify-end"><Link to={`/admin/students/${encodeURIComponent(student.student_id)}`} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">View Profile <ArrowRight size={14} /></Link><button onClick={() => downloadPDF(student)} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors"><FileText size={14} /> View PDF</button></div></td></tr>)}
                 </tbody>
               </table>
             </div>
@@ -375,8 +518,9 @@ export default function AdminDashboard() {
                     <select value={selectedStudent} onChange={e => setSelectedStudent(e.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"><option value="">Select student</option>{students.map((student: any) => <option key={student.student_id} value={student.email}>{student.full_name} ({student.email})</option>)}</select>
                     <select value={accessAction} onChange={e => setAccessAction(e.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"><option>Grant Lab Access</option><option>Revoke Lab Access</option><option>Grant Category Access</option><option>Revoke Category Access</option><option>Assign Variants</option><option>Restrict Variants</option></select>
                     <select value={accessPermission} onChange={e => setAccessPermission(e.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"><option>Allowed</option><option>Restricted</option><option>Locked</option><option>Hidden</option></select>
-                    <input value={selectedLabsCsv} onChange={e => setSelectedLabsCsv(e.target.value)} placeholder="Lab IDs (comma separated, e.g. lab-7,lab-8)" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none" />
-                    <input value={selectedVariantsCsv} onChange={e => setSelectedVariantsCsv(e.target.value)} placeholder="Variant IDs (for variant actions, e.g. A,B,C)" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none" />
+                    <button onClick={() => setShowLabModal(true)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 text-left hover:border-brand-orange transition-colors flex items-center justify-between">
+                      <span>{selectedLabs.size === 0 && selectedVariants.size === 0 ? "Select Labs & Variants" : `${selectedLabs.size} Labs, ${selectedVariants.size} Variants Selected`}</span>
+                    </button>
                     <button onClick={submitAccessAction} className="btn-primary inline-flex items-center justify-center gap-2 text-sm"><ShieldCheck size={16} /> Apply Change</button>
                   </div>
                 </div>
@@ -402,10 +546,30 @@ export default function AdminDashboard() {
 
         {!loading && activeSection === 'roles' && (
           <SectionCard title="Role Management" subtitle="Define RBAC roles, assign permissions, and create custom access profiles">
+            <div className="text-sm font-bold text-slate-900 mb-4">System Roles</div>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
-              {roles.map((role: any) => <div key={role.name} className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><div className="flex items-start justify-between gap-3 mb-3"><div><div className="text-base font-black text-slate-900 capitalize">{role.name.replace('_', ' ')}</div><div className="text-sm text-slate-500 font-medium">{role.description}</div></div><Badge value={role.is_default ? 'Default' : 'Custom'} tone={role.is_default ? 'green' : 'orange'} /></div><div className="flex flex-wrap gap-2">{role.permissions.map((permission: string) => <Badge key={permission} value={permission} tone="slate" />)}</div></div>)}
+              {roles.filter((r: any) => ['admin', 'superadmin', 'super_admin', 'student', 'instructor'].includes(r.name)).map((role: any) => <div key={role.name} className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><div className="flex items-start justify-between gap-3 mb-3"><div><div className="text-base font-black text-slate-900 capitalize">{role.name.replace('_', ' ')}</div><div className="text-sm text-slate-500 font-medium">{role.description || 'System defined role'}</div></div><Badge value="System" tone="green" /></div><div className="flex flex-wrap gap-2">{role.permissions.map((permission: string) => <Badge key={permission} value={permission} tone="slate" />)}</div></div>)}
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 mt-4">
+              <div className="text-sm font-bold text-slate-900 mb-4">Assign Role to User</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                <select value={assignRoleUser} onChange={e => setAssignRoleUser(e.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none">
+                  <option value="">Select User...</option>
+                  {students.map((student: any) => (
+                    <option key={student.student_id} value={student.student_id}>{student.email || student.username}</option>
+                  ))}
+                </select>
+                <select value={assignRoleName} onChange={e => setAssignRoleName(e.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none">
+                  <option value="">Select Role...</option>
+                  <option value="admin">Admin</option>
+                  <option value="student">Student</option>
+                  <option value="instructor">Instructor</option>
+                </select>
+                <button onClick={assignRoleAction} className="btn-primary text-sm inline-flex items-center justify-center gap-2" disabled={!assignRoleUser || !assignRoleName}><UserCheck size={16} /> Assign Role</button>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 mt-4">
               <div className="text-sm font-bold text-slate-900 mb-4">Create Custom Role</div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                 <input value={roleName} onChange={e => setRoleName(e.target.value)} placeholder="Role name" className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none" />
@@ -464,14 +628,13 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <div className="text-sm font-bold text-slate-900 mb-4">Student Reports</div>
-                <div className="space-y-3">{reports.student_reports.slice(0, 6).map((item: any) => <div key={item.student_id} className="rounded-xl border border-slate-200 bg-white p-4 flex items-center justify-between gap-3"><div><div className="font-bold text-slate-900">{item.name}</div><div className="text-xs text-slate-500">Progress: {item.learning_progress}%</div></div><div className="flex gap-2 items-center"><Badge value={`${item.success_rate}%`} tone="green" /><Badge value={`${item.solved_labs} solved`} tone="orange" /></div></div>)}</div>
-              </div>
+            <div className="grid grid-cols-1 gap-6">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                 <div className="text-sm font-bold text-slate-900 mb-4">System Reports</div>
-                <div className="grid grid-cols-2 gap-3 mb-4"><div className="rounded-xl border border-slate-200 bg-white p-4"><div className="text-xs uppercase font-bold text-slate-400">Active Users</div><div className="text-2xl font-black text-slate-900">{reports.system_reports?.active_users || 0}</div></div><div className="rounded-xl border border-slate-200 bg-white p-4"><div className="text-xs uppercase font-bold text-slate-400">Total Sessions</div><div className="text-2xl font-black text-slate-900">{reports.system_reports?.platform_usage_statistics?.total_sessions || 0}</div></div></div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                  <div className="rounded-xl border border-slate-200 bg-white p-4"><div className="text-xs uppercase font-bold text-slate-400">Active Users</div><div className="text-2xl font-black text-slate-900">{reports.system_reports?.active_users || 0}</div></div>
+                  <div className="rounded-xl border border-slate-200 bg-white p-4"><div className="text-xs uppercase font-bold text-slate-400">Total Sessions</div><div className="text-2xl font-black text-slate-900">{reports.system_reports?.platform_usage_statistics?.total_sessions || 0}</div></div>
+                </div>
                 <div className="text-sm font-bold text-slate-900 mb-2">Export Formats</div>
                 <div className="flex flex-wrap gap-2">{reports.export_options.map((item: string) => <Badge key={item} value={item} tone="slate" />)}</div>
               </div>
@@ -498,6 +661,125 @@ export default function AdminDashboard() {
           </SectionCard>
         )}
       </div>
+
+      {showLabModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-xl overflow-hidden">
+            <div className="flex items-center justify-between p-5 md:p-6 border-b border-slate-200">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 tracking-tight">Select Labs & Variants</h3>
+                <p className="text-sm text-slate-500 font-medium">Choose which labs to include in the access policy.</p>
+              </div>
+              <button onClick={() => setShowLabModal(false)} className="p-2 rounded-full hover:bg-slate-100 text-slate-500"><X size={20} /></button>
+            </div>
+            
+            <div className="p-4 flex items-center gap-3 border-b border-slate-100 bg-slate-50">
+              <button onClick={() => {
+                setSelectedLabs(new Set(labs.map((l: any) => l.lab_id)));
+                const allVariants = new Set<string>();
+                labs.forEach((l: any) => l.variants?.forEach((v: any) => allVariants.add(v.variant_id)));
+                setSelectedVariants(allVariants);
+              }} className="btn-secondary text-xs px-3 py-1.5 inline-flex items-center gap-1.5"><CheckSquare size={14} /> Select All</button>
+              <button onClick={() => {
+                setSelectedLabs(new Set());
+                setSelectedVariants(new Set());
+              }} className="btn-secondary text-xs px-3 py-1.5 inline-flex items-center gap-1.5"><Square size={14} /> Deselect All</button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-5 md:p-6 space-y-4 bg-slate-50/50">
+              {labs.map((lab: any) => {
+                const isLabSelected = selectedLabs.has(lab.lab_id);
+                return (
+                  <div key={lab.lab_id} className={`rounded-2xl border ${isLabSelected ? 'border-brand-orange bg-brand-orange-50/30' : 'border-slate-200 bg-white'} p-4 transition-colors`}>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => {
+                        const next = new Set(selectedLabs);
+                        if (isLabSelected) next.delete(lab.lab_id);
+                        else next.add(lab.lab_id);
+                        setSelectedLabs(next);
+                      }} className={`w-5 h-5 rounded border flex items-center justify-center ${isLabSelected ? 'bg-brand-orange border-brand-orange text-white' : 'border-slate-300 bg-white'}`}>
+                        <CheckSquare size={14} className={isLabSelected ? 'block text-white' : 'hidden'} />
+                      </button>
+                      <div>
+                        <div className="font-bold text-slate-900">{lab.title}</div>
+                        <div className="text-xs text-slate-500 font-medium">{lab.lab_id} • {lab.category}</div>
+                      </div>
+                    </div>
+                    
+                    {lab.variants && lab.variants.length > 0 && (
+                      <div className="mt-3 ml-8 space-y-4">
+                        {(() => {
+                          const grouped = lab.variants.reduce((acc: any, v: any) => {
+                            const sub = v.submodule || 'Variants';
+                            if (!acc[sub]) acc[sub] = [];
+                            acc[sub].push(v);
+                            return acc;
+                          }, {});
+                          
+                          return Object.keys(grouped).map(submodule => (
+                            <div key={submodule}>
+                              {submodule !== 'Variants' && (
+                                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 mt-1">{submodule}</div>
+                              )}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                {grouped[submodule].map((variant: any) => {
+                                  const isVariantSelected = selectedVariants.has(variant.variant_id);
+                                  return (
+                                    <div key={variant.variant_id} className={`flex items-center gap-2 p-2 rounded-xl border ${isVariantSelected ? 'border-brand-orange/40 bg-brand-orange-50/50' : 'border-slate-100 bg-slate-50'}`}>
+                                      <button onClick={() => {
+                                        const next = new Set(selectedVariants);
+                                        if (isVariantSelected) next.delete(variant.variant_id);
+                                        else {
+                                          next.add(variant.variant_id);
+                                          if (!isLabSelected) {
+                                            const nextLabs = new Set(selectedLabs);
+                                            nextLabs.add(lab.lab_id);
+                                            setSelectedLabs(nextLabs);
+                                          }
+                                        }
+                                        setSelectedVariants(next);
+                                      }} className={`w-4 h-4 rounded-sm border flex items-center justify-center ${isVariantSelected ? 'bg-brand-orange border-brand-orange text-white' : 'border-slate-300 bg-white'}`}>
+                                        <CheckSquare size={10} className={isVariantSelected ? 'block text-white' : 'hidden'} />
+                                      </button>
+                                      <div className="text-xs font-semibold text-slate-700">{variant.title} <span className="text-slate-400 font-normal">({variant.variant_id})</span></div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="p-5 md:p-6 border-t border-slate-200 bg-white flex justify-end">
+              <button onClick={() => setShowLabModal(false)} className="btn-primary">Done Selecting</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {previewPDF && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-4xl rounded-2xl bg-white shadow-xl flex flex-col h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+              <h3 className="text-lg font-bold text-slate-900">PDF Report Preview</h3>
+              <button onClick={() => setPreviewPDF(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 bg-slate-50 p-6 overflow-hidden">
+              <iframe src={previewPDF.uri} className="w-full h-full rounded-xl border border-slate-200" title="PDF Preview" />
+            </div>
+            <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
+              <button onClick={() => setPreviewPDF(null)} className="rounded-xl px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">Close</button>
+              <a href={previewPDF.uri} download={previewPDF.name} className="btn-primary text-sm inline-flex items-center gap-2"><Download size={16} /> Download PDF</a>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminShell>
   );
 }

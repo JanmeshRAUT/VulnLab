@@ -267,7 +267,7 @@ export default function Home() {
           <div className="absolute -top-40 -right-40 w-96 h-96 bg-orange-100/50 rounded-full blur-[80px]"></div>
           <h2 className="text-4xl font-extrabold text-slate-900 mb-6 relative z-10 tracking-tight">Ready to Begin Your Security Journey?</h2>
           <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto relative z-10 font-medium">Join thousands of learners building practical web security skills.</p>
-          <Link to="/register" className="btn-primary text-xl px-12 py-4 shadow-xl relative z-10">Start Learning Today</Link>
+          <Link to="/labs" className="btn-primary text-xl px-12 py-4 shadow-xl relative z-10">Start Learning Today</Link>
         </div>
       </div>
     </div>

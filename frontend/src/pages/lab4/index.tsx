@@ -92,7 +92,7 @@ export default function Lab4Index() {
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
                 Exploit a stock-checking feature to pivot requests to the server's local loopback interface and access a hidden admin console.
               </p>
-              <Link to="/labs/4/sub1/a" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-orange-600 text-white font-bold rounded-xl transition-colors">
+              <Link to="/labs/4/sub1" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-orange-600 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </Link>
             </div>

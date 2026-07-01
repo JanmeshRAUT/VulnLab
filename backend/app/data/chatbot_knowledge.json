@@ -1,0 +1,145 @@
+{
+  "platform": {
+    "name": "VulnLab",
+    "description": "A hands-on cybersecurity training platform with intentionally vulnerable lab environments.",
+    "flag_format": "FLAG{...} — cryptographically tied to your active session. If your session expired, re-exploit to get a new flag.",
+    "instance_ttl": "Lab instances expire after 5 minutes of inactivity. Heartbeats from the lab page keep them alive.",
+    "flag_submission": "Use the orange flag button (bottom-right of any lab page) to submit. Select the correct objective first.",
+    "no_vpn_needed": true,
+    "automated_tools": "Manual methodology required. Automated scanners prohibited unless lab explicitly allows them.",
+    "roles": ["student", "instructor", "admin", "reviewer", "super_admin"]
+  },
+  "labs": [
+    {
+      "lab_id": "1",
+      "title": "Path Traversal",
+      "vulnerability": "Path Traversal",
+      "what_it_is": "Path traversal lets an attacker read files outside the intended directory by using ../ sequences in a filename parameter.",
+      "real_world_impact": "Attackers read /etc/passwd, config files, private keys, or source code from servers.",
+      "variants": [
+        { "id": "1", "title": "DocuVault", "theme": "File download endpoint" },
+        { "id": "2", "title": "ShopExpress", "theme": "Image loader" },
+        { "id": "3", "title": "PixelMarket", "theme": "Advanced image loader" }
+      ],
+      "tiered_hints": [
+        "Think about what controls which file gets returned when you download something.",
+        "The file parameter in the request is passed directly to the filesystem. What happens if you change its value?",
+        "Try adding ../ sequences to navigate up directories. Where might a sensitive file live on a Linux system?"
+      ],
+      "stuck_advice": "Intercept the download request with browser DevTools or Burp Suite. Look at what parameter is sent and experiment with its value.",
+      "defense": "Sanitize file paths server-side. Use os.path.basename() or resolve the real path and verify it starts with the allowed base directory.",
+      "tools": ["Browser DevTools", "Burp Suite Repeater", "curl"]
+    },
+    {
+      "lab_id": "4",
+      "title": "SSRF",
+      "vulnerability": "Server-Side Request Forgery",
+      "what_it_is": "SSRF tricks the server into making HTTP requests to destinations you control, including internal services the server can reach but you cannot.",
+      "real_world_impact": "SSRF was behind the Capital One breach (2019). Attackers reached AWS metadata endpoints to steal credentials.",
+      "variants": [
+        { "id": "1a", "title": "Loopback admin access", "theme": "Internal localhost pivot" },
+        { "id": "1b", "title": "Back-end discovery", "theme": "192.168.0.0/24 scan" }
+      ],
+      "tiered_hints": [
+        "Find the parameter that tells the server which URL to fetch for stock data.",
+        "The server will fetch any URL you give it \u2014 including http://localhost/...",
+        "Once you reach the admin panel via SSRF, look for a delete action and replay that URL too."
+      ],
+      "stuck_advice": "Intercept the stock check request. The stockApi parameter is your entry point. Start with http://localhost/admin.",
+      "defense": "Allowlist permitted outbound domains. Never pass user-controlled values directly to an HTTP client.",
+      "tools": ["Burp Suite Repeater", "curl", "Browser DevTools"]
+    },
+    {
+      "lab_id": "5",
+      "title": "File Upload",
+      "vulnerability": "Unrestricted File Upload",
+      "what_it_is": "The server accepts uploaded files without properly validating their type or content, allowing executable code to be uploaded and triggered.",
+      "real_world_impact": "File upload vulnerabilities allow remote code execution \u2014 the highest severity class of web vulnerability.",
+      "lab_credentials": { "username": "wiener", "password": "peter" },
+      "variants": [
+        { "id": "1a/1b/1c", "title": "Unrestricted upload", "theme": "No extension validation" },
+        { "id": "2a/2b/2c", "title": "Content-Type bypass", "theme": "MIME type spoofing" }
+      ],
+      "tiered_hints": [
+        "Try uploading a normal image first to understand how the upload works and where files are stored.",
+        "The server checks the Content-Type header, not the actual file content. What happens if you change that header?",
+        "Upload a PHP file while spoofing the Content-Type to image/jpeg. Then navigate to the file's public path to trigger it."
+      ],
+      "stuck_advice": "Use Burp Suite to intercept the upload request. Modify the filename extension and Content-Type independently.",
+      "defense": "Validate file content (magic bytes), not just the extension or MIME header. Store uploads outside the web root.",
+      "tools": ["Burp Suite Repeater", "exiftool"]
+    },
+    {
+      "lab_id": "7",
+      "title": "SQL Injection",
+      "vulnerability": "SQL Injection",
+      "what_it_is": "User input is embedded directly into SQL queries without sanitisation, letting attackers manipulate the query logic.",
+      "real_world_impact": "SQLi can dump entire databases, bypass login, and in some configurations execute OS commands.",
+      "variants": [
+        { "id": "a/b/c", "title": "UNION-based extraction", "theme": "Product filter injection" },
+        { "id": "blind-a/b/c", "title": "Blind injection", "theme": "Boolean and time-based" }
+      ],
+      "tiered_hints": [
+        "Find an input that gets embedded in a database query \u2014 product filters, search boxes, login fields.",
+        "Try a single quote ' to break the query and see if the error reveals database details.",
+        "For UNION attacks, first determine the number of columns, then match their types before extracting data."
+      ],
+      "stuck_advice": "Start with a quote character to see if the input is injectable. Read error messages carefully \u2014 they tell you the database type.",
+      "defense": "Use parameterised queries / prepared statements. Never concatenate user input into SQL strings.",
+      "tools": ["Burp Suite Intruder", "sqlmap", "Browser DevTools"]
+    },
+    {
+      "lab_id": "8",
+      "title": "XSS",
+      "vulnerability": "Cross-Site Scripting",
+      "what_it_is": "User input is rendered in the browser without encoding, letting attackers inject JavaScript that executes in other users' browsers.",
+      "real_world_impact": "XSS enables session hijacking, credential theft, and full account takeover.",
+      "variants": [
+        { "id": "8.1 A-E", "title": "Reflected XSS", "theme": "Five different injection contexts" },
+        { "id": "8.2", "title": "Stored XSS", "theme": "Profile field stored and rendered" }
+      ],
+      "payload_patterns": ["<script", "onerror=", "onload=", "onclick=", "javascript:"],
+      "tiered_hints": [
+        "Find where user input is reflected back in the page and look at how it sits in the HTML \u2014 is it inside a tag, an attribute, or a script?",
+        "The injection context changes which payload works. Inside a tag: use <script>. Inside an attribute: use an event handler like onerror=.",
+        "Try the simplest possible payload first: <script>alert(1)</script>. If it's filtered, try an event-handler variant."
+      ],
+      "stuck_advice": "Open browser DevTools, inspect where your input appears in the DOM, then craft your payload for that exact context.",
+      "defense": "HTML-encode all output. Use Content-Security-Policy headers. Never use innerHTML with user data.",
+      "tools": ["Browser DevTools Console", "Burp Suite Repeater"]
+    },
+    {
+      "lab_id": "9",
+      "title": "Mobile Binary Analysis",
+      "vulnerability": "Hardcoded Secrets in APK",
+      "what_it_is": "Android APKs are ZIP archives containing compiled code. Developers sometimes leave API keys, credentials, or internal URLs hardcoded in the binary.",
+      "real_world_impact": "Hardcoded secrets in production apps have leaked AWS keys, payment credentials, and internal APIs.",
+      "variants": [
+        { "id": "1", "title": "APK secret extraction", "theme": "Decompile and search strings" }
+      ],
+      "tiered_hints": [
+        "An APK is just a ZIP file. Start by extracting it and exploring its contents.",
+        "The DEX file contains compiled Java/Kotlin code. Use JADX or apktool to decompile it to readable source.",
+        "Search the decompiled source for strings like 'password', 'key', 'secret', 'api', 'http'. They're often in resource files or constants."
+      ],
+      "stuck_advice": "Run: unzip app.apk -d app_extracted. Then use jadx-gui to open the APK directly and search for credential patterns.",
+      "defense": "Never hardcode secrets. Use Android Keystore, environment injection at runtime, or a secrets manager.",
+      "tools": ["JADX", "apktool", "strings command", "7-Zip", "MobSF"]
+    }
+  ],
+  "learning_path": {
+    "beginner": ["Lab 8 (XSS) \u2014 visual, fast feedback", "Lab 4 (SSRF) \u2014 clear cause-effect", "Lab 1 (Path Traversal) \u2014 fundamental"],
+    "intermediate": ["Lab 5 (File Upload)", "Lab 7 (SQL Injection) \u2014 requires DB knowledge"],
+    "advanced": ["Lab 9 (Mobile Analysis)", "Combine multiple labs into an attack chain"]
+  },
+  "out_of_scope": [
+    "Flags or flag values for any instance",
+    "Target usernames or passwords from active instances",
+    "Admin passwords from active instances",
+    "Exact payloads that solve a lab step-by-step",
+    "Questions about other students' progress or data",
+    "General cybersecurity questions unrelated to platform labs"
+  ],
+  "out_of_scope_response": "I can only answer questions about this platform and its labs. I won't provide flags, credentials, exact exploit payloads, or other students' data. Please ask about a lab (for example: 'SSRF hint') or platform topics like 'flags', 'sessions', or 'tools'.",
+  "fallback_response": "I can help with platform queries ('flags', 'sessions', 'tools', 'vpn') or explain vulnerabilities like 'SSRF', 'SQL Injection', 'XSS', 'File Upload', etc. Ask for a 'hint', 'defense', or 'impact'!"
+}

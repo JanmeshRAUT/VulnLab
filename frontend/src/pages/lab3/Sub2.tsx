@@ -1,13 +1,65 @@
-import { Link, useSearchParams } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
+import axios from 'axios';
 import { ArrowLeft, ArrowRight, ShieldAlert, Terminal, ShieldCheck } from 'lucide-react';
+import { useLabInstance } from '../../hooks/useLabInstance';
+import TechStore from './storefronts/TechStore';
+import BankSecure from './storefronts/BankSecure';
+import CloudDrive from './storefronts/CloudDrive';
 
-export default function Lab3Sub2() {
+export default function Lab3Sub2({ variantIdProp }: { variantIdProp?: string }) {
   const [params, setParams] = useSearchParams();
-  const step = (params.get('step') || 'theory') as 'theory' | 'selection' | 'lab';
-  const selectedVariant = params.get('variant') || 'a';
+  const routeParams = useParams();
+  const variantId = variantIdProp || routeParams.variantId;
+  
+  const isLabEnvironment = !!variantId;
+  const selectedVariant = variantId || params.get('variant') || 'a';
+  const step = isLabEnvironment ? 'lab' : ((params.get('step') || 'theory') as 'theory' | 'selection' | 'lab');
+
+  const { instanceId, loading: instanceLoading } = useLabInstance({ 
+    labId: '3', 
+    variantId: `2${selectedVariant}` 
+  });
+
+  const handleLaunch = async (e: React.MouseEvent, slug: string, variant: string) => {
+    e.preventDefault();
+    try {
+      const storageKey = `instance:${slug}`;
+      const existing = localStorage.getItem(storageKey);
+      let newInstanceId = existing;
+      
+      if (existing) {
+        try {
+          await axios.post(`http://localhost:8000/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
+        } catch (err) {
+          newInstanceId = null;
+        }
+      }
+
+      if (!newInstanceId) {
+        const res = await axios.post('http://localhost:8000/api/instances/launch', {
+          lab_id: '3',
+          variant_id: `2${variant}`,
+        }, { withCredentials: true });
+        newInstanceId = res.data.instance_id;
+      }
+      
+      if (newInstanceId) {
+        sessionStorage.setItem('active_instance_id', newInstanceId);
+        localStorage.setItem(storageKey, newInstanceId);
+        document.cookie = `instance_id=${newInstanceId}; path=/; max-age=86400`;
+        
+        localStorage.removeItem(`lab3_2_token_${variant}`);
+        
+        window.open(`/labs/${slug}`, '_blank');
+      }
+    } catch (error) {
+      console.error("Failed to launch instance:", error);
+      alert("Failed to launch lab environment. Is the backend running?");
+    }
+  };
 
   const variants: Record<string, { title: string; description: string; tone: string }> = {
-    a: { title: 'SecureShop', description: 'A straightforward store with a simple 2FA journey.', tone: 'blue' },
+    a: { title: 'TechStore', description: 'A straightforward store with a simple 2FA journey.', tone: 'blue' },
     b: { title: 'BankSecure', description: 'A polished banking app with a stricter looking login flow.', tone: 'green' },
     c: { title: 'CloudDrive', description: 'A cloud service with a more technical account portal.', tone: 'indigo' },
   };
@@ -99,6 +151,25 @@ export default function Lab3Sub2() {
               </button>
             </div>
 
+            <div className="mb-8 p-6 bg-slate-800 rounded-2xl border border-slate-700 shadow-md text-white flex flex-col md:flex-row gap-6 items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
+                  <Terminal size={18} className="text-brand-orange" /> Lab Credentials
+                </h3>
+                <p className="text-sm text-slate-400">Use these accounts to exploit the 2FA bypass vulnerability.</p>
+              </div>
+              <div className="flex gap-4">
+                <div className="bg-slate-900 border border-slate-700 p-3 rounded-xl">
+                  <div className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Your Account</div>
+                  <div className="font-mono text-brand-orange font-bold text-sm">wiener : peter</div>
+                </div>
+                <div className="bg-slate-900 border border-slate-700 p-3 rounded-xl">
+                  <div className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Victim Account</div>
+                  <div className="font-mono text-red-400 font-bold text-sm">carlos : montoya</div>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {Object.entries(variants).map(([variantId, variant]) => (
                 <div key={variantId} className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl transition-all flex flex-col group relative overflow-hidden">
@@ -111,7 +182,7 @@ export default function Lab3Sub2() {
                   </div>
                   <h3 className="text-2xl font-bold text-slate-900 mb-2">{variant.title}</h3>
                   <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">{variant.description}</p>
-                  <button onClick={() => goTo('lab', variantId)} className={`inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 text-white font-bold rounded-xl transition-colors ${variant.tone === 'blue' ? 'hover:bg-blue-600' : variant.tone === 'green' ? 'hover:bg-green-600' : 'hover:bg-indigo-600'}`}>
+                  <button onClick={(e) => handleLaunch(e, `2fa-bypass/${variant.title.toLowerCase()}`, variantId)} className={`inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 text-white font-bold rounded-xl transition-colors ${variant.tone === 'blue' ? 'hover:bg-blue-600' : variant.tone === 'green' ? 'hover:bg-green-600' : 'hover:bg-indigo-600'}`}>
                     Launch Environment <ArrowRight size={18} />
                   </button>
                 </div>
@@ -124,30 +195,23 @@ export default function Lab3Sub2() {
     );
   }
 
-  const labels = variants;
-
-  return (
-    <div className="w-full min-h-screen bg-slate-50 px-8 py-12 flex items-center justify-center">
-        <div className="max-w-3xl w-full bg-white rounded-3xl border border-slate-200 shadow-xl p-10 text-center">
-          <div className="p-6 bg-blue-100 text-blue-600 rounded-2xl inline-flex mb-6">
-            <ShieldCheck size={40} />
-          </div>
-          <h1 className="text-3xl font-extrabold text-slate-900 mb-3">Lab 3.2: 2FA Bypass</h1>
-          <p className="text-slate-600 text-lg mb-2">
-            Active Variant: <span className="font-black text-brand-orange">{labels[selectedVariant]?.title || labels.a.title}</span>
-          </p>
-          <p className="text-slate-400 text-sm mb-8">
-            This frontend module is a route shell for the 2FA exercise. Use the backend demo at <span className="font-semibold text-brand-orange">/lab3/2</span> for the interactive flow.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button onClick={() => goTo('selection')} className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition-colors">
-              Back to Variant Selection <ArrowLeft size={16} />
-            </button>
-            <Link to="/labs/3" className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-slate-200 text-slate-700 font-bold hover:border-brand-orange hover:text-brand-orange transition-colors">
-              Back to Lab 3
-            </Link>
+  if (step === 'lab') {
+    if (instanceLoading || !instanceId) {
+      return (
+        <div className="w-full min-h-screen bg-slate-50 flex items-center justify-center">
+          <div className="text-center animate-pulse">
+            <div className="w-16 h-16 border-4 border-brand-orange border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <h2 className="text-xl font-bold text-slate-700">Provisioning Environment...</h2>
+            <p className="text-slate-500">Allocating isolated backend instance</p>
           </div>
         </div>
-      </div>
-  );
+      );
+    }
+    if (selectedVariant === 'a') return <TechStore instanceId={instanceId} />;
+    if (selectedVariant === 'b') return <BankSecure instanceId={instanceId} />;
+    if (selectedVariant === 'c') return <CloudDrive instanceId={instanceId} />;
+    return <TechStore instanceId={instanceId} />;
+  }
+
+  return null;
 }

@@ -34,6 +34,11 @@ export const LAB_ROUTES: Record<string, LabRouteConfig> = {
   'brute-force/vaultmart':            { labId: '3', variantId: '1b', title: 'Brute Force (VaultMart)', labTitle: 'Lab 3.1: Brute Force' },
   'brute-force/alphacart':            { labId: '3', variantId: '1c', title: 'Brute Force (AlphaCart)', labTitle: 'Lab 3.1: Brute Force' },
 
+  // Lab 3.2: 2FA Bypass
+  '2fa-bypass/techstore':             { labId: '3', variantId: '2a', title: '2FA Bypass (TechStore)', labTitle: 'Lab 3.2: 2FA Bypass' },
+  '2fa-bypass/banksecure':            { labId: '3', variantId: '2b', title: '2FA Bypass (BankSecure)', labTitle: 'Lab 3.2: 2FA Bypass' },
+  '2fa-bypass/clouddrive':            { labId: '3', variantId: '2c', title: '2FA Bypass (CloudDrive)', labTitle: 'Lab 3.2: 2FA Bypass' },
+
   // Lab 3.X: Cross-Site Scripting (XSS) - old labeling
   'xss/reflected':                    { labId: '3', variantId: '1', title: 'Reflected XSS', labTitle: 'Lab 3: XSS' },
   'xss/stored':                       { labId: '3', variantId: '2', title: 'Stored XSS', labTitle: 'Lab 3: XSS' },

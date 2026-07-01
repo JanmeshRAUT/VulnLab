@@ -339,7 +339,7 @@ function App() {
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isLab1SubPath = location.pathname.match(/^\/labs\/1\/sub\d+$/i) !== null;
   const isOtherLabEnvPath = location.pathname.match(/^\/labs\/[2-8]\/sub\d+\/[a-c](?:\/.*)?$/i) !== null;
-  const isSemanticLabPath = location.pathname.match(/^\/labs\/[a-z-]+(\/[a-z0-9-]+)+$/i) !== null;
+  const isSemanticLabPath = location.pathname.match(/^\/labs\/[a-z0-9-]+(\/[a-z0-9-]+)+$/i) !== null;
   const isLabEnvironment = (isLab1SubPath || isOtherLabEnvPath || isSemanticLabPath) && (step === 'lab' || !step);
 
   return (
@@ -404,7 +404,11 @@ function App() {
               <Route path="/labs/3/sub2" element={<Lab3Sub2 />} />
 
               {/* Lab 4 Modules */}
+              <Route path="/labs/4/sub1" element={<Lab4Sub1 />} />
               <Route path="/labs/4/sub1/:variantId" element={<Lab4Sub1 />} />
+              <Route path="/labs/ssrf/stylehub/*" element={<Lab4Sub1 variantIdProp="a" />} />
+              <Route path="/labs/ssrf/skynet/*" element={<Lab4Sub1 variantIdProp="b" />} />
+              <Route path="/labs/ssrf/globallogistics/*" element={<Lab4Sub1 variantIdProp="c" />} />
               <Route path="/labs/4/sub2/:variantId" element={<Lab4Sub2 />} />
 
               {/* Lab 5 Modules */}
@@ -428,6 +432,11 @@ function App() {
               <Route path="/labs/8/sub1/:variantId" element={<Lab8Sub1 />} />
               <Route path="/labs/8/sub2" element={<Lab8Sub2 />} />
             </Route>
+            
+            {/* Fullscreen Labs (No Platform Header) */}
+            <Route path="/labs/2fa-bypass/techstore/*" element={<Lab3Sub2 variantIdProp="a" />} />
+            <Route path="/labs/2fa-bypass/banksecure/*" element={<Lab3Sub2 variantIdProp="b" />} />
+            <Route path="/labs/2fa-bypass/clouddrive/*" element={<Lab3Sub2 variantIdProp="c" />} />
           </Routes>
         </div>
       </main>

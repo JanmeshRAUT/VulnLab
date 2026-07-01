@@ -3,7 +3,72 @@ import { useParams, Link, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, ArrowRight, ShieldAlert, Terminal, FileSearch, KeyRound, ShoppingCart, ShoppingBag, Briefcase } from 'lucide-react';
 import { useLabInstance } from '../../hooks/useLabInstance';
-import Lab3_1_Portal from './storefronts/Lab3_1_Portal';
+import SecureShop from './storefronts/SecureShop';
+import VaultMart from './storefronts/VaultMart';
+import AlphaCart from './storefronts/AlphaCart';
+
+function LabApp({ variantId, instanceId }: { variantId: string, instanceId: string }) {
+  const [view, setView] = useState<'landing' | 'login' | 'dashboard' | 'profile'>('landing');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [profileData, setProfileData] = useState<any>(null);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      const res = await axios.post(`http://localhost:8000/api/lab3/1/${variantId}/login`, 
+        { username, password },
+        { headers: { 'X-Variant-Session-ID': instanceId } }
+      );
+      if (res.data.token) {
+        localStorage.setItem(`token_lab3_1_${variantId}`, res.data.token);
+        localStorage.setItem(`username_lab3_1_${variantId}`, username);
+        setView('dashboard');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadProfile = async () => {
+    setView('profile');
+    try {
+      const token = localStorage.getItem(`token_lab3_1_${variantId}`);
+      const user = localStorage.getItem(`username_lab3_1_${variantId}`);
+      const res = await axios.get(`http://localhost:8000/api/lab3/1/${variantId}/profile/${user}`, {
+        headers: {
+          'X-Variant-Session-ID': instanceId,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      setProfileData(res.data);
+    } catch (err) {
+      setView('login');
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem(`token_lab3_1_${variantId}`);
+    localStorage.removeItem(`username_lab3_1_${variantId}`);
+    setView('landing');
+    setUsername('');
+    setPassword('');
+    setProfileData(null);
+  };
+
+  const props = { view, setView, username, setUsername, password, setPassword, error, loading, profileData, handleLogin, handleLogout, loadProfile };
+
+  if (variantId === 'a') return <SecureShop {...props} />;
+  if (variantId === 'b') return <VaultMart {...props} />;
+  if (variantId === 'c') return <AlphaCart {...props} />;
+  return <SecureShop {...props} />;
+}
 
 export default function Lab3Sub1({ variantIdProp }: { variantIdProp?: string }) {
   const [params, setParams] = useSearchParams();
@@ -208,7 +273,7 @@ export default function Lab3Sub1({ variantIdProp }: { variantIdProp?: string }) 
         </div>
       );
     }
-    return <Lab3_1_Portal variantId={selectedVariant} instanceId={instanceId} />;
+    return <LabApp variantId={selectedVariant} instanceId={instanceId} />;
   }
 
   return null;

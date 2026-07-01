@@ -169,8 +169,6 @@ export function useLabInstance(options: string | UseLabInstanceLegacyOptions) {
       sendHeartbeat();
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('pagehide', handlePageHide);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('online', handleOnline);
 
@@ -178,8 +176,6 @@ export function useLabInstance(options: string | UseLabInstanceLegacyOptions) {
       if (heartbeatIntervalRef.current) {
         clearInterval(heartbeatIntervalRef.current);
       }
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('pagehide', handlePageHide);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
 

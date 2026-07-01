@@ -7,6 +7,7 @@ from datetime import datetime
 from app.core.config import settings
 from app.core.database import get_database
 from app.models.user import UserCreate, UserLogin
+from app.api.admin import role_permissions
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -109,10 +110,14 @@ async def auth_status(request: Request):
     except Exception:
         full_name = ""
         
+    role = request.session.get('role', 'user')
+    permissions = await role_permissions(role)
+    
     return {
         "is_authenticated": True,
         "email": request.session.get('email'),
-        "role": request.session.get('role', 'user'),
+        "role": role,
+        "permissions": permissions,
         "full_name": full_name
     }
 
@@ -128,11 +133,15 @@ async def get_profile(request: Request):
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
+        role = user.get("role", "student")
+        permissions = await role_permissions(role)
+        
         return {
             "email": user.get("email"),
             "full_name": user.get("full_name", ""),
             "enrollment_id": user.get("enrollment_id", ""),
-            "role": user.get("role")
+            "role": role,
+            "permissions": permissions
         }
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid user ID")

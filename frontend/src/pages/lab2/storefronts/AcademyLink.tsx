@@ -245,7 +245,7 @@ export default function AcademyLink(props: any) {
               </div>
               
               <div className="divide-y divide-slate-50">
-                {studentsList.map((s, idx) => (
+                {studentsList.map((s: any, idx: number) => (
                   <div key={s.id} className="grid grid-cols-12 gap-4 p-6 items-center hover:bg-slate-50/50 transition-colors">
                     <div className="col-span-5 md:col-span-4 flex items-center gap-4">
                       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-sm ${idx % 2 === 0 ? 'bg-blue-50 text-blue-600' : 'bg-indigo-50 text-indigo-600'}`}>

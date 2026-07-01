@@ -16,7 +16,7 @@ from app.services.instance_service import update_instance_status
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-ADMIN_ROLES = {"super_admin", "admin", "instructor", "reviewer"}
+ADMIN_ROLES = {"superadmin", "super_admin", "admin", "instructor"}
 PERMISSION_CATEGORIES = [
     "Manage Users",
     "Manage Labs",
@@ -40,7 +40,7 @@ PERMISSION_ALIASES = {
 }
 
 DEFAULT_ROLE_DEFINITIONS = {
-    "super_admin": PERMISSION_CATEGORIES,
+    "superadmin": PERMISSION_CATEGORIES,
     "admin": [
         "Manage Users",
         "Manage Students",
@@ -63,11 +63,8 @@ DEFAULT_ROLE_DEFINITIONS = {
         "Create Labs",
         "Edit Labs",
         "View Reports",
-        "Manage Access Control",
         "View Sessions",
-        "Export Reports",
     ],
-    "reviewer": ["View Reports", "View Sessions", "Export Reports"],
     "student": [],
 }
 
@@ -91,6 +88,11 @@ class RoleMutationRequest(BaseModel):
     description: str = ""
     permissions: list[str] = Field(default_factory=list)
     is_default: bool = False
+
+
+class AssignRoleRequest(BaseModel):
+    student_id: str
+    role: str
 
 
 class SessionActionRequest(BaseModel):
@@ -159,7 +161,11 @@ async def safe_find(collection_name: str, query: Optional[dict[str, Any]] = None
         cursor = db[collection_name].find(query or {})
         if sort:
             cursor = cursor.sort(sort)
-        return await cursor.to_list(length=5000)
+        docs = await cursor.to_list(length=5000)
+        for doc in docs:
+            if "_id" in doc:
+                doc["_id"] = str(doc["_id"])
+        return docs
     except Exception:
         return []
 
@@ -217,6 +223,7 @@ def get_lab_catalog() -> list[dict[str, Any]]:
                 "category": "Security",
                 "variant_count": len(variants),
                 "difficulty": "Intermediate",
+                "variants": [{"variant_id": str(v.variant_id), "title": str(v.title), "submodule": v.submodule} for v in variants],
             }
         )
     return labs
@@ -459,7 +466,7 @@ def build_reports(students: list[dict[str, Any]], sessions: list[dict[str, Any]]
             "success_rate": s["success_rate"],
             "learning_progress": s["completion_percentage"],
         }
-        for s in students[:10]
+        for s in students
     ]
 
     lab_reports = []
@@ -772,10 +779,38 @@ async def create_or_update_role(request: Request, data: RoleMutationRequest):
             "ip_address": request.client.host if request.client else "127.0.0.1",
         },
     )
-    return {"success": True, "role": role_name}
+    return {"message": "Role created/updated"}
 
 
-@router.post("/sessions/{instance_id}/expire")
+@router.post("/roles/assign")
+async def assign_role(request: Request, data: AssignRoleRequest):
+    identity = await require_permission(request, "Manage Roles")
+    timestamp = now_ts()
+    role_name = normalize_role(data.role)
+    db = get_database()
+    
+    result = await db["users"].update_one(
+        {"$or": [{"user_id": data.student_id}, {"email": data.student_id}, {"username": data.student_id}]},
+        {"$set": {"role": role_name}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    await safe_insert(
+        "audit_logs",
+        {
+            "user": identity["email"],
+            "action": "ASSIGN_ROLE",
+            "target": data.student_id,
+            "details": f"Assigned role {role_name}",
+            "timestamp": timestamp,
+        }
+    )
+    return {"message": f"Role {role_name} assigned to {data.student_id}"}
+
+
+@router.post("/sessions/{instance_id}/action")
 async def force_expire_session(request: Request, instance_id: str, data: SessionActionRequest):
     identity = await require_permission(request, "Manage Sessions")
     await update_instance_status(instance_id, "EXPIRED")

@@ -298,7 +298,7 @@ export default function CampusConnect(props: any) {
                 </div>
                 
                 <div className="divide-y divide-zinc-800">
-                  {studentsList.map(s => (
+                  {studentsList.map((s: any) => (
                     <div key={s.id} className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-zinc-900/80 transition-colors group">
                       <div className="col-span-5 md:col-span-4 flex items-center gap-4">
                         <div className="text-emerald-500 font-black opacity-50 group-hover:opacity-100 transition-opacity">::</div>

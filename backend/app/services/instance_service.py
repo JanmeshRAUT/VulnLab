@@ -39,7 +39,6 @@ async def create_instance(user_id: str, lab_id: str, variant_id: str):
         except Exception as e:
             state_data["target_username"] = "admin"
             state_data["target_password"] = "password123"
-        state_data["lab_flag"] = _new_flag_value()
 
     doc = {
         'instance_id': instance_id,

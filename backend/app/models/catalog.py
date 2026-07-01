@@ -5,6 +5,7 @@ class LabVariant(BaseModel):
     variant_id: str
     title: str
     description: str
+    submodule: Optional[str] = None
 
 class Lab(BaseModel):
     lab_id: str

@@ -167,6 +167,9 @@ export default function Login() {
             <p className="mt-8 text-center text-xs text-slate-500 font-medium leading-relaxed">
               By signing in, you agree to our <a href="/terms" className="text-brand-orange hover:text-brand-orange-700 underline">Terms of Service</a> and <a href="/privacy" className="text-brand-orange hover:text-brand-orange-700 underline">Privacy Policy</a>.
             </p>
+            <p className="mt-4 text-center text-sm text-slate-600 font-medium">
+              Don't have an account? <a href="/register" className="text-brand-orange hover:text-brand-orange-700 font-bold underline">Register First</a>
+            </p>
           </div>
         </div>
       </div>

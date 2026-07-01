@@ -355,7 +355,7 @@ function EduPortal(props: any) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {studentsList.map(s => (
+                  {studentsList.map((s: any) => (
                     <tr key={s.id} className="hover:bg-slate-50/50 transition-colors group">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">

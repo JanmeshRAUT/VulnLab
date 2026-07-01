@@ -6,9 +6,33 @@ from app.services.validation_service import submit_flag
 
 router = APIRouter(prefix="/instances", tags=["instances"])
 
+from app.core.database import get_database
+from app.api.admin import normalize_lab_id, has_permission
+
 @router.post("/launch", response_model=InstanceResponse)
-async def launch(req: LaunchRequest):
-    user_id = "guest_user" # No auth for now
+async def launch(req: LaunchRequest, request: Request):
+    user_id = request.session.get("user_id", "guest_user")
+    if user_id == "guest_user":
+        raise HTTPException(status_code=401, detail="Authentication required to launch labs")
+        
+    email = request.session.get("email", "").lower()
+    role = request.session.get("role", "student")
+    
+    can_bypass = await has_permission(role, "Manage Labs")
+    
+    if not can_bypass:
+        db = get_database()
+        student_key = email if email else user_id.lower()
+        normalized_lab = normalize_lab_id(req.lab_id)
+        
+        access_doc = await db.lab_access.find_one({
+            "student_id": {"$in": [student_key, user_id.lower()]},
+            "lab_id": normalized_lab
+        })
+        
+        if not access_doc or access_doc.get("permission") != "Allowed":
+            raise HTTPException(status_code=403, detail="You do not have permission to access this lab.")
+
     instance = await create_instance(user_id, req.lab_id, req.variant_id)
     return InstanceResponse(**instance)
 
