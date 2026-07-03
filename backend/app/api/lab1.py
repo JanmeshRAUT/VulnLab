@@ -63,9 +63,10 @@ async def lab1_1_download(file: str, instance: dict = Depends(get_valid_instance
                 "nginx:x:100:101:nginx:/var/lib/nginx:/sbin/nologin",
                 "vnstat:x:101:102:vnstat:/var/lib/vnstat:/bin/false",
                 "redis:x:102:103:redis:/var/lib/redis:/bin/false",
-                f"{flag_value}\n",
+                f"{flag_value}",
+                "daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin"
             ]
-            return PlainTextResponse("".join(lines))
+            return PlainTextResponse("\n".join(lines))
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error accessing system file template: {e}")
 
@@ -166,10 +167,10 @@ async def lab1_2_image(filename: str, instance: dict = Depends(get_valid_instanc
                 "nginx:x:100:101:nginx:/var/lib/nginx:/sbin/nologin",
                 "vnstat:x:101:102:vnstat:/var/lib/vnstat:/bin/false",
                 "redis:x:102:103:redis:/var/lib/redis:/bin/false",
-                f"{flag_value}\n",
-                "daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\n"
+                f"{flag_value}",
+                "daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin"
             ]
-            return PlainTextResponse("".join(lines))
+            return PlainTextResponse("\n".join(lines))
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error accessing system file template: {e}")
 
@@ -213,7 +214,7 @@ async def lab1_3_image(filename: str, instance: dict = Depends(get_valid_instanc
             flag_value = record['flag_value'] if record else "FLAG{ERROR_GENERATING_FLAG}"
             
             lines = [
-                                "root:x:0:0:root:/root:/bin/ash",
+                "root:x:0:0:root:/root:/bin/ash",
                 "bin:x:1:1:bin:/bin:/sbin/nologin",
                 "daemon:x:2:2:daemon:/sbin:/sbin/nologin",
                 "adm:x:3:4:adm:/var/adm:/sbin/nologin",
@@ -243,9 +244,9 @@ async def lab1_3_image(filename: str, instance: dict = Depends(get_valid_instanc
                 "nginx:x:100:101:nginx:/var/lib/nginx:/sbin/nologin",
                 "vnstat:x:101:102:vnstat:/var/lib/vnstat:/bin/false",
                 "redis:x:102:103:redis:/var/lib/redis:/bin/false",
-                f"{flag_value}\n",
+                f"{flag_value}"
             ]
-            return PlainTextResponse("".join(lines))
+            return PlainTextResponse("\n".join(lines))
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error accessing system file template: {e}")
 

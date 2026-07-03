@@ -43,39 +43,53 @@ export default function FlagSubmissionWidget() {
       {!isOpen && (
         <button 
           onClick={() => setIsOpen(true)} 
-          className="fixed bottom-6 right-6 z-[999] w-14 h-14 rounded-full bg-red-600 text-white shadow-lg flex items-center justify-center hover:bg-red-700 hover:scale-105 transition-all"
+          className="fixed bottom-6 right-6 z-[999] w-14 h-14 rounded-full bg-gradient-to-r from-red-600 to-orange-500 text-white shadow-[0_0_15px_rgba(220,38,38,0.5)] flex items-center justify-center hover:scale-110 hover:shadow-[0_0_25px_rgba(220,38,38,0.7)] transition-all duration-300 ease-out"
           title="Submit Flag"
         >
-          <Flag size={24} />
+          <Flag size={24} className="drop-shadow-sm" />
         </button>
       )}
 
       {isOpen && typeof document !== 'undefined' && createPortal(
-        <div className="fixed bottom-6 right-6 w-80 bg-white border border-slate-200 rounded-xl shadow-xl z-[1100] overflow-hidden flex flex-col">
-          <header className="bg-red-600 text-white p-4 flex justify-between items-start">
-            <div>
-              <div className="text-xs uppercase tracking-wider text-red-100 font-bold mb-1">Capture The Flag</div>
-              <h3 className="font-bold text-lg m-0 leading-tight">Submit Flag</h3>
+        <div className="fixed bottom-6 right-6 w-80 bg-white/95 backdrop-blur-xl border border-slate-200/60 rounded-2xl shadow-2xl z-[1100] overflow-hidden flex flex-col transform transition-all duration-300 ease-out animate-in slide-in-from-bottom-5 fade-in">
+          <header className="bg-gradient-to-br from-red-600 to-orange-500 text-white p-5 flex justify-between items-start relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+            <div className="relative z-10">
+              <div className="text-[10px] uppercase tracking-widest text-red-100 font-extrabold mb-1">Capture The Flag</div>
+              <h3 className="font-black text-xl m-0 leading-tight drop-shadow-sm">Submit Flag</h3>
             </div>
-            <button onClick={() => setIsOpen(false)} className="text-red-100 hover:text-white transition-colors">
-              <X size={20} />
+            <button onClick={() => setIsOpen(false)} className="relative z-10 text-red-100 hover:text-white hover:bg-white/20 p-1.5 rounded-full transition-colors">
+              <X size={18} strokeWidth={2.5} />
             </button>
           </header>
 
-          <div className="p-4 bg-white">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-              <input 
-                type="text" 
-                className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600"
-                placeholder="flag{...}" 
-                value={flag} 
-                onChange={e => setFlag(e.target.value)} 
-              />
-              <button type="submit" className="w-full bg-red-600 text-white px-3 py-2 rounded text-sm font-bold hover:bg-red-700 transition-colors">Submit</button>
+          <div className="p-5 bg-white/80">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <div className="relative">
+                <input 
+                  type="text" 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-10 py-3 text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/10 transition-all"
+                  placeholder="flag{...}" 
+                  value={flag} 
+                  onChange={e => setFlag(e.target.value)} 
+                />
+                <Flag size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300" />
+              </div>
+              <button 
+                type="submit" 
+                className="w-full bg-gradient-to-r from-red-600 to-orange-500 text-white px-4 py-3 rounded-xl text-sm font-bold shadow-md hover:shadow-lg hover:from-red-500 hover:to-orange-400 hover:-translate-y-0.5 transition-all duration-200"
+              >
+                Submit Validation
+              </button>
             </form>
             
             {status.message && (
-              <div className={`mt-3 text-sm px-3 py-2 rounded ${status.type === 'success' ? 'bg-green-100 text-green-800' : status.type === 'error' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-800'}`}>
+              <div className={`mt-4 text-xs font-semibold px-4 py-3 rounded-xl border flex items-center gap-2 ${
+                status.type === 'success' ? 'bg-emerald-50/80 border-emerald-200 text-emerald-700' : 
+                status.type === 'error' ? 'bg-red-50/80 border-red-200 text-red-700' : 
+                'bg-slate-50/80 border-slate-200 text-slate-600'
+              }`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${status.type === 'success' ? 'bg-emerald-500' : status.type === 'error' ? 'bg-red-500' : 'bg-slate-500 animate-pulse'}`}></div>
                 {status.message}
               </div>
             )}
