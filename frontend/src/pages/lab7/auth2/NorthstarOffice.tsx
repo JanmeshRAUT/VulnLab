@@ -21,7 +21,7 @@ export default function NorthstarOffice() {
     
     setStatus('loading');
     try {
-      const res = await axios.post(`http://localhost:8000/api/lab7/2/a/login`, 
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab7/2/a/login`, 
         { username, password },
         { 
           withCredentials: true,
@@ -46,7 +46,7 @@ export default function NorthstarOffice() {
   const fetchUsers = async () => {
     if (!instanceId || currentUser?.role !== 'admin') return;
     try {
-      const res = await axios.get(`http://localhost:8000/api/lab7/2/a/users`, {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab7/2/a/users`, {
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': instanceId }
       });
@@ -65,7 +65,7 @@ export default function NorthstarOffice() {
   const handleDeleteUser = async (targetUsername: string) => {
     if (!instanceId) return;
     try {
-      const res = await axios.delete(`http://localhost:8000/api/lab7/2/a/users/${targetUsername}`, {
+      const res = await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab7/2/a/users/${targetUsername}`, {
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': instanceId }
       });

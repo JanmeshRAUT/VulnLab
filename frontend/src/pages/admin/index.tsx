@@ -99,7 +99,7 @@ export default function AdminDashboard() {
   const fetchDashboard = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:8000/api/admin/dashboard', {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/dashboard`, {
         params: { q: query, status: filterStatus, role: filterRole, category: filterCategory, range },
         withCredentials: true,
       });
@@ -158,8 +158,8 @@ export default function AdminDashboard() {
           return;
         }
         const endpoint = accessAction === 'Assign Variants'
-          ? 'http://localhost:8000/api/admin/access/variants/assign'
-          : 'http://localhost:8000/api/admin/access/variants/restrict';
+          ? `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/access/variants/assign`
+          : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/access/variants/restrict`;
         await axios.post(endpoint, {
           student_id: student,
           lab_id: labIds[0],
@@ -168,8 +168,8 @@ export default function AdminDashboard() {
         }, { withCredentials: true });
       } else {
         const endpoint = accessAction === 'Grant Lab Access' || accessAction === 'Grant Category Access'
-          ? 'http://localhost:8000/api/admin/access/grant'
-          : 'http://localhost:8000/api/admin/access/revoke';
+          ? `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/access/grant`
+          : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/access/revoke`;
         await axios.post(endpoint, {
           student_id: student,
           lab_ids: labIds,
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
   const deleteStudent = async (studentId: string) => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
     try {
-      await axios.delete(`http://localhost:8000/api/admin/students/${encodeURIComponent(studentId)}`, { withCredentials: true });
+      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/students/${encodeURIComponent(studentId)}`, { withCredentials: true });
       setOpNotice({ text: 'User deleted successfully.', tone: 'green' });
       await fetchDashboard();
     } catch {
@@ -318,7 +318,7 @@ export default function AdminDashboard() {
   const assignRoleAction = async () => {
     if (!assignRoleUser || !assignRoleName) return;
     try {
-      await axios.post('http://localhost:8000/api/admin/roles/assign', {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/roles/assign`, {
         student_id: assignRoleUser,
         role: assignRoleName,
       }, { withCredentials: true });
@@ -337,7 +337,7 @@ export default function AdminDashboard() {
       return;
     }
     try {
-      await axios.post('http://localhost:8000/api/admin/roles', {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/roles`, {
         name: roleName,
         description: roleDescription,
         permissions: [rolePermission],
@@ -359,7 +359,7 @@ export default function AdminDashboard() {
       reset: 'reset',
     };
     try {
-      await axios.post(`http://localhost:8000/api/admin/sessions/${encodeURIComponent(instanceId)}/${endpointMap[action]}`, {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/sessions/${encodeURIComponent(instanceId)}/${endpointMap[action]}`, {
         reason: 'Admin console action',
       }, { withCredentials: true });
       setOpNotice({ text: `Session ${action} executed.`, tone: 'green' });
@@ -370,7 +370,7 @@ export default function AdminDashboard() {
   };
 
   const downloadReport = async (format: string) => {
-    const res = await axios.get('http://localhost:8000/api/admin/reports/export', {
+    const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/reports/export`, {
       params: { format, scope: activeSection },
       withCredentials: true,
       responseType: 'blob',

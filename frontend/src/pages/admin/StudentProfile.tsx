@@ -54,7 +54,7 @@ export default function StudentProfile() {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    axios.get(`http://localhost:8000/api/admin/students/${encodeURIComponent(studentId)}`, { withCredentials: true })
+    axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/students/${encodeURIComponent(studentId)}`, { withCredentials: true })
       .then(res => {
         if (mounted) {
           setData(res.data);

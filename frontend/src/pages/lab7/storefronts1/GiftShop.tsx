@@ -13,7 +13,7 @@ export default function GiftShop() {
 
   const fetchProducts = async (cat: string, currentInstanceId: string) => {
     try {
-      const res = await axios.get(`http://localhost:8000/api/lab7/1/a?category=${encodeURIComponent(cat)}`, {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab7/1/a?category=${encodeURIComponent(cat)}`, {
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': currentInstanceId }
       });

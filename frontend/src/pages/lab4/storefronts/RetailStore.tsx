@@ -35,7 +35,7 @@ export default function RetailStore({ setView }: any) {
     setLoading(true);
     setResult(null);
     try {
-      const res = await axios.post(`http://localhost:8000/api/lab4/1/a/check`, { stockApi }, {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab4/1/a/check`, { stockApi }, {
         headers: { 'X-Variant-Session-ID': instanceId }
       });
       

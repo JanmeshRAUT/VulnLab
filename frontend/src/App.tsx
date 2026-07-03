@@ -64,7 +64,7 @@ function ChatbotWidget() {
     setMessages(prev => [...prev, { role: 'bot', text: 'Thinking...' }]);
     
     try {
-      const res = await axios.post('http://localhost:8000/api/chatbot', { message: q, path: window.location.pathname });
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/chatbot`, { message: q, path: window.location.pathname });
       setMessages(prev => {
         const newMsg = [...prev];
         newMsg.pop();
@@ -154,7 +154,7 @@ function Navigation() {
   const [auth, setAuth] = useState<any>(null);
 
   useEffect(() => {
-    axios.get('http://localhost:8000/api/auth/status', { withCredentials: true })
+    axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/status`, { withCredentials: true })
       .then(res => {
         if (res.data.is_authenticated) {
           setAuth(res.data);
@@ -184,7 +184,7 @@ function Navigation() {
               </div>
               <button 
                 onClick={async () => {
-                  await axios.post('http://localhost:8000/api/auth/logout', {}, { withCredentials: true });
+                  await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/logout`, {}, { withCredentials: true });
                   window.location.href = '/login';
                 }}
                 className="text-slate-500 hover:text-slate-900 font-bold text-sm bg-transparent border-none cursor-pointer"

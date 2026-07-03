@@ -45,7 +45,7 @@ function ArchivesContent() {
     document.cookie = `instance_id=${instanceId}; path=/; max-age=86400; SameSite=Lax`;
 
     axios
-      .get<string[]>('http://localhost:8000/api/lab1/1/files', {
+      .get<string[]>(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab1/1/files`, {
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': instanceId }
       })
@@ -202,7 +202,7 @@ function ArchivesContent() {
 
                   <div className="mt-auto flex gap-2 pt-4 border-t border-slate-100/80">
                     <a
-                      href={`http://localhost:8000/api/lab1/1/download?file=${item.file}`}
+                      href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab1/1/download?file=${item.file}`}
                       target="_blank"
                       rel="noreferrer"
                       className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold py-2.5 px-3 rounded-xl text-center transition-colors flex justify-center items-center gap-1.5 border border-slate-200"
@@ -210,7 +210,7 @@ function ArchivesContent() {
                       <Eye size={14} /> View
                     </a>
                     <a
-                      href={`http://localhost:8000/api/lab1/1/download?file=${item.file}`}
+                      href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab1/1/download?file=${item.file}`}
                       download
                       className="flex-1 bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 text-xs font-bold py-2.5 px-3 rounded-xl text-center transition-colors flex justify-center items-center gap-1.5 border border-blue-100 hover:border-blue-600"
                     >

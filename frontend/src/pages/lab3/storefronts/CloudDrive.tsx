@@ -26,7 +26,7 @@ export default function CloudDrive({ instanceId }: Props) {
 
   useEffect(() => {
     if (showEmail) {
-      axios.get(`http://localhost:8000/api/lab3/2/${variantId}/email`, {
+      axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab3/2/${variantId}/email`, {
         headers: { 'X-Variant-Session-ID': instanceId }
       }).then(res => setEmails(res.data.emails || []))
         .catch(() => toast.error("Failed to load emails"));
@@ -232,7 +232,7 @@ function LoginPage({ variantId, instanceId, setView, setIsLoggedIn }: any) {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await axios.post(`http://localhost:8000/api/lab3/2/${variantId}/login`, { username, password }, {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab3/2/${variantId}/login`, { username, password }, {
         headers: { 'X-Variant-Session-ID': instanceId }
       });
       if (res.data.session_token) {
@@ -285,7 +285,7 @@ function VerifyMfaPage({ variantId, instanceId, setView }: any) {
     e.preventDefault();
     try {
       const token = localStorage.getItem(`lab3_2_token_${instanceId}`);
-      const res = await axios.post(`http://localhost:8000/api/lab3/2/${variantId}/verify-mfa`, { mfa_code: code }, {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab3/2/${variantId}/verify-mfa`, { mfa_code: code }, {
         headers: { 'X-Variant-Session-ID': instanceId, Authorization: `Bearer ${token}` }
       });
       if (res.data.session_token) {
@@ -324,7 +324,7 @@ function AccountPage({ variantId, instanceId, setView, setIsLoggedIn }: any) {
 
   useEffect(() => {
     const token = localStorage.getItem(`lab3_2_token_${instanceId}`);
-    axios.get(`http://localhost:8000/api/lab3/2/${variantId}/my-account`, {
+    axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab3/2/${variantId}/my-account`, {
       headers: { 'X-Variant-Session-ID': instanceId, Authorization: `Bearer ${token}` }
     }).then(res => setData(res.data))
       .catch(() => setView('login'));

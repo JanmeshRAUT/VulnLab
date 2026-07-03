@@ -19,7 +19,7 @@ export default function GlobalLogistics({ setView }: any) {
     setLoading(true);
     setResult(null);
     try {
-      const res = await axios.post(`http://localhost:8000/api/lab4/1/c/check`, { stockApi: trackingApi }, {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab4/1/c/check`, { stockApi: trackingApi }, {
         headers: { 'X-Variant-Session-ID': instanceId }
       });
       

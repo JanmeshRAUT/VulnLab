@@ -16,14 +16,14 @@ export default function Lab7Index() {
       
       if (existing) {
         try {
-          await axios.post(`http://localhost:8000/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
+          await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
         } catch (err) {
           newInstanceId = null;
         }
       }
 
       if (!newInstanceId) {
-        const res = await axios.post('http://localhost:8000/api/instances/launch', {
+        const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/instances/launch`, {
           lab_id: '7',
           variant_id: variant,
         }, { withCredentials: true });

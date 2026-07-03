@@ -20,7 +20,7 @@ function LabApp({ variantId, instanceId }: { variantId: string, instanceId: stri
     setLoading(true);
     setError('');
     try {
-      const res = await axios.post(`http://localhost:8000/api/lab3/1/${variantId}/login`, 
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab3/1/${variantId}/login`, 
         { username, password },
         { headers: { 'X-Variant-Session-ID': instanceId } }
       );
@@ -41,7 +41,7 @@ function LabApp({ variantId, instanceId }: { variantId: string, instanceId: stri
     try {
       const token = localStorage.getItem(`token_lab3_1_${variantId}`);
       const user = localStorage.getItem(`username_lab3_1_${variantId}`);
-      const res = await axios.get(`http://localhost:8000/api/lab3/1/${variantId}/profile/${user}`, {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab3/1/${variantId}/profile/${user}`, {
         headers: {
           'X-Variant-Session-ID': instanceId,
           'Authorization': `Bearer ${token}`
@@ -100,14 +100,14 @@ export default function Lab3Sub1({ variantIdProp }: { variantIdProp?: string }) 
       
       if (existing) {
         try {
-          await axios.post(`http://localhost:8000/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
+          await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
         } catch (err) {
           newInstanceId = null;
         }
       }
 
       if (!newInstanceId) {
-        const res = await axios.post('http://localhost:8000/api/instances/launch', {
+        const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/instances/launch`, {
           lab_id: '3',
           variant_id: `1${variant}`,
         }, { withCredentials: true });

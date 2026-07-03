@@ -21,7 +21,7 @@ export default function AdminShell({ title, subtitle, activeSection, children }:
 
   useEffect(() => {
     let mounted = true;
-    axios.get('http://localhost:8000/api/auth/status', { withCredentials: true })
+    axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/status`, { withCredentials: true })
       .then(res => {
         if (mounted) {
           setAuth(res.data);
@@ -36,7 +36,7 @@ export default function AdminShell({ title, subtitle, activeSection, children }:
 
   const handleExitAdmin = async () => {
     try {
-      await axios.post('http://localhost:8000/api/auth/logout', {}, { withCredentials: true });
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/logout`, {}, { withCredentials: true });
     } finally {
       window.location.href = '/';
     }

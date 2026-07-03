@@ -24,7 +24,7 @@ export default function Lab8Sub2() {
 
   const fetchProfile = async (currentInstanceId: string) => {
     try {
-      const res = await axios.get(`http://localhost:8000/api/lab8/2/profile`, {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab8/2/profile`, {
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': currentInstanceId }
       });
@@ -49,7 +49,7 @@ export default function Lab8Sub2() {
     if (!instanceId) return;
     
     try {
-      await axios.post(`http://localhost:8000/api/lab8/2/profile`, formData, {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab8/2/profile`, formData, {
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': instanceId }
       });

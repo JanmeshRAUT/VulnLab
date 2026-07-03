@@ -23,7 +23,7 @@ export default function AutoPartsPro({ setView }: any) {
       params.append('productId', productId);
       params.append('locationId', locationId);
       
-      const res = await axios.post(`http://localhost:8000/api/lab6/1/b/check-stock`, params, {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab6/1/b/check-stock`, params, {
         withCredentials: true,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',

@@ -43,7 +43,7 @@ export default function AcademicSubmission({ setView }: any) {
     formData.append('title', assignmentTitle);
 
     try {
-      const res = await axios.post(`http://localhost:8000/api/lab5/2/b/upload`, formData, {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab5/2/b/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'X-Variant-Session-ID': instanceId,
@@ -53,7 +53,7 @@ export default function AcademicSubmission({ setView }: any) {
       const uploadedFilename = res.data.filename;
       toast.success('Assignment submitted successfully.');
       
-      const url = `http://localhost:8000/api/lab5/2/b/files/avatars/${uploadedFilename}`;
+      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab5/2/b/files/avatars/${uploadedFilename}`;
       setAssignments([url, ...assignments]);
     } catch (err: any) {
       toast.error(err.response?.data?.detail || 'Submission failed');

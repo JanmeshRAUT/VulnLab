@@ -23,7 +23,7 @@ export default function MegaMart({ setView }: any) {
       params.append('productId', productId);
       params.append('storeId', storeId);
       
-      const res = await axios.post(`http://localhost:8000/api/lab6/1/a/check-stock`, params, {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab6/1/a/check-stock`, params, {
         withCredentials: true,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',

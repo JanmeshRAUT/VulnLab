@@ -18,7 +18,7 @@ export default function Login() {
     setLoading(true);
     setError('');
     try {
-      await axios.post('http://localhost:8000/api/auth/login/local', {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/login/local`, {
         email,
         password
       }, { withCredentials: true });

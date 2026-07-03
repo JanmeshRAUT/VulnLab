@@ -39,7 +39,7 @@ export default function SupportTicketSystem({ setView }: any) {
     formData.append('severity', ticketSeverity);
 
     try {
-      const res = await axios.post(`http://localhost:8000/api/lab5/2/c/upload`, formData, {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab5/2/c/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'X-Variant-Session-ID': instanceId,
@@ -49,7 +49,7 @@ export default function SupportTicketSystem({ setView }: any) {
       const uploadedFilename = res.data.filename;
       toast.success('Screenshot attached to ticket.');
       
-      const url = `http://localhost:8000/api/lab5/2/c/files/avatars/${uploadedFilename}`;
+      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab5/2/c/files/avatars/${uploadedFilename}`;
       setAttachments([url, ...attachments]);
     } catch (err: any) {
       toast.error(err.response?.data?.detail || 'Attachment failed');

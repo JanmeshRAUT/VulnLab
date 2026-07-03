@@ -29,7 +29,7 @@ export default function Register() {
     setLoading(true);
     setError('');
     try {
-      await axios.post('http://localhost:8000/api/auth/register', {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/register`, {
         email,
         password,
         full_name: fullName,

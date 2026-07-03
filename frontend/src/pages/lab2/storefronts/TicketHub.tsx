@@ -532,7 +532,7 @@ function Login({ instanceId }: { instanceId: string | null }) {
     setError('');
 
     try {
-      const res = await axios.post(`http://localhost:8000/api/lab2/4/4c/login`, 
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab2/4/4c/login`, 
         { username, password },
         { 
           withCredentials: true,
@@ -649,7 +649,7 @@ function MyAccount({ instanceId }: { instanceId: string | null }) {
       setLoading(true);
       setError('');
       try {
-        const res = await axios.get(`http://localhost:8000/api/lab2/4/4c/account?id=${id}`, {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab2/4/4c/account?id=${id}`, {
           withCredentials: true,
           headers: { 'X-Variant-Session-ID': instanceId }
         });

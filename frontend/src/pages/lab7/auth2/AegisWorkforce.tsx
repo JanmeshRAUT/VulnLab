@@ -21,7 +21,7 @@ export default function AegisWorkforce() {
     
     setStatus('loading');
     try {
-      const res = await axios.post(`http://localhost:8000/api/lab7/2/b/login`, 
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab7/2/b/login`, 
         { username, password },
         { 
           withCredentials: true,
@@ -46,7 +46,7 @@ export default function AegisWorkforce() {
   const fetchUsers = async () => {
     if (!instanceId || currentUser?.role !== 'admin') return;
     try {
-      const res = await axios.get(`http://localhost:8000/api/lab7/2/b/users`, {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab7/2/b/users`, {
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': instanceId }
       });
@@ -65,7 +65,7 @@ export default function AegisWorkforce() {
   const handleDeleteUser = async (targetUsername: string) => {
     if (!instanceId) return;
     try {
-      const res = await axios.delete(`http://localhost:8000/api/lab7/2/b/users/${targetUsername}`, {
+      const res = await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab7/2/b/users/${targetUsername}`, {
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': instanceId }
       });
