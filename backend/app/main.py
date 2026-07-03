@@ -39,19 +39,13 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
-# Add ProxyHeadersMiddleware to ensure request.url_for generates https:// URIs
+frontend_url = settings.FRONTEND_URL.rstrip("/")
+is_production = "localhost" not in frontend_url
+
+# 1. Inner-most middleware (added first)
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL, "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174", "http://localhost:5175", "http://127.0.0.1:5175"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-is_production = "localhost" not in settings.FRONTEND_URL
-
+# 2. Session middleware (added second)
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.SECRET_KEY,
@@ -59,6 +53,15 @@ app.add_middleware(
     max_age=14 * 24 * 60 * 60, # 14 days
     same_site="none" if is_production else "lax",
     https_only=is_production
+)
+
+# 3. Outer-most middleware (added last, so it executes FIRST for CORS preflights)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[frontend_url, "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174", "http://localhost:5175", "http://127.0.0.1:5175"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.get("/health")
