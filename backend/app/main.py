@@ -45,12 +45,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+is_production = "localhost" not in settings.FRONTEND_URL
+
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.SECRET_KEY,
     session_cookie="session",
     max_age=14 * 24 * 60 * 60, # 14 days
-    same_site="lax"
+    same_site="none" if is_production else "lax",
+    https_only=is_production
 )
 
 @app.get("/health")
