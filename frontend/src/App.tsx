@@ -375,7 +375,7 @@ function App() {
       </main>
 
       {!isLabEnvironment && !isAdminRoute && <Footer />}
-      <ChatbotWidget />
+      {!isLabEnvironment && !isAdminRoute && <ChatbotWidget />}
     </div>
   );
 }

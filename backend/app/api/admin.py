@@ -930,9 +930,15 @@ async def delete_student(request: Request, student_id: str):
     identity = await require_permission(request, "Manage Students")
     db = get_database()
     
-    result = await db["users"].delete_one(
-        {"$or": [{"user_id": student_id}, {"email": student_id}, {"username": student_id}]}
-    )
+    from bson import ObjectId
+    
+    query = [{"user_id": student_id}, {"email": student_id}, {"username": student_id}]
+    try:
+        query.append({"_id": ObjectId(student_id)})
+    except Exception:
+        pass
+        
+    result = await db["users"].delete_one({"$or": query})
     
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Student not found")
