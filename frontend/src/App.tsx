@@ -43,6 +43,7 @@ const AdminDashboard = lazy(() => import('./pages/admin'));
 const StudentProfile = lazy(() => import('./pages/admin/StudentProfile'));
 import { createPortal } from 'react-dom';
 import { MessageSquare, Flag, X } from 'lucide-react';
+import FlagSubmissionWidget from './components/FlagSubmissionWidget';
 
 function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -376,6 +377,7 @@ function App() {
 
       {!isLabEnvironment && !isAdminRoute && <Footer />}
       {!isLabEnvironment && !isAdminRoute && <ChatbotWidget />}
+      {isLabEnvironment && <FlagSubmissionWidget />}
     </div>
   );
 }

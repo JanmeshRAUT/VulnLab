@@ -7,7 +7,7 @@ async def submit_flag(instance_id: str, objective_id: str, submitted_flag: str):
     if not instance:
         return False, "Instance not found."
     
-    if instance.get("status") != "ACTIVE":
+    if instance.get("status") not in ["ACTIVE", "CREATED"]:
         return False, f"Instance is {instance.get('status')} and does not accept submissions."
 
     records = instance.get("state", {}).get("flag_records", [])
