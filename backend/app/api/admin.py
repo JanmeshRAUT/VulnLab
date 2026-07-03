@@ -220,10 +220,11 @@ def get_lab_catalog() -> list[dict[str, Any]]:
             {
                 "lab_id": normalize_lab_id(lab.lab_id),
                 "title": lab.title,
+                "description": lab.description,
                 "category": "Security",
                 "variant_count": len(variants),
                 "difficulty": "Intermediate",
-                "variants": [{"variant_id": str(v.variant_id), "title": str(v.title), "submodule": v.submodule} for v in variants],
+                "variants": [{"variant_id": str(v.variant_id), "title": str(v.title), "description": v.description, "submodule": v.submodule} for v in variants],
             }
         )
     return labs
@@ -609,7 +610,14 @@ async def get_student_profile(request: Request, student_key: str):
 
     for doc in progress_docs:
         lab_id = normalize_lab_id(doc.get("lab_id"))
-        lab = labs.get(lab_id, {"title": lab_id or "Unknown Lab"})
+        lab = labs.get(lab_id, {"title": lab_id or "Unknown Lab", "variants": []})
+        
+        variant_id = str(doc.get("variant_id", "default"))
+        variant_desc = ""
+        for v in lab.get("variants", []):
+            if v.get("variant_id") == variant_id:
+                variant_desc = v.get("description", "")
+                break
 
         if doc.get("schema_version") == 2:
             objectives = doc.get("objectives", {})
@@ -618,7 +626,8 @@ async def get_student_profile(request: Request, student_key: str):
             item = {
                 "lab_id": lab_id,
                 "lab_title": lab["title"],
-                "variant_id": str(doc.get("variant_id", "default")),
+                "variant_id": variant_id,
+                "variant_desc": variant_desc,
                 "is_solved": solved_count > 0,
                 "solved_objectives": solved_count,
                 "objective_count": objective_count,
@@ -632,7 +641,8 @@ async def get_student_profile(request: Request, student_key: str):
             item = {
                 "lab_id": lab_id,
                 "lab_title": lab["title"],
-                "variant_id": "default",
+                "variant_id": variant_id,
+                "variant_desc": variant_desc,
                 "is_solved": solved_flag,
                 "solved_objectives": 1 if solved_flag else 0,
                 "objective_count": 1,

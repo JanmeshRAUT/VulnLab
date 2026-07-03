@@ -196,7 +196,15 @@ export default function AdminDashboard() {
     }
   };
 
-  const downloadPDF = (student: any) => {
+  const downloadPDF = async (student: any) => {
+    let detailedProfile: any = null;
+    try {
+      const res = await axios.get(`${API_BASE}/api/admin/students/${encodeURIComponent(student.student_id)}`, { withCredentials: true });
+      detailedProfile = res.data?.profile;
+    } catch (e) {
+      console.error("Failed to fetch detailed profile", e);
+    }
+
     const doc = new jsPDF();
     const name = student.full_name || student.name || 'UNKNOWN SUBJECT';
     const progress = student.completion_percentage ?? student.learning_progress ?? 0;
@@ -295,7 +303,39 @@ export default function AdminDashboard() {
         2: { cellWidth: 'auto' }
       }
     });
+
+    // ----------------------------------------------------
+    // SECTION 3: LAB PROGRESS DETAILS
+    // ----------------------------------------------------
+    let currentY3 = (doc as any).lastAutoTable?.finalY + 15 || 180;
     
+    if (detailedProfile && detailedProfile.progress_reports && detailedProfile.progress_reports.length > 0) {
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(14);
+      doc.setFont('courier', 'bold');
+      doc.text('>> DETAILED LAB PROGRESS', 14, currentY3);
+
+      const labRows = detailedProfile.progress_reports.map((report: any) => [
+        report.lab_title || report.lab_id,
+        report.variant_id || 'default',
+        report.variant_desc || 'N/A',
+        report.is_solved ? 'SOLVED' : 'PENDING',
+        `${report.completion_percentage || 0}%`,
+        formatDate(report.last_activity) || 'N/A'
+      ]);
+
+      autoTable(doc, {
+        startY: currentY3 + 6,
+        head: [['LAB', 'VARIANT', 'THEORY', 'STATUS', 'COMPLETION', 'LAST ACTIVITY']],
+        body: labRows,
+        theme: 'grid',
+        headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], font: 'courier', fontStyle: 'bold' },
+        styles: { font: 'courier', fontSize: 9, cellPadding: 4, lineColor: [226, 232, 240] },
+        columnStyles: {
+          2: { cellWidth: 50 } // Wrap description column so it doesn't overflow
+        }
+      });
+    }
 
     // ----------------------------------------------------
     // FOOTER: System Signature
