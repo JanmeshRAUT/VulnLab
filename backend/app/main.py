@@ -55,7 +55,7 @@ is_production = "localhost" not in settings.FRONTEND_URL
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.SECRET_KEY,
-    session_cookie="session",
+    session_cookie="secure_session",
     max_age=14 * 24 * 60 * 60, # 14 days
     same_site="none" if is_production else "lax",
     https_only=is_production

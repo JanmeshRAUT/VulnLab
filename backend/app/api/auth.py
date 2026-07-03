@@ -41,8 +41,11 @@ async def login(request: Request, source: str = 'login', next_url: str = ''):
     if next_url:
         request.session['oauth_next'] = next_url
     
-    redirect_uri = request.url_for('auth_callback')
-    return await oauth.google.authorize_redirect(request, str(redirect_uri))
+    redirect_uri = str(request.url_for('auth_callback'))
+    if "onrender.com" in redirect_uri and redirect_uri.startswith("http://"):
+        redirect_uri = redirect_uri.replace("http://", "https://")
+        
+    return await oauth.google.authorize_redirect(request, redirect_uri)
 
 @router.get("/callback", name="auth_callback")
 async def auth_callback(request: Request):
