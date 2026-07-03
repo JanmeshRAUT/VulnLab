@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
@@ -25,7 +26,7 @@ export default function Lab8Sub1() {
     setResult(null);
     
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab8/1/detect`, { payload: inputVal, variant }, {
+      const res = await axios.post(`${API_BASE}/api/lab8/1/detect`, { payload: inputVal, variant }, {
         withCredentials: true
       });
       setResult(res.data);

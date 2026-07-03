@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { LAB_ROUTES } from '../config/labRoutes';
@@ -37,7 +38,7 @@ export function useLabInstance(options: string | UseLabInstanceLegacyOptions) {
           const existingId = localStorage.getItem(storageKey);
           if (existingId) {
             try {
-              const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/instances/${existingId}/heartbeat`, {}, { withCredentials: true });
+              const res = await axios.post(`${API_BASE}/api/instances/${existingId}/heartbeat`, {}, { withCredentials: true });
               if (res.data.instance_status !== 'SOLVED' && res.data.instance_status !== 'ABANDONED') {
                 if (active) {
                   setInstanceId(existingId);
@@ -63,7 +64,7 @@ export function useLabInstance(options: string | UseLabInstanceLegacyOptions) {
         }
 
         // Always request a new instance from the backend on mount
-        const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/instances/launch`, {
+        const res = await axios.post(`${API_BASE}/api/instances/launch`, {
           lab_id: labConfig.labId,
           variant_id: labConfig.variantId,
         }, { withCredentials: true });
@@ -106,7 +107,7 @@ export function useLabInstance(options: string | UseLabInstanceLegacyOptions) {
 
       if (slug) clearInstance(slug);
 
-      const eventUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/instances/${instanceId}/event`;
+      const eventUrl = `${API_BASE}/api/instances/${instanceId}/event`;
       const payload = JSON.stringify({ type: 'abandon' });
 
       if (navigator.sendBeacon) {
@@ -139,7 +140,7 @@ export function useLabInstance(options: string | UseLabInstanceLegacyOptions) {
       
       lastHeartbeat = now;
       heartbeatInFlight = true;
-      axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/instances/${instanceId}/heartbeat`, {}, { withCredentials: true })
+      axios.post(`${API_BASE}/api/instances/${instanceId}/heartbeat`, {}, { withCredentials: true })
         .then(res => {
           if (res.data.instance_status === 'SOLVED' || res.data.instance_status === 'ABANDONED') {
             if (slug) clearInstance(slug);

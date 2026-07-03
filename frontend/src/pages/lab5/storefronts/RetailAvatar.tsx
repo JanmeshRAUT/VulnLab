@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import React, { useState, useContext, useRef } from 'react';
 import axios from 'axios';
 import { InstanceContext } from '../../../contexts/InstanceContext';
@@ -34,7 +35,7 @@ export default function RetailAvatar({ setView }: any) {
     formData.append('file', file);
 
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab5/1/a/upload`, formData, {
+      const res = await axios.post(`${API_BASE}/api/lab5/1/a/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'X-Variant-Session-ID': instanceId,
@@ -44,7 +45,7 @@ export default function RetailAvatar({ setView }: any) {
       const uploadedFilename = res.data.filename;
       toast.success('Avatar uploaded successfully!');
       
-      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab5/1/a/files/avatars/${uploadedFilename}`;
+      const url = `${API_BASE}/api/lab5/1/a/files/avatars/${uploadedFilename}`;
       setAvatarUrl(url);
     } catch (err: any) {
       toast.error(err.response?.data?.detail || 'Upload failed');

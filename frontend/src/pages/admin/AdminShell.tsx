@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -21,7 +22,7 @@ export default function AdminShell({ title, subtitle, activeSection, children }:
 
   useEffect(() => {
     let mounted = true;
-    axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/status`, { withCredentials: true })
+    axios.get(`${API_BASE}/api/auth/status`, { withCredentials: true })
       .then(res => {
         if (mounted) {
           setAuth(res.data);
@@ -36,7 +37,7 @@ export default function AdminShell({ title, subtitle, activeSection, children }:
 
   const handleExitAdmin = async () => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/logout`, {}, { withCredentials: true });
+      await axios.post(`${API_BASE}/api/auth/logout`, {}, { withCredentials: true });
     } finally {
       window.location.href = '/';
     }

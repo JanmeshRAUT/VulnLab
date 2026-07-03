@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { ShieldAlert, Search, BookOpen, MapPin, Menu, UserCircle, ShoppingCart } from 'lucide-react';
@@ -13,7 +14,7 @@ export default function BookStore() {
 
   const fetchProducts = async (cat: string, currentInstanceId: string) => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab7/1/b?category=${encodeURIComponent(cat)}`, {
+      const res = await axios.get(`${API_BASE}/api/lab7/1/b?category=${encodeURIComponent(cat)}`, {
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': currentInstanceId }
       });

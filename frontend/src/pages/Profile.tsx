@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { User, Shield, ShieldCheck, AlertTriangle, Save, Loader2, XCircle, Target, CheckCircle2, Clock } from 'lucide-react';
@@ -22,7 +23,7 @@ export default function Profile() {
 
   const fetchProfile = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/me`, { withCredentials: true });
+      const res = await axios.get(`${API_BASE}/api/auth/me`, { withCredentials: true });
       setProfile(res.data);
       setFormData({
         full_name: res.data.full_name || '',
@@ -45,7 +46,7 @@ export default function Profile() {
     setError('');
     setSuccessMsg('');
     try {
-      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/me`, formData, { withCredentials: true });
+      await axios.put(`${API_BASE}/api/auth/me`, formData, { withCredentials: true });
       setSuccessMsg('Profile updated successfully!');
       
       // Update local state to clear warnings

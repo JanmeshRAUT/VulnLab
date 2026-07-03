@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import { LogIn, ShieldCheck, Terminal, Key, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
 
 import { useState } from 'react';
@@ -21,7 +22,7 @@ export default function Register() {
   
   const handleGoogleRegister = () => {
     // Redirect to the FastAPI auth endpoint
-    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/login`;
+    window.location.href = `${API_BASE}/api/auth/login`;
   };
 
   const handleLocalRegister = async (e: React.FormEvent) => {
@@ -29,7 +30,7 @@ export default function Register() {
     setLoading(true);
     setError('');
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/register`, {
+      await axios.post(`${API_BASE}/api/auth/register`, {
         email,
         password,
         full_name: fullName,

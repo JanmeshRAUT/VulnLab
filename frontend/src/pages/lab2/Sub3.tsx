@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
@@ -26,7 +27,7 @@ export default function Lab2Sub3({ variantIdProp }: { variantIdProp?: string }) 
   const fetchPath = async (path: string, currentInstanceId: string) => {
     setLoading(true);
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab2/3/${variant}/navigate?path=/${encodeURIComponent(path)}`, { 
+      const res = await axios.get(`${API_BASE}/api/lab2/3/${variant}/navigate?path=/${encodeURIComponent(path)}`, { 
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': currentInstanceId }
       });

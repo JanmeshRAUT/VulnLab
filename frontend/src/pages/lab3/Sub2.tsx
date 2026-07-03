@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, ArrowRight, ShieldAlert, Terminal, ShieldCheck } from 'lucide-react';
@@ -29,14 +30,14 @@ export default function Lab3Sub2({ variantIdProp }: { variantIdProp?: string }) 
       
       if (existing) {
         try {
-          await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
+          await axios.post(`${API_BASE}/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
         } catch (err) {
           newInstanceId = null;
         }
       }
 
       if (!newInstanceId) {
-        const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/instances/launch`, {
+        const res = await axios.post(`${API_BASE}/api/instances/launch`, {
           lab_id: '3',
           variant_id: `2${variant}`,
         }, { withCredentials: true });

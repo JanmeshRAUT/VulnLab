@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Search, ShoppingBag, ArrowLeft, RefreshCw, ChevronRight, MapPin, Heart, Plus, Minus, Star } from 'lucide-react';
@@ -69,7 +70,7 @@ export default function ArcadeAvenue({ setView }: any) {
     setLoading(true);
     setResult(null);
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab4/2/a/check`, { stockApi }, {
+      const res = await axios.post(`${API_BASE}/api/lab4/2/a/check`, { stockApi }, {
         headers: { 'X-Variant-Session-ID': instanceId }
       });
       if (typeof res.data === 'string' && res.data.includes('<html')) {

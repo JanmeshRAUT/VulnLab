@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import { LogIn, ShieldCheck, Terminal, Key, Eye, EyeOff } from 'lucide-react';
 
 import { useState } from 'react';
@@ -16,12 +17,12 @@ export default function Login() {
     setLoading(true);
     setError('');
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/login/local`, {
+      await axios.post(`${API_BASE}/api/auth/login/local`, {
         email,
         password
       }, { withCredentials: true });
 
-      const statusRes = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/status`, {
+      const statusRes = await axios.get(`${API_BASE}/api/auth/status`, {
         withCredentials: true
       });
 
@@ -156,7 +157,7 @@ export default function Login() {
 
             <button 
               type="button"
-              onClick={() => window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/login`}
+              onClick={() => window.location.href = `${API_BASE}/api/auth/login`}
               className="w-full flex justify-center items-center gap-3 py-4 px-4 border border-transparent rounded-xl shadow-md text-lg font-bold text-white bg-brand-orange hover:bg-brand-orange-700 hover:shadow-lg transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-orange transition-all"
             >
               <LogIn size={22} /> Sign in with Google

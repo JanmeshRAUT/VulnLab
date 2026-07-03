@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
@@ -99,7 +100,7 @@ export default function AdminDashboard() {
   const fetchDashboard = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/dashboard`, {
+      const res = await axios.get(`${API_BASE}/api/admin/dashboard`, {
         params: { q: query, status: filterStatus, role: filterRole, category: filterCategory, range },
         withCredentials: true,
       });
@@ -158,8 +159,8 @@ export default function AdminDashboard() {
           return;
         }
         const endpoint = accessAction === 'Assign Variants'
-          ? `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/access/variants/assign`
-          : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/access/variants/restrict`;
+          ? `${API_BASE}/api/admin/access/variants/assign`
+          : `${API_BASE}/api/admin/access/variants/restrict`;
         await axios.post(endpoint, {
           student_id: student,
           lab_id: labIds[0],
@@ -168,8 +169,8 @@ export default function AdminDashboard() {
         }, { withCredentials: true });
       } else {
         const endpoint = accessAction === 'Grant Lab Access' || accessAction === 'Grant Category Access'
-          ? `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/access/grant`
-          : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/access/revoke`;
+          ? `${API_BASE}/api/admin/access/grant`
+          : `${API_BASE}/api/admin/access/revoke`;
         await axios.post(endpoint, {
           student_id: student,
           lab_ids: labIds,
@@ -187,7 +188,7 @@ export default function AdminDashboard() {
   const deleteStudent = async (studentId: string) => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/students/${encodeURIComponent(studentId)}`, { withCredentials: true });
+      await axios.delete(`${API_BASE}/api/admin/students/${encodeURIComponent(studentId)}`, { withCredentials: true });
       setOpNotice({ text: 'User deleted successfully.', tone: 'green' });
       await fetchDashboard();
     } catch {
@@ -318,7 +319,7 @@ export default function AdminDashboard() {
   const assignRoleAction = async () => {
     if (!assignRoleUser || !assignRoleName) return;
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/roles/assign`, {
+      await axios.post(`${API_BASE}/api/admin/roles/assign`, {
         student_id: assignRoleUser,
         role: assignRoleName,
       }, { withCredentials: true });
@@ -337,7 +338,7 @@ export default function AdminDashboard() {
       return;
     }
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/roles`, {
+      await axios.post(`${API_BASE}/api/admin/roles`, {
         name: roleName,
         description: roleDescription,
         permissions: [rolePermission],
@@ -359,7 +360,7 @@ export default function AdminDashboard() {
       reset: 'reset',
     };
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/sessions/${encodeURIComponent(instanceId)}/${endpointMap[action]}`, {
+      await axios.post(`${API_BASE}/api/admin/sessions/${encodeURIComponent(instanceId)}/${endpointMap[action]}`, {
         reason: 'Admin console action',
       }, { withCredentials: true });
       setOpNotice({ text: `Session ${action} executed.`, tone: 'green' });
@@ -370,7 +371,7 @@ export default function AdminDashboard() {
   };
 
   const downloadReport = async (format: string) => {
-    const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/reports/export`, {
+    const res = await axios.get(`${API_BASE}/api/admin/reports/export`, {
       params: { format, scope: activeSection },
       withCredentials: true,
       responseType: 'blob',

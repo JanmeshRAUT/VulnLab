@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Package, MapPin, Truck, RefreshCw, ShieldAlert, ArrowLeft, ArrowRight, Anchor, Plane, Search, Clock, Box, FileText, CheckCircle2, Globe, Terminal } from 'lucide-react';
@@ -19,7 +20,7 @@ export default function GlobalLogistics({ setView }: any) {
     setLoading(true);
     setResult(null);
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab4/1/c/check`, { stockApi: trackingApi }, {
+      const res = await axios.post(`${API_BASE}/api/lab4/1/c/check`, { stockApi: trackingApi }, {
         headers: { 'X-Variant-Session-ID': instanceId }
       });
       

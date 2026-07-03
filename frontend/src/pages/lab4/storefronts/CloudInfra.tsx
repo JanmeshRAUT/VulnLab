@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Cloud, Server, Activity, RefreshCw, ShieldAlert, ArrowLeft, Cpu, MemoryStick, HardDrive, Settings, Search, Terminal, Plus, AlertCircle, CheckCircle2, ChevronRight, BarChart3, Globe } from 'lucide-react';
@@ -19,7 +20,7 @@ export default function CloudInfra({ setView }: any) {
     setLoading(true);
     setResult(null);
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab4/1/b/check`, { stockApi: statusApi }, {
+      const res = await axios.post(`${API_BASE}/api/lab4/1/b/check`, { stockApi: statusApi }, {
         headers: { 'X-Variant-Session-ID': instanceId }
       });
       

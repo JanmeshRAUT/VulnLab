@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { InstanceContext } from '../../../contexts/InstanceContext';
@@ -23,7 +24,7 @@ export default function MegaMart({ setView }: any) {
       params.append('productId', productId);
       params.append('storeId', storeId);
       
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab6/1/a/check-stock`, params, {
+      const res = await axios.post(`${API_BASE}/api/lab6/1/a/check-stock`, params, {
         withCredentials: true,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',

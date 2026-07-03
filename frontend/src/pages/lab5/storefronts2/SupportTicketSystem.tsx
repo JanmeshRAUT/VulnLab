@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import React, { useState, useContext, useRef } from 'react';
 import axios from 'axios';
 import { InstanceContext } from '../../../contexts/InstanceContext';
@@ -39,7 +40,7 @@ export default function SupportTicketSystem({ setView }: any) {
     formData.append('severity', ticketSeverity);
 
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab5/2/c/upload`, formData, {
+      const res = await axios.post(`${API_BASE}/api/lab5/2/c/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'X-Variant-Session-ID': instanceId,
@@ -49,7 +50,7 @@ export default function SupportTicketSystem({ setView }: any) {
       const uploadedFilename = res.data.filename;
       toast.success('Screenshot attached to ticket.');
       
-      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab5/2/c/files/avatars/${uploadedFilename}`;
+      const url = `${API_BASE}/api/lab5/2/c/files/avatars/${uploadedFilename}`;
       setAttachments([url, ...attachments]);
     } catch (err: any) {
       toast.error(err.response?.data?.detail || 'Attachment failed');

@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
@@ -27,7 +28,7 @@ export default function Lab1Sub2() {
     if (instanceId) {
       document.cookie = `instance_id=${instanceId}; path=/; max-age=86400; SameSite=Lax`;
       
-      axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab1/2/products`, { 
+      axios.get(`${API_BASE}/api/lab1/2/products`, { 
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': instanceId }
       })
@@ -140,7 +141,7 @@ export default function Lab1Sub2() {
                   {/* VULNERABLE IMAGE LOADING */}
                   <div className="w-full h-80 bg-[#F5F2EC] flex items-center justify-center p-10 overflow-hidden relative group-hover:bg-[#EFEBE1] transition-colors">
                     <img 
-                      src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab1/2/image?filename=${product.image}`}
+                      src={`${API_BASE}/api/lab1/2/image?filename=${product.image}`}
                       alt={product.name}
                       className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform duration-700 ease-out drop-shadow-xl"
                       loading="lazy"

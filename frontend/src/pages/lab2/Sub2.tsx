@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
@@ -23,7 +24,7 @@ export default function Lab2Sub2({ variantIdProp }: { variantIdProp?: string }) 
       // Try to heartbeat existing instance first
       if (existing) {
         try {
-          await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
+          await axios.post(`${API_BASE}/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
         } catch (e) {
           newInstanceId = null; // Heartbeat failed, need a new instance
         }
@@ -31,7 +32,7 @@ export default function Lab2Sub2({ variantIdProp }: { variantIdProp?: string }) 
 
       // If no valid instance exists, create a new one
       if (!newInstanceId) {
-        const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/instances/launch`, {
+        const res = await axios.post(`${API_BASE}/api/instances/launch`, {
           lab_id: '2',
           variant_id: variant,
         }, { withCredentials: true });
@@ -181,7 +182,7 @@ export default function Lab2Sub2({ variantIdProp }: { variantIdProp?: string }) 
   const fetchPath = async (path: string, currentInstanceId: string) => {
     setLoading(true);
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab2/2/${variant}/navigate?path=/${encodeURIComponent(path)}`, {
+      const res = await axios.get(`${API_BASE}/api/lab2/2/${variant}/navigate?path=/${encodeURIComponent(path)}`, {
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': currentInstanceId }
       });

@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import React, { useState, useContext, useRef } from 'react';
 import axios from 'axios';
 import { InstanceContext } from '../../../contexts/InstanceContext';
@@ -45,7 +46,7 @@ export default function PixelArtGallery({ setView }: any) {
     formData.append('file', selectedFile);
 
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab5/1/b/upload`, formData, {
+      const res = await axios.post(`${API_BASE}/api/lab5/1/b/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'X-Variant-Session-ID': instanceId,
@@ -55,7 +56,7 @@ export default function PixelArtGallery({ setView }: any) {
       const uploadedFilename = res.data.filename;
       toast.success('Artwork submitted to gallery!');
       
-      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab5/1/b/files/avatars/${uploadedFilename}`;
+      const url = `${API_BASE}/api/lab5/1/b/files/avatars/${uploadedFilename}`;
       setArtworks([url, ...artworks]);
       
       // Reset form

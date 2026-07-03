@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLabInstance } from '../../../hooks/useLabInstance';
@@ -21,7 +22,7 @@ export default function HelixAdmin() {
     
     setStatus('loading');
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab7/2/c/login`, 
+      const res = await axios.post(`${API_BASE}/api/lab7/2/c/login`, 
         { username, password },
         { 
           withCredentials: true,
@@ -46,7 +47,7 @@ export default function HelixAdmin() {
   const fetchUsers = async () => {
     if (!instanceId || currentUser?.role !== 'admin') return;
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab7/2/c/users`, {
+      const res = await axios.get(`${API_BASE}/api/lab7/2/c/users`, {
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': instanceId }
       });
@@ -65,7 +66,7 @@ export default function HelixAdmin() {
   const handleDeleteUser = async (targetUsername: string) => {
     if (!instanceId) return;
     try {
-      const res = await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab7/2/c/users/${targetUsername}`, {
+      const res = await axios.delete(`${API_BASE}/api/lab7/2/c/users/${targetUsername}`, {
         withCredentials: true,
         headers: { 'X-Variant-Session-ID': instanceId }
       });

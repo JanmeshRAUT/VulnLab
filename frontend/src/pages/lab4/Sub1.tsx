@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import { useState } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
@@ -38,14 +39,14 @@ export default function Lab4Sub1({ variantIdProp }: { variantIdProp?: string }) 
       
       if (existing) {
         try {
-          await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
+          await axios.post(`${API_BASE}/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
         } catch (err) {
           newInstanceId = null;
         }
       }
 
       if (!newInstanceId) {
-        const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/instances/launch`, {
+        const res = await axios.post(`${API_BASE}/api/instances/launch`, {
           lab_id: '4',
           variant_id: `1${variant}`,
         }, { withCredentials: true });

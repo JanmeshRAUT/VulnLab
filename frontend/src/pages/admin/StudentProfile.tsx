@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
@@ -54,7 +55,7 @@ export default function StudentProfile() {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/students/${encodeURIComponent(studentId)}`, { withCredentials: true })
+    axios.get(`${API_BASE}/api/admin/students/${encodeURIComponent(studentId)}`, { withCredentials: true })
       .then(res => {
         if (mounted) {
           setData(res.data);

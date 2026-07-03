@@ -1,3 +1,4 @@
+import { API_BASE } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
@@ -26,7 +27,7 @@ export default function TechStore({ instanceId }: Props) {
 
   useEffect(() => {
     if (showEmail) {
-      axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab3/2/${variantId}/email`, {
+      axios.get(`${API_BASE}/api/lab3/2/${variantId}/email`, {
         headers: { 'X-Variant-Session-ID': instanceId }
       }).then(res => setEmails(res.data.emails || []))
         .catch(() => toast.error("Failed to load emails"));
@@ -260,7 +261,7 @@ function LoginPage({ variantId, instanceId, setView, setIsLoggedIn }: any) {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab3/2/${variantId}/login`, { username, password }, {
+      const res = await axios.post(`${API_BASE}/api/lab3/2/${variantId}/login`, { username, password }, {
         headers: { 'X-Variant-Session-ID': instanceId }
       });
       if (res.data.session_token) {
@@ -307,7 +308,7 @@ function VerifyMfaPage({ variantId, instanceId, setView }: any) {
     e.preventDefault();
     try {
       const token = localStorage.getItem(`lab3_2_token_${variantId}`);
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab3/2/${variantId}/verify-mfa`, { mfa_code: code }, {
+      const res = await axios.post(`${API_BASE}/api/lab3/2/${variantId}/verify-mfa`, { mfa_code: code }, {
         headers: { 'X-Variant-Session-ID': instanceId, Authorization: `Bearer ${token}` }
       });
       if (res.data.session_token) {
@@ -347,7 +348,7 @@ function AccountPage({ variantId, instanceId, setView, setIsLoggedIn }: any) {
 
   useEffect(() => {
     const token = localStorage.getItem(`lab3_2_token_${variantId}`);
-    axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/lab3/2/${variantId}/my-account`, {
+    axios.get(`${API_BASE}/api/lab3/2/${variantId}/my-account`, {
       headers: { 'X-Variant-Session-ID': instanceId, Authorization: `Bearer ${token}` }
     }).then(res => {
       setProfile(res.data);
