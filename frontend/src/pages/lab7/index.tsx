@@ -1,10 +1,47 @@
 import { useSearchParams, Link } from 'react-router-dom';
 import { ShieldAlert, ArrowRight, ArrowLeft, Database, Key } from 'lucide-react';
+import axios from 'axios';
 
 export default function Lab7Index() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const step = (searchParams.get('step') || 'info') as 'info' | 'selection';
+  const step = (searchParams.get('step') || 'info') as 'info' | 'selection' | 'variant-1' | 'variant-2';
   const setStep = (s: string) => setSearchParams({ step: s });
+
+  const handleLaunch = async (e: React.MouseEvent, slug: string, variant: string) => {
+    e.preventDefault();
+    try {
+      const storageKey = `instance:${slug}`;
+      const existing = localStorage.getItem(storageKey);
+      let newInstanceId = existing;
+      
+      if (existing) {
+        try {
+          await axios.post(`http://localhost:8000/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
+        } catch (err) {
+          newInstanceId = null;
+        }
+      }
+
+      if (!newInstanceId) {
+        const res = await axios.post('http://localhost:8000/api/instances/launch', {
+          lab_id: '7',
+          variant_id: variant,
+        }, { withCredentials: true });
+        newInstanceId = res.data.instance_id;
+      }
+      
+      if (newInstanceId) {
+        sessionStorage.setItem('active_instance_id', newInstanceId);
+        localStorage.setItem(storageKey, newInstanceId);
+        document.cookie = `instance_id=${newInstanceId}; path=/; max-age=86400`;
+        
+        window.open(`/labs/${slug}`, '_blank');
+      }
+    } catch (err) {
+      console.error("Failed to launch instance:", err);
+      alert("Failed to launch lab environment. Please try again.");
+    }
+  };
 
   return (
     <div className="w-full py-12 px-8">
@@ -69,10 +106,10 @@ export default function Lab7Index() {
             </button>
           </div>
         </div>
-      ) : (
+      ) : step === 'selection' ? (
         <div className="animate-in fade-in slide-in-from-right-8 duration-500">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-extrabold text-slate-900">Select a Target Environment</h2>
+            <h2 className="text-2xl font-extrabold text-slate-900">Select a Sub-Lab</h2>
             <button 
               onClick={() => setStep('info')}
               className="text-slate-500 hover:text-brand-orange font-bold text-sm flex items-center gap-1 transition-colors"
@@ -82,7 +119,7 @@ export default function Lab7Index() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-purple-400 transition-all flex flex-col group relative overflow-hidden">
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-purple-400 transition-all flex flex-col group relative overflow-hidden cursor-pointer" onClick={() => setStep('variant-1')}>
               <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
               <div className="flex items-start justify-between mb-6">
                 <div className="p-4 bg-purple-100 text-purple-600 rounded-xl"><Database size={32} /></div>
@@ -92,12 +129,12 @@ export default function Lab7Index() {
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
                 Use SQL injection on a product category filter to access unreleased or hidden items.
               </p>
-              <Link to="/labs/sql-injection/gift-shop" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-purple-600 text-white font-bold rounded-xl transition-colors">
-                Launch Environment <ArrowRight size={18} />
-              </Link>
+              <button className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-purple-600 text-white font-bold rounded-xl transition-colors">
+                Select Theme <ArrowRight size={18} />
+              </button>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-pink-400 transition-all flex flex-col group relative overflow-hidden">
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-pink-400 transition-all flex flex-col group relative overflow-hidden cursor-pointer" onClick={() => setStep('variant-2')}>
               <div className="absolute top-0 right-0 w-32 h-32 bg-pink-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
               <div className="flex items-start justify-between mb-6">
                 <div className="p-4 bg-pink-100 text-pink-600 rounded-xl"><Key size={32} /></div>
@@ -107,9 +144,127 @@ export default function Lab7Index() {
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
                 Exploit an insecure login form to access an administrative dashboard without knowing the password.
               </p>
-              <Link to="/labs/sql-injection/corp-login" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-pink-600 text-white font-bold rounded-xl transition-colors">
+              <button className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-pink-600 text-white font-bold rounded-xl transition-colors">
+                Select Theme <ArrowRight size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : step === 'variant-1' ? (
+        <div className="animate-in fade-in slide-in-from-right-8 duration-500">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-extrabold text-slate-900">Lab 7.1: Select a Target Environment</h2>
+            <button 
+              onClick={() => setStep('selection')}
+              className="text-slate-500 hover:text-brand-orange font-bold text-sm flex items-center gap-1 transition-colors"
+            >
+              <ArrowLeft size={16} /> Back to Sub-Labs
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-pink-400 transition-all flex flex-col group relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-pink-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+              <div className="flex items-start justify-between mb-6">
+                <div className="p-4 bg-pink-100 text-pink-600 rounded-xl"><Database size={32} /></div>
+                <span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Theme A</span>
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">The Gift Boutique</h3>
+              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
+                Use SQL injection on a product category filter to access unreleased or hidden gifts.
+              </p>
+              <button onClick={(e) => handleLaunch(e, 'sql-injection/gift-shop', '1a')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-pink-600 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
-              </Link>
+              </button>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-[#8c2d19] transition-all flex flex-col group relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+              <div className="flex items-start justify-between mb-6">
+                <div className="p-4 bg-orange-100 text-[#8c2d19] rounded-xl"><Database size={32} /></div>
+                <span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Theme B</span>
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">The Chapter House</h3>
+              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
+                Bypass the 'WHERE' clause in an antiquarian bookstore's search to find hidden volumes.
+              </p>
+              <button onClick={(e) => handleLaunch(e, 'sql-injection/book-store', '1b')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-[#8c2d19] text-white font-bold rounded-xl transition-colors">
+                Launch Environment <ArrowRight size={18} />
+              </button>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-cyan-500 transition-all flex flex-col group relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+              <div className="flex items-start justify-between mb-6">
+                <div className="p-4 bg-cyan-100 text-cyan-600 rounded-xl"><Database size={32} /></div>
+                <span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Theme C</span>
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">TechHub Nexus</h3>
+              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
+                Query an advanced hardware catalog to leak restricted prototype items.
+              </p>
+              <button onClick={(e) => handleLaunch(e, 'sql-injection/tech-shop', '1c')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-cyan-600 text-white font-bold rounded-xl transition-colors">
+                Launch Environment <ArrowRight size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="animate-in fade-in slide-in-from-right-8 duration-500">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-extrabold text-slate-900">Lab 7.2: Select a Target Environment</h2>
+            <button 
+              onClick={() => setStep('selection')}
+              className="text-slate-500 hover:text-brand-orange font-bold text-sm flex items-center gap-1 transition-colors"
+            >
+              <ArrowLeft size={16} /> Back to Sub-Labs
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-purple-400 transition-all flex flex-col group relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+              <div className="flex items-start justify-between mb-6">
+                <div className="p-4 bg-purple-100 text-purple-600 rounded-xl"><Key size={32} /></div>
+                <span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Theme A</span>
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">Northstar Office</h3>
+              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
+                Corporate administrative dashboard login form vulnerable to SQL injection.
+              </p>
+              <button onClick={(e) => handleLaunch(e, 'sql-injection/blind-a', '2a')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-purple-600 text-white font-bold rounded-xl transition-colors">
+                Launch Environment <ArrowRight size={18} />
+              </button>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-blue-400 transition-all flex flex-col group relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+              <div className="flex items-start justify-between mb-6">
+                <div className="p-4 bg-blue-100 text-blue-600 rounded-xl"><Key size={32} /></div>
+                <span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Theme B</span>
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">Aegis Workforce</h3>
+              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
+                Employee portal login page vulnerable to authentication bypass.
+              </p>
+              <button onClick={(e) => handleLaunch(e, 'sql-injection/blind-b', '2b')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-blue-600 text-white font-bold rounded-xl transition-colors">
+                Launch Environment <ArrowRight size={18} />
+              </button>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-emerald-400 transition-all flex flex-col group relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+              <div className="flex items-start justify-between mb-6">
+                <div className="p-4 bg-emerald-100 text-emerald-600 rounded-xl"><Key size={32} /></div>
+                <span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Theme C</span>
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">Helix Admin</h3>
+              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
+                Access a secure backend infrastructure control panel via SQLi bypass.
+              </p>
+              <button onClick={(e) => handleLaunch(e, 'sql-injection/blind-c', '2c')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors">
+                Launch Environment <ArrowRight size={18} />
+              </button>
             </div>
           </div>
         </div>

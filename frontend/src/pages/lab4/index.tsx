@@ -107,7 +107,7 @@ export default function Lab4Index() {
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
                 Perform a blind internal network scan via SSRF to identify hidden backend services on the 192.168.0.x subnet.
               </p>
-              <Link to="/labs/4/sub2/a" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-red-600 text-white font-bold rounded-xl transition-colors">
+              <Link to="/labs/4/sub2" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-red-600 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </Link>
             </div>

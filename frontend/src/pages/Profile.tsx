@@ -206,12 +206,7 @@ export default function Profile() {
           </h2>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { id: 1, title: "Lab 1: Injection Vulnerabilities", progress: 100, status: "completed" },
-              { id: 2, title: "Lab 2: Broken Authentication", progress: 60, status: "in_progress" },
-              { id: 3, title: "Lab 3: Cross-Site Scripting (XSS)", progress: 25, status: "in_progress" },
-              { id: 4, title: "Lab 4: Security Misconfiguration", progress: 0, status: "not_started" },
-            ].map(lab => (
+            {(profile?.labs_progress || []).map((lab: any) => (
               <div key={lab.id} className="border border-slate-200 rounded-xl p-5 hover:border-brand-orange/50 transition-colors">
                 <div className="flex justify-between items-start mb-4">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Lab {lab.id}</span>

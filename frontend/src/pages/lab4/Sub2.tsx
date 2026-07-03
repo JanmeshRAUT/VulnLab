@@ -1,17 +1,68 @@
-import { Link, useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
+import axios from 'axios';
 import { Terminal, ArrowRight, ArrowLeft, ShieldAlert, FileSearch, Search, Server, Cloud, Package } from 'lucide-react';
+import { useLabInstance } from '../../hooks/useLabInstance';
+import { InstanceContext } from '../../contexts/InstanceContext';
+import ArcadeAvenue from './storefronts/ArcadeAvenue';
+import NimbusMarketplace from './storefronts/NimbusMarketplace';
+import PortlineFreight from './storefronts/PortlineFreight';
 
-export default function Lab4Sub2() {
+export default function Lab4Sub2({ variantIdProp }: { variantIdProp?: string }) {
   const [params, setParams] = useSearchParams();
-  const step = (params.get('step') || 'theory') as 'theory' | 'selection' | 'lab';
-  const selectedVariant = params.get('variant') || 'a';
+  const routeParams = useParams();
+  const variantId = variantIdProp || routeParams.variantId;
+  
+  const isLabEnvironment = !!variantId;
+  const selectedVariant = variantId || params.get('variant') || 'a';
+  const step = isLabEnvironment ? 'lab' : ((params.get('step') || 'theory') as 'theory' | 'selection' | 'lab');
+
+  const { instanceId, loading: instanceLoading } = useLabInstance({ 
+    labId: '4', 
+    variantId: `2${selectedVariant}` 
+  });
 
   const goTo = (nextStep: string, variant?: string) => {
-    const p = new URLSearchParams();
-    p.set('step', nextStep);
-    if (variant) p.set('variant', variant);
-    else if (selectedVariant) p.set('variant', selectedVariant);
-    setParams(p);
+    const nextParams = new URLSearchParams();
+    nextParams.set('step', nextStep);
+    nextParams.set('variant', variant || selectedVariant);
+    setParams(nextParams);
+  };
+
+  const handleLaunch = async (e: React.MouseEvent, slug: string, variant: string) => {
+    e.preventDefault();
+    try {
+      const storageKey = `instance:${slug}`;
+      const existing = localStorage.getItem(storageKey);
+      let newInstanceId = existing;
+      
+      if (existing) {
+        try {
+          await axios.post(`http://localhost:8000/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
+        } catch (err) {
+          newInstanceId = null;
+        }
+      }
+
+      if (!newInstanceId) {
+        const res = await axios.post('http://localhost:8000/api/instances/launch', {
+          lab_id: '4',
+          variant_id: `2${variant}`,
+        }, { withCredentials: true });
+        newInstanceId = res.data.instance_id;
+      }
+      
+      if (newInstanceId) {
+        sessionStorage.setItem('active_instance_id', newInstanceId);
+        localStorage.setItem(storageKey, newInstanceId);
+        document.cookie = `instance_id=${newInstanceId}; path=/; max-age=86400`;
+        
+        window.open(`/labs/${slug}`, '_blank');
+      }
+    } catch (error) {
+      console.error("Failed to launch instance:", error);
+      alert("Failed to launch lab environment. Is the backend running?");
+    }
   };
 
   if (step === 'theory') {
@@ -104,7 +155,7 @@ export default function Lab4Sub2() {
               </div>
               <h3 className="text-2xl font-bold text-slate-900 mb-2">Arcade Avenue Outfitters</h3>
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A retail discovery lab. Use a stock gateway to brute-force the 192.168.0.x subnet and find the hidden admin host.</p>
-              <button onClick={() => goTo('lab', 'a')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+              <button onClick={(e) => handleLaunch(e, 'ssrf/arcade', 'a')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </button>
             </div>
@@ -116,7 +167,7 @@ export default function Lab4Sub2() {
               </div>
               <h3 className="text-2xl font-bold text-slate-900 mb-2">Nimbus Marketplace</h3>
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A cloud compute environment. Identify which private node is running the privileged management API.</p>
-              <button onClick={() => goTo('lab', 'b')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+              <button onClick={(e) => handleLaunch(e, 'ssrf/nimbus', 'b')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </button>
             </div>
@@ -128,7 +179,7 @@ export default function Lab4Sub2() {
               </div>
               <h3 className="text-2xl font-bold text-slate-900 mb-2">Portline Freight Systems</h3>
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A logistics discovery lab. Brute force internal IPs to locate the hidden operations admin host.</p>
-              <button onClick={() => goTo('lab', 'c')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+              <button onClick={(e) => handleLaunch(e, 'ssrf/portline', 'c')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </button>
             </div>
@@ -138,30 +189,30 @@ export default function Lab4Sub2() {
     );
   }
 
-  // Lab Environment
-  const labels: Record<string, string> = { a: 'Arcade Avenue Outfitters', b: 'Nimbus Marketplace', c: 'Portline Freight Systems' };
-  return (
-    <div className="w-full">
-      <div className="p-8 flex items-center justify-center min-h-[calc(100vh-60px)] bg-slate-50 text-slate-800">
-        <div className="text-center">
-        <div className="p-6 bg-red-100 text-red-600 rounded-2xl inline-flex mb-6"><ShieldAlert size={40} /></div>
-        <h1 className="text-3xl font-extrabold text-slate-900 mb-3">Lab 4.2: Back-end Discovery</h1>
-        <p className="text-slate-600 text-lg mb-2">Active Variant: <span className="font-black text-brand-orange">{labels[selectedVariant]}</span></p>
-        <p className="text-slate-400 text-sm mb-8">Connect the vulnerable backend to this component.</p>
-        <div className="max-w-md mx-auto bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8">
-            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2 justify-center"><Search size={20} className="text-brand-orange" /> Internal Stock Gateway</h3>
-            <div className="flex flex-col gap-3">
-              <label className="text-sm font-semibold text-slate-600 text-left">Internal API Endpoint</label>
-              <input type="text" readOnly value="http://192.168.0.X:8080/api/stock" className="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-slate-500 font-mono text-sm" />
-              <button className="w-full bg-slate-900 text-white font-bold py-3 rounded-lg opacity-50 cursor-not-allowed">Query Endpoint</button>
-              <p className="text-xs text-slate-400 mt-2">API integration pending backend connection.</p>
-            </div>
+  if (step === 'lab') {
+    if (instanceLoading || !instanceId) {
+      return (
+        <div className="w-full min-h-screen bg-slate-50 flex items-center justify-center">
+          <div className="text-center animate-pulse">
+            <div className="w-16 h-16 border-4 border-brand-orange border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <h2 className="text-xl font-bold text-slate-700">Provisioning Environment...</h2>
+            <p className="text-slate-500">Allocating isolated backend instance</p>
+          </div>
         </div>
-        <button onClick={() => goTo('selection')} className="text-slate-500 hover:text-brand-orange font-bold text-sm flex items-center gap-1 transition-colors mx-auto">
-          <ArrowLeft size={16} /> Back to Variant Selection
-        </button>
-      </div>
-    </div>
-  </div>
-  );
+      );
+    }
+    
+    let Storefront = null;
+    if (selectedVariant === 'a') Storefront = <ArcadeAvenue setView={goTo} />;
+    if (selectedVariant === 'b') Storefront = <NimbusMarketplace setView={goTo} />;
+    if (selectedVariant === 'c') Storefront = <PortlineFreight setView={goTo} />;
+    
+    return (
+      <InstanceContext.Provider value={{ instanceId, loading: instanceLoading }}>
+        {Storefront}
+      </InstanceContext.Provider>
+    );
+  }
+  
+  return null;
 }

@@ -92,7 +92,7 @@ export default function Lab5Index() {
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
                 Exploit an avatar upload feature that lacks extension and content validation to upload and execute a malicious PHP file.
               </p>
-              <Link to="/labs/5/sub1/a" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-purple-600 text-white font-bold rounded-xl transition-colors">
+              <Link to="/labs/5/sub1" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-purple-600 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </Link>
             </div>
@@ -107,7 +107,7 @@ export default function Lab5Index() {
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
                 Bypass weak MIME type validation by spoofing the Content-Type header to successfully upload a reverse shell.
               </p>
-              <Link to="/labs/5/sub2/a" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-pink-600 text-white font-bold rounded-xl transition-colors">
+              <Link to="/labs/5/sub2" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-pink-600 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </Link>
             </div>

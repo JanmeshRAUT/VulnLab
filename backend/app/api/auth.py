@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.core.database import get_database
 from app.models.user import UserCreate, UserLogin
 from app.api.admin import role_permissions
+from bson import ObjectId
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -123,6 +124,8 @@ async def auth_status(request: Request):
 
 @router.get("/me")
 async def get_profile(request: Request):
+    from app.services.catalog_service import get_all_labs
+    
     user_id = request.session.get('user_id')
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -136,14 +139,52 @@ async def get_profile(request: Request):
         role = user.get("role", "student")
         permissions = await role_permissions(role)
         
+        # Calculate Progress
+        email = user.get("email")
+        labs = get_all_labs()
+        progress_docs = await db.progress.find({
+            "$or": [
+                {"email": email},
+                {"email": str(user_id)},
+                {"user_id": str(user_id)}
+            ]
+        }).to_list(None)
+        
+        labs_progress = []
+        for lab in labs:
+            lab_id = lab.lab_id
+            variants_count = len(lab.variants)
+            if variants_count == 0:
+                variants_count = 1
+            solved_count = len([p for p in progress_docs if p.get("lab_id") == lab_id and p.get("is_solved")])
+            
+            progress_percentage = int((solved_count / variants_count) * 100)
+            progress_percentage = min(progress_percentage, 100)
+            
+            if progress_percentage >= 100:
+                status = "completed"
+            elif progress_percentage > 0:
+                status = "in_progress"
+            else:
+                status = "not_started"
+                
+            labs_progress.append({
+                "id": lab_id,
+                "title": f"Lab {lab_id}: {lab.title}",
+                "progress": progress_percentage,
+                "status": status
+            })
+        
         return {
-            "email": user.get("email"),
+            "email": email,
             "full_name": user.get("full_name", ""),
             "enrollment_id": user.get("enrollment_id", ""),
             "role": role,
-            "permissions": permissions
+            "permissions": permissions,
+            "labs_progress": labs_progress
         }
-    except Exception:
+    except Exception as e:
+        print(f"Error in get_profile: {e}")
         raise HTTPException(status_code=400, detail="Invalid user ID")
 
 @router.put("/me")

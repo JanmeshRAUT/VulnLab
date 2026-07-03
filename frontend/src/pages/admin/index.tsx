@@ -6,7 +6,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import AdminShell from './AdminShell';
 
-const SECTIONS = ['overview', 'students', 'access', 'roles', 'sessions', 'reports', 'audit', 'notifications'] as const;
+const SECTIONS = ['overview', 'students', 'access', 'roles', 'sessions', 'reports', 'notifications'] as const;
 
 function Badge({ value, tone = 'slate' }: { value: string; tone?: string }) {
   const toneMap: Record<string, string> = {
@@ -183,6 +183,17 @@ export default function AdminDashboard() {
         setOpNotice({ text: 'Access update failed.', tone: 'red' });
       }
     };
+
+  const deleteStudent = async (studentId: string) => {
+    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    try {
+      await axios.delete(`http://localhost:8000/api/admin/students/${encodeURIComponent(studentId)}`, { withCredentials: true });
+      setOpNotice({ text: 'User deleted successfully.', tone: 'green' });
+      await fetchDashboard();
+    } catch {
+      setOpNotice({ text: 'Failed to delete user.', tone: 'red' });
+    }
+  };
 
   const downloadPDF = (student: any) => {
     const doc = new jsPDF();
@@ -376,78 +387,11 @@ export default function AdminDashboard() {
   return (
     <AdminShell title="Admin Management" subtitle="Platform control center" activeSection={activeSection}>
       <div className="space-y-6">
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 md:p-6 shadow-sm">
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 text-brand-orange font-bold uppercase tracking-[0.3em] text-xs mb-2"><Sparkles size={14} /> Admin Dashboard</div>
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Manage students, sessions, roles, access, and reports from one console.</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full xl:w-auto xl:min-w-[36rem]">
-              <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <Search size={18} className="text-slate-400" />
-                <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search students, labs, variants, sessions, roles" className="w-full bg-transparent text-sm font-medium outline-none placeholder:text-slate-400" />
-              </label>
-              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none">
-                <option value="">All statuses</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Suspended">Suspended</option>
-                <option value="CREATED">CREATED</option>
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="SOLVED">SOLVED</option>
-                <option value="ABANDONED">ABANDONED</option>
-                <option value="EXPIRED">EXPIRED</option>
-              </select>
-              <select value={range} onChange={e => setRange(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none">
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-              </select>
-            </div>
+        {opNotice && (
+          <div className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${opNotice.tone === 'green' ? 'border-green-200 bg-green-50 text-green-700' : 'border-red-200 bg-red-50 text-red-700'}`}>
+            {opNotice.text}
           </div>
-
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-            <select value={filterRole} onChange={e => setFilterRole(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none">
-              <option value="">All roles</option>
-              <option value="super_admin">Super Admin</option>
-              <option value="admin">Admin</option>
-              <option value="instructor">Instructor</option>
-              <option value="reviewer">Reviewer</option>
-              <option value="student">Student</option>
-            </select>
-            <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none">
-              <option value="">All lab categories</option>
-              <option value="File System">File System</option>
-              <option value="Access Control">Access Control</option>
-              <option value="Identity">Identity</option>
-              <option value="Network">Network</option>
-              <option value="Input Validation">Input Validation</option>
-              <option value="Injection">Injection</option>
-              <option value="Database">Database</option>
-              <option value="Client-Side">Client-Side</option>
-            </select>
-          </div>
-
-          <div className="mt-5 flex flex-wrap items-center gap-2">
-            {SECTIONS.map(section => (
-              <button key={section} onClick={() => setActiveSection(section)} className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${activeSection === section ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200 text-slate-600 hover:border-brand-orange hover:text-brand-orange'}`}>
-                {section}
-              </button>
-            ))}
-            <div className="ml-auto flex flex-wrap gap-2">
-              <button onClick={() => downloadReport('csv')} className="btn-secondary inline-flex items-center gap-2 text-sm"><Download size={16} /> CSV</button>
-              <button onClick={() => downloadReport('excel')} className="btn-secondary inline-flex items-center gap-2 text-sm"><Download size={16} /> Excel</button>
-              <button onClick={() => downloadReport('pdf')} className="btn-secondary inline-flex items-center gap-2 text-sm"><Download size={16} /> PDF</button>
-              <button onClick={() => window.location.reload()} className="btn-primary inline-flex items-center gap-2 text-sm"><RefreshCcw size={16} /> Refresh</button>
-            </div>
-          </div>
-
-          {opNotice && (
-            <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold ${opNotice.tone === 'green' ? 'border-green-200 bg-green-50 text-green-700' : 'border-red-200 bg-red-50 text-red-700'}`}>
-              {opNotice.text}
-            </div>
-          )}
-        </div>
+        )}
 
         {loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -501,7 +445,7 @@ export default function AdminDashboard() {
               <table className="w-full text-left text-sm">
                 <thead className="text-xs uppercase tracking-widest text-slate-400 font-bold"><tr><th className="py-3 pr-4">Name</th><th className="py-3 pr-4">Username</th><th className="py-3 pr-4">Email</th><th className="py-3 pr-4">Enrollment ID</th><th className="py-3 pr-4">Last Login</th><th className="py-3 pr-4">Status</th><th className="py-3 pr-4">Role</th><th className="py-3 pr-4">Attempted</th><th className="py-3 pr-4">Solved</th><th className="py-3 pr-4">Success</th><th className="py-3 pr-4">Active Sessions</th><th className="py-3 pr-4 text-right">Actions</th></tr></thead>
                 <tbody className="divide-y divide-slate-100">
-                  {visibleStudents.map((student: any) => <tr key={student.student_id} className="hover:bg-slate-50/80"><td className="py-4 pr-4 font-bold text-slate-900">{student.full_name}</td><td className="py-4 pr-4 text-slate-600">{student.username}</td><td className="py-4 pr-4 text-slate-600">{student.email}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap font-mono text-[10px] uppercase">{String(student.student_id).substring(0, 8)}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{formatDate(student.last_login)}</td><td className="py-4 pr-4"><Badge value={student.status} tone={student.status === 'Active' ? 'green' : student.status === 'Suspended' ? 'red' : 'slate'} /></td><td className="py-4 pr-4"><Badge value={student.assigned_role} tone="orange" /></td><td className="py-4 pr-4 font-semibold text-slate-700">{student.total_labs_attempted}</td><td className="py-4 pr-4 font-semibold text-slate-700">{student.total_labs_solved}</td><td className="py-4 pr-4 font-semibold text-slate-700">{student.success_rate}%</td><td className="py-4 pr-4 font-semibold text-slate-700">{student.current_active_sessions}</td><td className="py-4 pr-4 text-right"><div className="inline-flex items-center gap-2 justify-end"><Link to={`/admin/students/${encodeURIComponent(student.student_id)}`} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">View Profile <ArrowRight size={14} /></Link><button onClick={() => downloadPDF(student)} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors"><FileText size={14} /> View PDF</button></div></td></tr>)}
+                  {visibleStudents.map((student: any) => <tr key={student.student_id} className="hover:bg-slate-50/80"><td className="py-4 pr-4 font-bold text-slate-900">{student.full_name}</td><td className="py-4 pr-4 text-slate-600">{student.username}</td><td className="py-4 pr-4 text-slate-600">{student.email}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap font-mono text-[10px] uppercase">{String(student.student_id).substring(0, 8)}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{formatDate(student.last_login)}</td><td className="py-4 pr-4"><Badge value={student.status} tone={student.status === 'Active' ? 'green' : student.status === 'Suspended' ? 'red' : 'slate'} /></td><td className="py-4 pr-4"><Badge value={student.assigned_role} tone="orange" /></td><td className="py-4 pr-4 font-semibold text-slate-700">{student.total_labs_attempted}</td><td className="py-4 pr-4 font-semibold text-slate-700">{student.total_labs_solved}</td><td className="py-4 pr-4 font-semibold text-slate-700">{student.success_rate}%</td><td className="py-4 pr-4 font-semibold text-slate-700">{student.current_active_sessions}</td><td className="py-4 pr-4 text-right"><div className="inline-flex items-center gap-2 justify-end"><button onClick={() => deleteStudent(student.student_id)} className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:border-red-300 hover:text-red-800 transition-colors">Delete</button><Link to={`/admin/students/${encodeURIComponent(student.student_id)}`} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">View Profile <ArrowRight size={14} /></Link><button onClick={() => downloadPDF(student)} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors"><FileText size={14} /> View PDF</button></div></td></tr>)}
                 </tbody>
               </table>
             </div>
@@ -582,16 +526,26 @@ export default function AdminDashboard() {
         )}
 
         {!loading && activeSection === 'sessions' && (
-          <SectionCard title="Session Monitoring" subtitle="Track all live instances, expiration windows, solve states, and emergency actions">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="text-xs uppercase tracking-widest text-slate-400 font-bold"><tr><th className="py-3 pr-4">Instance ID</th><th className="py-3 pr-4">Student</th><th className="py-3 pr-4">Lab</th><th className="py-3 pr-4">Variant</th><th className="py-3 pr-4">Status</th><th className="py-3 pr-4">Started</th><th className="py-3 pr-4">Last Activity</th><th className="py-3 pr-4">Solved Time</th><th className="py-3 pr-4">Expiration</th><th className="py-3 pr-4 text-right">Actions</th></tr></thead>
-                <tbody className="divide-y divide-slate-100">
-                  {visibleSessions.map((session: any) => <tr key={session.instance_id} className="hover:bg-slate-50/80"><td className="py-4 pr-4 font-mono text-xs text-slate-500">{session.instance_id}</td><td className="py-4 pr-4 font-semibold text-slate-900">{session.student}</td><td className="py-4 pr-4 text-slate-700">{session.lab}</td><td className="py-4 pr-4 text-slate-700">{session.variant}</td><td className="py-4 pr-4"><Badge value={session.status} tone={session.status === 'SOLVED' ? 'green' : session.status === 'ABANDONED' ? 'red' : session.status === 'EXPIRED' ? 'slate' : 'orange'} /></td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.started_time}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.last_activity}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.solved_time || '-'}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.expiration_time}</td><td className="py-4 pr-4 text-right whitespace-nowrap"><div className="inline-flex items-center gap-2"><button onClick={() => navigator.clipboard?.writeText(session.instance_id)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">View Session</button><button onClick={() => runSessionAction(session.instance_id, 'expire')} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">Force Expire</button><button onClick={() => runSessionAction(session.instance_id, 'terminate')} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">Terminate</button><button onClick={() => runSessionAction(session.instance_id, 'reset')} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">Reset</button></div></td></tr>)}
-                </tbody>
-              </table>
-            </div>
-          </SectionCard>
+          <div className="space-y-6">
+            <SectionCard title="Session Monitoring" subtitle="Track all live instances, expiration windows, solve states, and emergency actions">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="text-xs uppercase tracking-widest text-slate-400 font-bold"><tr><th className="py-3 pr-4">Instance ID</th><th className="py-3 pr-4">Student</th><th className="py-3 pr-4">Lab</th><th className="py-3 pr-4">Variant</th><th className="py-3 pr-4">Status</th><th className="py-3 pr-4">Started</th><th className="py-3 pr-4">Last Activity</th><th className="py-3 pr-4">Solved Time</th><th className="py-3 pr-4">Expiration</th><th className="py-3 pr-4 text-right">Actions</th></tr></thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {visibleSessions.map((session: any) => <tr key={session.instance_id} className="hover:bg-slate-50/80"><td className="py-4 pr-4 font-mono text-xs text-slate-500">{session.instance_id}</td><td className="py-4 pr-4 font-semibold text-slate-900">{session.student}</td><td className="py-4 pr-4 text-slate-700">{session.lab}</td><td className="py-4 pr-4 text-slate-700">{session.variant}</td><td className="py-4 pr-4"><Badge value={session.status} tone={session.status === 'SOLVED' ? 'green' : session.status === 'ABANDONED' ? 'red' : session.status === 'EXPIRED' ? 'slate' : 'orange'} /></td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.started_time}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.last_activity}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.solved_time || '-'}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.expiration_time}</td><td className="py-4 pr-4 text-right whitespace-nowrap"><div className="inline-flex items-center gap-2"><button onClick={() => navigator.clipboard?.writeText(session.instance_id)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">View Session</button><button onClick={() => runSessionAction(session.instance_id, 'expire')} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">Force Expire</button><button onClick={() => runSessionAction(session.instance_id, 'terminate')} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">Terminate</button><button onClick={() => runSessionAction(session.instance_id, 'reset')} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">Reset</button></div></td></tr>)}
+                  </tbody>
+                </table>
+              </div>
+            </SectionCard>
+            <SectionCard title="Audit Logs" subtitle="Track every administrative action across modules with role and IP context">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="text-xs uppercase tracking-widest text-slate-400 font-bold"><tr><th className="py-3 pr-4">User</th><th className="py-3 pr-4">Role</th><th className="py-3 pr-4">Action</th><th className="py-3 pr-4">Module</th><th className="py-3 pr-4">Timestamp</th><th className="py-3 pr-4">IP Address</th></tr></thead>
+                  <tbody className="divide-y divide-slate-100">{auditLogs.map((log: any, index: number) => <tr key={index} className="hover:bg-slate-50/80"><td className="py-4 pr-4 font-semibold text-slate-900">{log.user}</td><td className="py-4 pr-4"><Badge value={log.role} tone="slate" /></td><td className="py-4 pr-4 text-slate-700">{log.action}</td><td className="py-4 pr-4 text-slate-700">{log.module}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{log.timestamp}</td><td className="py-4 pr-4 font-mono text-xs text-slate-500">{log.ip_address}</td></tr>)}</tbody>
+                </table>
+              </div>
+            </SectionCard>
+          </div>
         )}
 
         {!loading && activeSection === 'reports' && (
@@ -636,22 +590,13 @@ export default function AdminDashboard() {
                   <div className="rounded-xl border border-slate-200 bg-white p-4"><div className="text-xs uppercase font-bold text-slate-400">Total Sessions</div><div className="text-2xl font-black text-slate-900">{reports.system_reports?.platform_usage_statistics?.total_sessions || 0}</div></div>
                 </div>
                 <div className="text-sm font-bold text-slate-900 mb-2">Export Formats</div>
-                <div className="flex flex-wrap gap-2">{reports.export_options.map((item: string) => <Badge key={item} value={item} tone="slate" />)}</div>
+                <div className="flex flex-wrap gap-2">{reports.export_options.map((item: string) => <button key={item} onClick={() => downloadReport(item.toLowerCase())} className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5"><Download size={14}/> {item}</button>)}</div>
               </div>
             </div>
           </SectionCard>
         )}
 
-        {!loading && activeSection === 'audit' && (
-          <SectionCard title="Audit Logs" subtitle="Track every administrative action across modules with role and IP context">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="text-xs uppercase tracking-widest text-slate-400 font-bold"><tr><th className="py-3 pr-4">User</th><th className="py-3 pr-4">Role</th><th className="py-3 pr-4">Action</th><th className="py-3 pr-4">Module</th><th className="py-3 pr-4">Timestamp</th><th className="py-3 pr-4">IP Address</th></tr></thead>
-                <tbody className="divide-y divide-slate-100">{auditLogs.map((log: any, index: number) => <tr key={index} className="hover:bg-slate-50/80"><td className="py-4 pr-4 font-semibold text-slate-900">{log.user}</td><td className="py-4 pr-4"><Badge value={log.role} tone="slate" /></td><td className="py-4 pr-4 text-slate-700">{log.action}</td><td className="py-4 pr-4 text-slate-700">{log.module}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{log.timestamp}</td><td className="py-4 pr-4 font-mono text-xs text-slate-500">{log.ip_address}</td></tr>)}</tbody>
-              </table>
-            </div>
-          </SectionCard>
-        )}
+
 
         {!loading && activeSection === 'notifications' && (
           <SectionCard title="Notifications" subtitle="Platform alerts for registrations, suspicious activity, completions, and timeouts">

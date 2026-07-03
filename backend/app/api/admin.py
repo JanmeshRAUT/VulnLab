@@ -407,30 +407,49 @@ def build_overview(students: list[dict[str, Any]], sessions: list[dict[str, Any]
     abandoned_sessions = len([item for item in sessions if item["status"] == "ABANDONED"])
     expired_sessions = len([item for item in sessions if item["status"] == "EXPIRED"])
 
-    recent_activity = sorted(
-        [
-            *[
-                {
-                    "type": "Student Updated",
-                    "title": student["full_name"],
-                    "detail": f"{student['total_labs_solved']} solved across {student['total_labs_attempted']} attempts",
-                    "timestamp": student["last_login"],
-                }
-                for student in students[:5]
-            ],
-            *[
-                {
-                    "type": f"Session {session['status'].title()}",
-                    "title": session["lab"],
-                    "detail": f"Instance {session['instance_id']} for {session['student']}",
-                    "timestamp": session["last_activity"],
-                }
-                for session in sessions[:5]
-            ],
-        ],
-        key=lambda item: item["timestamp"],
-        reverse=True,
-    )
+    recent_activity = []
+    
+    # Who logged in
+    for student in students:
+        if student.get("last_login"):
+            recent_activity.append({
+                "type": "Login",
+                "title": student["full_name"],
+                "detail": f"{student['full_name']} logged in",
+                "timestamp": student["last_login"],
+            })
+
+    # What Student Solve
+    for session in sessions:
+        if session["status"] == "SOLVED" and session.get("solved_time"):
+            recent_activity.append({
+                "type": "Lab Solved",
+                "title": session["lab"],
+                "detail": f"{session['student']} solved {session['lab']}",
+                "timestamp": session["solved_time"],
+            })
+
+    recent_activity = sorted(recent_activity, key=lambda item: item["timestamp"], reverse=True)[:15]
+
+    import time
+    now = time.time()
+    
+    # Calculate real statistics based on sessions
+    def count_active_in_range(days):
+        cutoff = now - (days * 86400)
+        from datetime import datetime
+        cutoff_iso = datetime.utcfromtimestamp(cutoff).isoformat()
+        return len([s for s in sessions if s["status"] in {"CREATED", "ACTIVE"} and s.get("started_time") and s["started_time"] >= cutoff_iso])
+        
+    def count_solved_in_range(days):
+        cutoff = now - (days * 86400)
+        from datetime import datetime
+        cutoff_iso = datetime.utcfromtimestamp(cutoff).isoformat()
+        return len([s for s in sessions if s["status"] == "SOLVED" and s.get("solved_time") and s["solved_time"] >= cutoff_iso])
+
+    daily_statistics = [{"label": f"Day {i + 1}", "value": count_active_in_range(i + 1), "solved": count_solved_in_range(i + 1)} for i in range(7)]
+    weekly_statistics = [{"label": f"Week {i + 1}", "value": count_active_in_range((i + 1) * 7), "solved": count_solved_in_range((i + 1) * 7)} for i in range(4)]
+    monthly_statistics = [{"label": label, "value": count_active_in_range((i + 1) * 30), "solved": count_solved_in_range((i + 1) * 30)} for i, label in enumerate(["This Month", "Last Month", "2 Months Ago"])]
 
     return {
         "total_students": len(students),
@@ -447,9 +466,9 @@ def build_overview(students: list[dict[str, Any]], sessions: list[dict[str, Any]
             reverse=True,
         )[:5],
         "recent_activity": recent_activity,
-        "daily_statistics": [{"label": f"Day {i + 1}", "value": max(active_sessions - i, 0), "solved": max(solved_sessions - i // 2, 0)} for i in range(7)],
-        "weekly_statistics": [{"label": f"Week {i + 1}", "value": max(len(students) - i, 0), "solved": max(solved_sessions - i, 0)} for i in range(4)],
-        "monthly_statistics": [{"label": label, "value": max(len(labs) - i, 0), "solved": max(len(students) - i * 2, 0)} for i, label in enumerate(["This Month", "Last Month", "2 Months Ago"])],
+        "daily_statistics": daily_statistics,
+        "weekly_statistics": weekly_statistics,
+        "monthly_statistics": monthly_statistics,
         "role_count": len(roles),
     }
 
@@ -905,3 +924,28 @@ async def export_reports(request: Request, format: str = Query(default="csv"), s
         return Response(content=buffer.getvalue(), media_type="application/vnd.ms-excel")
 
     return Response(content=f"PDF export queued for {scope} reports", media_type="application/pdf")
+
+@router.delete("/students/{student_id}")
+async def delete_student(request: Request, student_id: str):
+    identity = await require_permission(request, "Manage Students")
+    db = get_database()
+    
+    result = await db["users"].delete_one(
+        {"$or": [{"user_id": student_id}, {"email": student_id}, {"username": student_id}]}
+    )
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Student not found")
+        
+    await safe_insert(
+        "audit_logs",
+        {
+            "user": identity["email"],
+            "role": identity["role"],
+            "action": "Delete Student",
+            "module": "Students",
+            "timestamp": now_ts(),
+            "ip_address": request.client.host if request.client else "127.0.0.1",
+        },
+    )
+    return {"success": True, "message": "Student deleted successfully"}

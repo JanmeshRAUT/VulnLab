@@ -1,10 +1,47 @@
 import { useSearchParams, Link } from 'react-router-dom';
 import { ShieldAlert, ArrowRight, ArrowLeft, Terminal, TerminalSquare } from 'lucide-react';
+import axios from 'axios';
 
 export default function Lab6Index() {
   const [searchParams, setSearchParams] = useSearchParams();
   const step = (searchParams.get('step') || 'info') as 'info' | 'selection';
   const setStep = (s: string) => setSearchParams({ step: s });
+
+  const handleLaunch = async (e: React.MouseEvent, slug: string, variant: string) => {
+    e.preventDefault();
+    try {
+      const storageKey = `instance:${slug}`;
+      const existing = localStorage.getItem(storageKey);
+      let newInstanceId = existing;
+      
+      if (existing) {
+        try {
+          await axios.post(`http://localhost:8000/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
+        } catch (err) {
+          newInstanceId = null;
+        }
+      }
+
+      if (!newInstanceId) {
+        const res = await axios.post('http://localhost:8000/api/instances/launch', {
+          lab_id: '6',
+          variant_id: `1${variant}`,
+        }, { withCredentials: true });
+        newInstanceId = res.data.instance_id;
+      }
+      
+      if (newInstanceId) {
+        sessionStorage.setItem('active_instance_id', newInstanceId);
+        localStorage.setItem(storageKey, newInstanceId);
+        document.cookie = `instance_id=${newInstanceId}; path=/; max-age=86400`;
+        
+        window.open(`/labs/${slug}`, '_blank');
+      }
+    } catch (err) {
+      console.error("Failed to launch instance:", err);
+      alert("Failed to launch lab environment. Please try again.");
+    }
+  };
 
   return (
     <div className="w-full py-12 px-8">
@@ -81,21 +118,56 @@ export default function Lab6Index() {
             </button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-1 gap-8">
-            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-purple-400 transition-all flex flex-col group relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            {/* Variant A */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-sky-400 transition-all flex flex-col group relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-sky-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
               <div className="flex items-start justify-between mb-6">
-                <div className="p-4 bg-purple-100 text-purple-600 rounded-xl"><Terminal size={32} /></div>
+                <div className="p-4 bg-sky-100 text-sky-600 rounded-xl"><Terminal size={32} /></div>
                 <span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Intermediate</span>
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Lab 6.1: Stock Check Command Injection</h3>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">MegaMart</h3>
               <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
-                Exploit a stock checking feature that improperly concatenates user input into a system shell command. Includes 3 variations.
+                A supermarket inventory system. Exploit the stock checker that improperly concatenates product and store IDs into a system shell command.
               </p>
-              <Link to="/labs/command-injection/megamart" className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-purple-600 text-white font-bold rounded-xl transition-colors">
+              <button onClick={(e) => handleLaunch(e, 'command-injection/megamart', 'a')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-sky-600 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
-              </Link>
+              </button>
             </div>
+
+            {/* Variant B */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-yellow-500 transition-all flex flex-col group relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+              <div className="flex items-start justify-between mb-6">
+                <div className="p-4 bg-yellow-100 text-yellow-600 rounded-xl"><Terminal size={32} /></div>
+                <span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Intermediate</span>
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">AutoParts Pro</h3>
+              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
+                An industrial auto parts supplier. Inject OS commands into the warehouse part locator system via the Location ID field.
+              </p>
+              <button onClick={(e) => handleLaunch(e, 'command-injection/autoparts-pro', 'b')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-yellow-500 text-white font-bold rounded-xl transition-colors">
+                Launch Environment <ArrowRight size={18} />
+              </button>
+            </div>
+
+            {/* Variant C */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-[#58a6ff] transition-all flex flex-col group relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+              <div className="flex items-start justify-between mb-6">
+                <div className="p-4 bg-blue-100 text-blue-600 rounded-xl"><Terminal size={32} /></div>
+                <span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Intermediate</span>
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">TechTools</h3>
+              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">
+                A datacenter hardware supplier. Escalate a simple branch inventory check into full command execution.
+              </p>
+              <button onClick={(e) => handleLaunch(e, 'command-injection/tech-tools', 'c')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-[#58a6ff] text-white font-bold rounded-xl transition-colors">
+                Launch Environment <ArrowRight size={18} />
+              </button>
+            </div>
+
           </div>
         </div>
       )}

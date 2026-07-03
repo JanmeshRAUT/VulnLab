@@ -129,9 +129,15 @@ export function useLabInstance(options: string | UseLabInstanceLegacyOptions) {
       }
     };
 
+    let lastHeartbeat = 0;
+
     // Send heartbeat every 30 seconds
     const sendHeartbeat = () => {
+      const now = Date.now();
+      if (now - lastHeartbeat < 5000) return; // Prevent spam: max 1 request per 5 seconds
       if (heartbeatInFlight) return;
+      
+      lastHeartbeat = now;
       heartbeatInFlight = true;
       axios.post(`http://localhost:8000/api/instances/${instanceId}/heartbeat`, {}, { withCredentials: true })
         .then(res => {
@@ -150,7 +156,7 @@ export function useLabInstance(options: string | UseLabInstanceLegacyOptions) {
         });
     };
 
-    sendHeartbeat(); // initial heartbeat
+    // Start interval without an immediate heartbeat (since initInstance just validated/launched it)
     heartbeatIntervalRef.current = window.setInterval(sendHeartbeat, 30000);
 
     const handleBeforeUnload = () => sendAbandon();

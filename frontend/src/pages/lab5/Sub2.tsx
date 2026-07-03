@@ -1,17 +1,67 @@
-import { Link, useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
+import axios from 'axios';
 import { Terminal, ArrowRight, ArrowLeft, ShieldAlert, FileSearch, FileText, GraduationCap, LifeBuoy, ShieldCheck } from 'lucide-react';
+import { useLabInstance } from '../../hooks/useLabInstance';
+import { InstanceContext } from '../../contexts/InstanceContext';
+import LegalDocsPortal from './storefronts2/LegalDocsPortal';
+import AcademicSubmission from './storefronts2/AcademicSubmission';
+import SupportTicketSystem from './storefronts2/SupportTicketSystem';
 
-export default function Lab5Sub2() {
+export default function Lab5Sub2({ variantIdProp }: { variantIdProp?: string }) {
   const [params, setParams] = useSearchParams();
-  const step = (params.get('step') || 'theory') as 'theory' | 'selection' | 'lab';
-  const selectedVariant = params.get('variant') || 'a';
+  const routeParams = useParams();
+  const variantId = variantIdProp || routeParams.variantId;
+  
+  const isLabEnvironment = !!variantId;
+  const selectedVariant = variantId || params.get('variant') || 'a';
+  const step = isLabEnvironment ? 'lab' : ((params.get('step') || 'theory') as 'theory' | 'selection' | 'lab');
 
+  const { instanceId, loading: instanceLoading } = useLabInstance({ 
+    labId: '5', 
+    variantId: `2${selectedVariant}` 
+  });
   const goTo = (nextStep: string, variant?: string) => {
-    const p = new URLSearchParams();
-    p.set('step', nextStep);
-    if (variant) p.set('variant', variant);
-    else if (selectedVariant) p.set('variant', selectedVariant);
-    setParams(p);
+    const nextParams = new URLSearchParams();
+    nextParams.set('step', nextStep);
+    nextParams.set('variant', variant || selectedVariant);
+    setParams(nextParams);
+  };
+
+  const handleLaunch = async (e: React.MouseEvent, slug: string, variant: string) => {
+    e.preventDefault();
+    try {
+      const storageKey = `instance:${slug}`;
+      const existing = localStorage.getItem(storageKey);
+      let newInstanceId = existing;
+      
+      if (existing) {
+        try {
+          await axios.post(`http://localhost:8000/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
+        } catch (err) {
+          newInstanceId = null;
+        }
+      }
+
+      if (!newInstanceId) {
+        const res = await axios.post('http://localhost:8000/api/instances/launch', {
+          lab_id: '5',
+          variant_id: `2${variant}`,
+        }, { withCredentials: true });
+        newInstanceId = res.data.instance_id;
+      }
+      
+      if (newInstanceId) {
+        sessionStorage.setItem('active_instance_id', newInstanceId);
+        localStorage.setItem(storageKey, newInstanceId);
+        document.cookie = `instance_id=${newInstanceId}; path=/; max-age=86400`;
+        
+        window.open(`/labs/${slug}`, '_blank');
+      }
+    } catch (err) {
+      console.error("Failed to launch instance:", err);
+      alert("Failed to launch lab environment. Please try again.");
+    }
   };
 
   if (step === 'theory') {
@@ -102,9 +152,9 @@ export default function Lab5Sub2() {
                 <div className="p-4 bg-slate-200 text-slate-700 rounded-xl border border-slate-300"><FileText size={32} /></div>
                 <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Advanced</span>
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Legal Docs Portal</h3>
-              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A law firm's client portal. Bypass the PDF-only restriction by spoofing the Content-Type header to upload a web shell.</p>
-              <button onClick={() => goTo('lab', 'a')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">Legal HR Portal</h3>
+              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A law firm's attorney intranet. Bypass the image-only restriction on the avatar profile upload by spoofing the Content-Type header.</p>
+              <button onClick={(e) => handleLaunch(e, 'upload/legaldocs', 'a')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </button>
             </div>
@@ -115,8 +165,8 @@ export default function Lab5Sub2() {
                 <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Advanced</span>
               </div>
               <h3 className="text-2xl font-bold text-slate-900 mb-2">Academic Submission</h3>
-              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A university assignment portal. Trick the system into accepting an executable payload disguised as a student assignment document.</p>
-              <button onClick={() => goTo('lab', 'b')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">A university assignment portal. Trick the system into accepting an executable payload disguised as an assignment cover page scan.</p>
+              <button onClick={(e) => handleLaunch(e, 'upload/academic', 'b')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </button>
             </div>
@@ -127,8 +177,8 @@ export default function Lab5Sub2() {
                 <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">Advanced</span>
               </div>
               <h3 className="text-2xl font-bold text-slate-900 mb-2">Support Ticket System</h3>
-              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">An IT helpdesk system. Submit a malicious log file attachment by spoofing the MIME type to obtain a reverse shell.</p>
-              <button onClick={() => goTo('lab', 'c')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+              <p className="text-slate-600 font-medium mb-8 flex-1 leading-relaxed">An IT helpdesk system. Submit a malicious screenshot attachment by spoofing the MIME type to obtain a reverse shell.</p>
+              <button onClick={(e) => handleLaunch(e, 'upload/support', 'c')} className="inline-flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
                 Launch Environment <ArrowRight size={18} />
               </button>
             </div>
@@ -139,30 +189,40 @@ export default function Lab5Sub2() {
   }
 
   // Lab Environment
-  const labels: Record<string, string> = { a: 'Legal Docs Portal', b: 'Academic Submission', c: 'Support Ticket System' };
-  return (
-    <div className="w-full">
-      <div className="p-8 flex items-center justify-center min-h-[calc(100vh-60px)] bg-slate-50 text-slate-800">
-        <div className="text-center">
-        <div className="p-6 bg-pink-100 text-pink-600 rounded-2xl inline-flex mb-6"><ShieldAlert size={40} /></div>
-        <h1 className="text-3xl font-extrabold text-slate-900 mb-3">Lab 5.2: Content-Type Bypass</h1>
-        <p className="text-slate-600 text-lg mb-2">Active Variant: <span className="font-black text-brand-orange">{labels[selectedVariant]}</span></p>
-        <p className="text-slate-400 text-sm mb-8">Connect the vulnerable backend to this component.</p>
-        <div className="max-w-md mx-auto bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8">
-            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2 justify-center"><ShieldCheck size={20} className="text-brand-orange" /> Secure Document Drop</h3>
-            <div className="flex flex-col gap-3">
-              <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 bg-slate-50 text-slate-400 font-medium text-sm">
-                Only PDF and DOCX files allowed.
-              </div>
-              <button className="w-full bg-slate-900 text-white font-bold py-3 rounded-lg opacity-50 cursor-not-allowed">Submit Document</button>
-              <p className="text-xs text-slate-400 mt-2">Upload handler pending backend integration.</p>
-            </div>
+  if (instanceLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-slate-200 border-t-brand-orange rounded-full animate-spin"></div>
+          <p className="text-slate-500 font-medium">Provisioning vulnerable instance...</p>
         </div>
-        <button onClick={() => goTo('selection')} className="text-slate-500 hover:text-brand-orange font-bold text-sm flex items-center gap-1 transition-colors mx-auto">
-          <ArrowLeft size={16} /> Back to Variant Selection
-        </button>
       </div>
-    </div>
-  </div>
+    );
+  }
+
+  if (!instanceId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <div className="text-center p-8 bg-white rounded-2xl border border-slate-200 shadow-sm max-w-md">
+          <ShieldAlert className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Instance Unavailable</h2>
+          <p className="text-slate-500 mb-6">The lab environment failed to launch or has expired.</p>
+          <button 
+            onClick={() => window.close()} 
+            className="bg-slate-900 text-white font-bold px-6 py-3 rounded-xl hover:bg-slate-800 transition-colors"
+          >
+            Close Window
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <InstanceContext.Provider value={{ instanceId, loading: instanceLoading }}>
+      {selectedVariant === 'a' && <LegalDocsPortal setView={goTo} />}
+      {selectedVariant === 'b' && <AcademicSubmission setView={goTo} />}
+      {selectedVariant === 'c' && <SupportTicketSystem setView={goTo} />}
+    </InstanceContext.Provider>
   );
 }

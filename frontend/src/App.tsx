@@ -1,44 +1,45 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense, lazy } from 'react';
 import axios from 'axios';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Profile from './pages/Profile';
-import Help from './pages/Help';
-import Labs from './pages/Labs';
-import Lab1Index from './pages/lab1/index';
-import Lab1Sub1 from './pages/lab1/Sub1';
-import Lab1SharedWithMe from './pages/lab1/Sub1Shared';
-import Lab1Archives from './pages/lab1/Sub1Archives';
-import Lab1Sub2 from './pages/lab1/Sub2';
-import Lab1Sub3 from './pages/lab1/Sub3';
-import Lab2Index from './pages/lab2/index';
-import Lab2Sub1 from './pages/lab2/Sub1';
-import Lab2Sub2 from './pages/lab2/Sub2';
-import Lab2Sub3 from './pages/lab2/Sub3';
-import Lab2Sub4 from './pages/lab2/Sub4';
-import Lab2Sub5 from './pages/lab2/Sub5';
-import Lab3Index from './pages/lab3/index';
-import Lab3Sub1 from './pages/lab3/Sub1';
-import Lab3Sub2 from './pages/lab3/Sub2';
-import Lab4Index from './pages/lab4/index';
-import Lab4Sub1 from './pages/lab4/Sub1';
-import Lab4Sub2 from './pages/lab4/Sub2';
-import Lab5Index from './pages/lab5/index';
-import Lab5Sub1 from './pages/lab5/Sub1';
-import Lab5Sub2 from './pages/lab5/Sub2';
-import Lab6Index from './pages/lab6/index';
-import Lab6Sub1 from './pages/lab6/Sub1';
-import Lab7Index from './pages/lab7/index';
-import Lab7Sub1 from './pages/lab7/Sub1';
-import Lab7Sub2 from './pages/lab7/Sub2';
-import Lab8Index from './pages/lab8/index';
-import Lab8Sub1 from './pages/lab8/Sub1';
-import Lab8Sub2 from './pages/lab8/Sub2';
+
+const Home = lazy(() => import('./pages/Home'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Help = lazy(() => import('./pages/Help'));
+const Labs = lazy(() => import('./pages/Labs'));
+const Lab1Index = lazy(() => import('./pages/lab1/index'));
+const Lab1Sub1 = lazy(() => import('./pages/lab1/Sub1'));
+const Lab1SharedWithMe = lazy(() => import('./pages/lab1/Sub1Shared'));
+const Lab1Archives = lazy(() => import('./pages/lab1/Sub1Archives'));
+const Lab1Sub2 = lazy(() => import('./pages/lab1/Sub2'));
+const Lab1Sub3 = lazy(() => import('./pages/lab1/Sub3'));
+const Lab2Index = lazy(() => import('./pages/lab2/index'));
+const Lab2Sub1 = lazy(() => import('./pages/lab2/Sub1'));
+const Lab2Sub2 = lazy(() => import('./pages/lab2/Sub2'));
+const Lab2Sub3 = lazy(() => import('./pages/lab2/Sub3'));
+const Lab2Sub4 = lazy(() => import('./pages/lab2/Sub4'));
+const Lab2Sub5 = lazy(() => import('./pages/lab2/Sub5'));
+const Lab3Index = lazy(() => import('./pages/lab3/index'));
+const Lab3Sub1 = lazy(() => import('./pages/lab3/Sub1'));
+const Lab3Sub2 = lazy(() => import('./pages/lab3/Sub2'));
+const Lab4Index = lazy(() => import('./pages/lab4/index'));
+const Lab4Sub1 = lazy(() => import('./pages/lab4/Sub1'));
+const Lab4Sub2 = lazy(() => import('./pages/lab4/Sub2'));
+const Lab5Index = lazy(() => import('./pages/lab5/index'));
+const Lab5Sub1 = lazy(() => import('./pages/lab5/Sub1'));
+const Lab5Sub2 = lazy(() => import('./pages/lab5/Sub2'));
+const Lab6Index = lazy(() => import('./pages/lab6/index'));
+const Lab6Sub1 = lazy(() => import('./pages/lab6/Sub1'));
+const Lab7Index = lazy(() => import('./pages/lab7/index'));
+const Lab7Sub1 = lazy(() => import('./pages/lab7/Sub1'));
+const Lab7Sub2 = lazy(() => import('./pages/lab7/Sub2'));
+const Lab8Index = lazy(() => import('./pages/lab8/index'));
+const Lab8Sub1 = lazy(() => import('./pages/lab8/Sub1'));
+const Lab8Sub2 = lazy(() => import('./pages/lab8/Sub2'));
 import LabNavigator from './components/LabNavigator';
-import AdminDashboard from './pages/admin';
-import StudentProfile from './pages/admin/StudentProfile';
+const AdminDashboard = lazy(() => import('./pages/admin'));
+const StudentProfile = lazy(() => import('./pages/admin/StudentProfile'));
 import { createPortal } from 'react-dom';
 import { MessageSquare, Flag, X } from 'lucide-react';
 
@@ -82,14 +83,14 @@ function ChatbotWidget() {
 
   return (
     <>
-      <button 
-        type="button" 
-        className="flex items-center gap-2 text-slate-900 hover:text-brand-orange font-semibold transition-colors py-2 px-3 rounded hover:bg-brand-orange-50"
-        aria-expanded={isOpen} 
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <MessageSquare size={18} /> Support
-      </button>
+      {!isOpen && (
+        <button 
+          onClick={() => setIsOpen(true)} 
+          className="fixed bottom-6 right-6 z-[999] w-14 h-14 rounded-full bg-slate-800 text-white shadow-lg flex items-center justify-center hover:bg-slate-700 hover:scale-105 transition-all"
+        >
+          <MessageSquare size={24} />
+        </button>
+      )}
 
       {isOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed bottom-6 right-6 w-80 bg-white border border-slate-200 rounded-xl shadow-xl z-[1100] overflow-hidden flex flex-col">
@@ -147,90 +148,7 @@ function ChatbotWidget() {
   );
 }
 
-function FlagWidget() {
-  const [isOpen, setIsOpen] = useState(false);
-  const location = useLocation();
-  const [status, setStatus] = useState<any>(null);
-  const [flagInput, setFlagInput] = useState('');
 
-  const submitFlag = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!flagInput.trim()) return;
-    
-    setStatus({ success: false, message: 'Submitting...' });
-    
-    try {
-      const activeInstanceId = sessionStorage.getItem('active_instance_id');
-      const res = await axios.post('http://localhost:8000/api/instances/submit_flag', {
-        flag: flagInput.trim(),
-        instance_id: activeInstanceId || undefined
-      }, { withCredentials: true });
-      
-      setStatus({ success: res.data.success, message: res.data.message });
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.error || 'Failed to connect to backend.';
-      setStatus({ success: false, error: errorMsg });
-    }
-  };
-
-  if (!location.pathname.includes('/lab')) return null;
-
-  return (
-    <>
-      <div 
-        className="fixed bottom-6 right-6 z-[1000] p-6 rounded-xl border border-slate-200 bg-white shadow-2xl w-80 transition-all"
-        style={{ display: isOpen ? 'block' : 'none' }}
-      >
-        <div className="flex justify-between items-center gap-3 mb-4">
-          <h4 className="m-0 text-sm uppercase tracking-wide text-brand-orange font-bold flex items-center gap-2">
-            <Flag size={16} /> Submit Flag
-          </h4>
-          <button onClick={() => setIsOpen(false)} className="text-xs text-slate-500 hover:text-slate-800 underline">Cancel</button>
-        </div>
-        
-        <form onSubmit={submitFlag}>
-          <div className="mb-4">
-            <label className="block text-xs text-slate-600 font-bold mb-1 uppercase tracking-wider">Lab Objective</label>
-            <select className="w-full bg-slate-50 border border-slate-300 text-slate-900 p-2 rounded text-sm focus:outline-none focus:border-brand-orange">
-              <option value="objective_1">Objective 1</option>
-              <option value="objective_2">Objective 2</option>
-              <option value="objective_3">Objective 3</option>
-              <option value="default">Default</option>
-            </select>
-          </div>
-          <div className="mb-4">
-            <label className="block text-xs text-slate-600 font-bold mb-1 uppercase tracking-wider">Solution Flag</label>
-            <input 
-              type="text" 
-              placeholder="FLAG{...}" 
-              required 
-              value={flagInput}
-              onChange={(e) => setFlagInput(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-300 text-brand-orange font-mono p-3 rounded-lg text-sm focus:outline-none focus:border-brand-orange focus:ring-1 focus:ring-brand-orange placeholder-slate-400"
-            />
-          </div>
-          <button type="submit" className="w-full bg-brand-orange hover:bg-brand-orange-700 text-white p-3 rounded-lg font-bold text-sm transition-colors shadow-md">
-            Submit Solution
-          </button>
-        </form>
-        {status && (
-          <div className="mt-3 text-sm text-center font-bold">
-            {status.success ? <span className="text-green-600">✓ {status.message}</span> : <span className="text-red-600">✗ {status.error}</span>}
-          </div>
-        )}
-      </div>
-
-      {!isOpen && (
-        <button 
-          onClick={() => setIsOpen(true)} 
-          className="fixed bottom-6 right-6 z-[999] w-14 h-14 rounded-full bg-brand-orange text-white shadow-lg flex items-center justify-center hover:bg-brand-orange-700 hover:scale-105 transition-all"
-        >
-          <Flag size={24} />
-        </button>
-      )}
-    </>
-  );
-}
 
 function Navigation() {
   const [auth, setAuth] = useState<any>(null);
@@ -252,7 +170,6 @@ function Navigation() {
         </div>
         <nav className="flex items-center gap-6">
           <Link to="/labs" className="text-slate-900 hover:text-brand-orange font-semibold transition-colors">Academy Labs</Link>
-          <ChatbotWidget />
           
           <div className="w-px h-6 bg-slate-200"></div>
           
@@ -348,8 +265,9 @@ function App() {
       <main className="flex-1 w-full">
         <div className="w-full">
           
-          <Routes>
-            <Route path="/" element={<Home />} />
+          <Suspense fallback={<div className="flex h-[80vh] items-center justify-center text-slate-500 font-bold">Loading...</div>}>
+            <Routes>
+              <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/profile" element={<Profile />} />
@@ -410,11 +328,23 @@ function App() {
               <Route path="/labs/ssrf/stylehub/*" element={<Lab4Sub1 variantIdProp="a" />} />
               <Route path="/labs/ssrf/skynet/*" element={<Lab4Sub1 variantIdProp="b" />} />
               <Route path="/labs/ssrf/globallogistics/*" element={<Lab4Sub1 variantIdProp="c" />} />
+              <Route path="/labs/4/sub2" element={<Lab4Sub2 />} />
               <Route path="/labs/4/sub2/:variantId" element={<Lab4Sub2 />} />
+              <Route path="/labs/ssrf/arcade/*" element={<Lab4Sub2 variantIdProp="a" />} />
+              <Route path="/labs/ssrf/nimbus/*" element={<Lab4Sub2 variantIdProp="b" />} />
+              <Route path="/labs/ssrf/portline/*" element={<Lab4Sub2 variantIdProp="c" />} />
 
               {/* Lab 5 Modules */}
+              <Route path="/labs/5/sub1" element={<Lab5Sub1 />} />
               <Route path="/labs/5/sub1/:variantId" element={<Lab5Sub1 />} />
+              <Route path="/labs/upload/retail/*" element={<Lab5Sub1 variantIdProp="a" />} />
+              <Route path="/labs/upload/pixelart/*" element={<Lab5Sub1 variantIdProp="b" />} />
+              <Route path="/labs/upload/hireminds/*" element={<Lab5Sub1 variantIdProp="c" />} />
+              <Route path="/labs/5/sub2" element={<Lab5Sub2 />} />
               <Route path="/labs/5/sub2/:variantId" element={<Lab5Sub2 />} />
+              <Route path="/labs/upload/legaldocs/*" element={<Lab5Sub2 variantIdProp="a" />} />
+              <Route path="/labs/upload/academic/*" element={<Lab5Sub2 variantIdProp="b" />} />
+              <Route path="/labs/upload/support/*" element={<Lab5Sub2 variantIdProp="c" />} />
               
               {/* Lab 6 Modules */}
               <Route path="/labs/command-injection/megamart/*" element={<Lab6Sub1 variantIdProp="a" />} />
@@ -439,11 +369,12 @@ function App() {
             <Route path="/labs/2fa-bypass/banksecure/*" element={<Lab3Sub2 variantIdProp="b" />} />
             <Route path="/labs/2fa-bypass/clouddrive/*" element={<Lab3Sub2 variantIdProp="c" />} />
           </Routes>
+          </Suspense>
         </div>
       </main>
 
       {!isLabEnvironment && !isAdminRoute && <Footer />}
-      <FlagWidget />
+      <ChatbotWidget />
     </div>
   );
 }

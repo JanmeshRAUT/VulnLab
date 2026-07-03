@@ -67,6 +67,8 @@ async def update_instance_state(instance_id: str, new_state: dict):
 async def cleanup_expired_instances():
     db = get_database()
     now = time.time()
+    
+    # Mark active/created instances as expired if past TTL
     await db.instances.update_many(
         {
             'status': {'$in': ['CREATED', 'ACTIVE']},
@@ -78,6 +80,14 @@ async def cleanup_expired_instances():
             }
         }
     )
+    
+    # Hard delete instances that have expired to prevent DB bloat and session history accumulation
+    await db.instances.delete_many(
+        {
+            'status': 'EXPIRED'
+        }
+    )
+    
     return True
 
 async def get_instance(instance_id: str):

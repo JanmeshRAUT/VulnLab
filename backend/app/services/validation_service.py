@@ -38,6 +38,35 @@ async def submit_flag(instance_id: str, objective_id: str, submitted_flag: str):
         }
     )
     
+    # Track Progress
+    user_id = instance.get('user_id')
+    lab_id = instance.get('lab_id')
+    variant_id = instance.get('variant_id', 'default')
+    
+    if user_id:
+        await db.progress.update_one(
+            {
+                'email': user_id,
+                'lab_id': lab_id,
+                'variant_id': variant_id
+            },
+            {
+                '$set': {
+                    'is_solved': True,
+                    'updated_at': now,
+                    'completion_percentage': 100.0,
+                    'schema_version': 1
+                },
+                '$inc': {
+                    'attempts': 1
+                },
+                '$setOnInsert': {
+                    'email': user_id,
+                }
+            },
+            upsert=True
+        )
+
     return True, "Correct!"
 
 async def issue_flag_for_instance(instance_id: str, objective_id: str):

@@ -60,9 +60,9 @@ export const LAB_ROUTES: Record<string, LabRouteConfig> = {
   'csrf/weak-token-c':                { labId: '5', variantId: '2c', title: 'Weak Anti-CSRF Token (C)', labTitle: 'Lab 5: CSRF' },
 
   // Lab 6: Command Injection
-  'command-injection/megamart':       { labId: '6', variantId: '1', title: 'Basic Command Injection', labTitle: 'Lab 6: Command Injection' },
-  'command-injection/autoparts-pro':  { labId: '6', variantId: '2', title: 'Blind Command Injection', labTitle: 'Lab 6: Command Injection' },
-  'command-injection/tech-tools':     { labId: '6', variantId: '3', title: 'Advanced Command Injection', labTitle: 'Lab 6: Command Injection' },
+  'command-injection/megamart':       { labId: '6', variantId: '1a', title: 'Basic Command Injection', labTitle: 'Lab 6: Command Injection' },
+  'command-injection/autoparts-pro':  { labId: '6', variantId: '1b', title: 'Blind Command Injection', labTitle: 'Lab 6: Command Injection' },
+  'command-injection/tech-tools':     { labId: '6', variantId: '1c', title: 'Advanced Command Injection', labTitle: 'Lab 6: Command Injection' },
 
   // Lab 7: SQL Injection
   'sql-injection/gift-shop':          { labId: '7', variantId: '1a', title: 'SQLi Error Based (A)', labTitle: 'Lab 7: SQL Injection' },

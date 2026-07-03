@@ -68,32 +68,32 @@ async def lab1_2_products(instance: dict = Depends(get_valid_instance)):
         {
             'id': 1, 'name': 'Eco-Friendly Bamboo Coffee Cup', 'price': 12.99,
             'description': 'Sustainable bamboo cup with silicone lid and grip.',
-            'image': 'prod_1.png'
+            'image': 'images/prod_1.png'
         },
         {
             'id': 2, 'name': 'Recycled Plastic Travel Mug', 'price': 15.50,
             'description': 'Made from 100% recycled plastics. Durable and leak-proof.',
-            'image': 'prod_2.png'
+            'image': 'images/prod_2.png'
         },
         {
             'id': 3, 'name': 'Artisan Pour-Over Dripper', 'price': 24.00,
             'description': 'Ceramic pour-over coffee maker for the perfect blooming extraction.',
-            'image': 'prod_3.png'
+            'image': 'images/prod_3.png'
         },
         {
             'id': 4, 'name': 'Fair Trade Organic Beans (1lb)', 'price': 18.99,
             'description': 'Single-origin Ethiopian Yirgacheffe beans. Light roast with floral notes.',
-            'image': 'prod_4.png'
+            'image': 'images/prod_4.png'
         },
         {
             'id': 5, 'name': 'Minimalist Espresso Cups (Set of 2)', 'price': 14.00,
             'description': 'Matte black ceramic espresso cups, heavily insulated to retain heat.',
-            'image': 'prod_5.png'
+            'image': 'images/prod_5.png'
         },
         {
             'id': 6, 'name': 'Cold Brew Glass Pitcher', 'price': 29.99,
             'description': '1-liter borosilicate glass pitcher with a removable stainless steel filter.',
-            'image': 'prod_6.png'
+            'image': 'images/prod_6.png'
         }
     ]
 
@@ -118,7 +118,12 @@ async def lab1_2_image(filename: str, instance: dict = Depends(get_valid_instanc
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error accessing system file template: {e}")
 
-    file_path = os.path.join(BASE_PATH, 'img', filename)
+    # Strip the 'images/' prefix for actual file resolution so mock images load correctly
+    actual_filename = filename
+    if actual_filename.startswith("images/"):
+        actual_filename = actual_filename[7:]
+    
+    file_path = os.path.join(BASE_PATH, 'img', actual_filename)
     if not os.path.exists(file_path):
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, 'wb') as f:

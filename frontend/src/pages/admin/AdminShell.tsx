@@ -9,9 +9,8 @@ const NAV_ITEMS = [
   { key: 'students', label: 'Students', href: '/admin?section=students', icon: Users },
   { key: 'access', label: 'Access Control', href: '/admin?section=access', icon: ShieldAlert },
   { key: 'roles', label: 'Roles', href: '/admin?section=roles', icon: KeyRound },
-  { key: 'sessions', label: 'Sessions', href: '/admin?section=sessions', icon: Activity },
+  { key: 'sessions', label: 'Sessions & Logs', href: '/admin?section=sessions', icon: Activity },
   { key: 'reports', label: 'Reports', href: '/admin?section=reports', icon: FileBarChart2 },
-  { key: 'audit', label: 'Audit Logs', href: '/admin?section=audit', icon: ListChecks },
   { key: 'notifications', label: 'Notifications', href: '/admin?section=notifications', icon: Bell },
 ];
 
@@ -135,6 +134,12 @@ export default function AdminShell({ title, subtitle, activeSection, children }:
               <div className="flex items-center gap-3">
                 <div className="hidden md:flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600"><Search size={14} className="text-slate-400" /> Global search in content</div>
                 <div className="rounded-full border border-orange-200 bg-brand-orange-50 px-3 py-1.5 text-xs font-bold text-brand-orange">{auth?.role || 'student'}</div>
+                <Link
+                  to="/labs"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors"
+                >
+                  Back to Main Dashboard
+                </Link>
                 <button
                   type="button"
                   onClick={handleExitAdmin}

@@ -1,110 +1,69 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useContext } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { ShieldAlert, ArrowLeft, Terminal, Server } from 'lucide-react';
+import { useLabInstance } from '../../hooks/useLabInstance';
+import { InstanceContext } from '../../contexts/InstanceContext';
+import MegaMart from './storefronts1/MegaMart';
+import AutoPartsPro from './storefronts1/AutoPartsPro';
+import TechTools from './storefronts1/TechTools';
 
 export default function Lab6Sub1({ variantIdProp }: { variantIdProp?: string }) {
-  const params = useParams();
-  const variantId = variantIdProp || params.variantId || 'a';
+  const [params, setParams] = useSearchParams();
+  const routeParams = useParams();
+  const variantId = variantIdProp || routeParams.variantId;
   
-  const [productId, setProductId] = useState('1');
-  const [storeId, setStoreId] = useState('1001');
-  const [output, setOutput] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const labels: Record<string, any> = {
-    a: { name: 'MegaMart', storeLabel: 'Store ID', endpoint: '/api/lab6/1/check-stock', param: 'storeId' },
-    b: { name: 'AutoParts Pro', storeLabel: 'Location ID', endpoint: '/api/lab6/1/b/check-stock', param: 'locationId' },
-    c: { name: 'PharmaCare', storeLabel: 'Branch ID', endpoint: '/api/lab6/1/c/check-stock', param: 'branchId' }
+  const isLabEnvironment = !!variantId;
+  const selectedVariant = variantId || params.get('variant') || 'a';
+  
+  const { instanceId, loading: instanceLoading } = useLabInstance({ 
+    labId: '6', 
+    variantId: `1${selectedVariant}` 
+  });
+  
+  const goTo = (nextStep: string, variant?: string) => {
+    const nextParams = new URLSearchParams();
+    nextParams.set('step', nextStep);
+    nextParams.set('variant', variant || selectedVariant);
+    setParams(nextParams);
   };
-  const config = labels[variantId];
 
-  const checkStock = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setOutput('');
-    
-    try {
-      const formData = new FormData();
-      formData.append('productId', productId);
-      formData.append(config.param, storeId);
-      
-      const res = await axios.post(`http://localhost:8000${config.endpoint}`, formData, {
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      setOutput(res.data);
-    } catch (err: any) {
-      setOutput(err.response?.data || err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Lab Environment Loading State
+  if (instanceLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-slate-200 border-t-brand-orange rounded-full animate-spin"></div>
+          <p className="text-slate-500 font-medium">Provisioning vulnerable instance...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Lab Environment Error State
+  if (!instanceId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <div className="text-center p-8 bg-white rounded-2xl border border-slate-200 shadow-sm max-w-md">
+          <ShieldAlert className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Instance Unavailable</h2>
+          <p className="text-slate-500 mb-6">The lab environment failed to launch or has expired.</p>
+          <button 
+            onClick={() => window.close()} 
+            className="bg-slate-900 text-white font-bold px-6 py-3 rounded-xl hover:bg-slate-800 transition-colors"
+          >
+            Close Window
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full">
-      <div className="bg-slate-900 text-white p-4 flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <Terminal className="text-brand-orange" />
-          <h2 className="font-bold text-lg">{config.name} Stock Checker</h2>
-        </div>
-        <Link to="/labs/6?step=selection" className="text-slate-400 hover:text-white flex items-center gap-1 text-sm font-bold">
-          <ArrowLeft size={16} /> Exit Lab
-        </Link>
-      </div>
-
-      <div className="p-8 flex items-center justify-center min-h-[calc(100vh-130px)] bg-slate-50 text-slate-800">
-        <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8">
-          
-          <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
-            <div className="mb-6">
-              <ShieldAlert size={32} className="text-brand-orange mb-4" />
-              <h3 className="text-2xl font-bold text-slate-900">Check Inventory</h3>
-              <p className="text-slate-600 mt-2">Enter product and location details to verify stock availability.</p>
-            </div>
-            
-            <form onSubmit={checkStock} className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Product ID</label>
-                <input 
-                  type="text" 
-                  value={productId} 
-                  onChange={e => setProductId(e.target.value)}
-                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-orange focus:border-brand-orange outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">{config.storeLabel}</label>
-                <input 
-                  type="text" 
-                  value={storeId} 
-                  onChange={e => setStoreId(e.target.value)}
-                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-orange focus:border-brand-orange outline-none"
-                />
-              </div>
-              <button 
-                type="submit" 
-                disabled={loading}
-                className="w-full py-3 bg-brand-orange hover:bg-brand-orange-700 text-white font-bold rounded-lg transition-colors flex justify-center items-center gap-2 disabled:opacity-50"
-              >
-                {loading ? 'Checking...' : 'Check Stock'}
-              </button>
-            </form>
-          </div>
-
-          <div className="bg-slate-900 rounded-2xl p-6 shadow-xl border border-slate-800 flex flex-col">
-            <h4 className="text-slate-400 text-xs uppercase tracking-widest font-bold mb-4 flex items-center gap-2 border-b border-slate-800 pb-3">
-              <Server size={14} /> System Output
-            </h4>
-            <div className="flex-1 bg-black/50 rounded-lg p-4 font-mono text-sm text-green-400 overflow-y-auto whitespace-pre-wrap break-all min-h-[300px]">
-              {output || 'Waiting for query...'}
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
+    <InstanceContext.Provider value={{ instanceId, loading: instanceLoading }}>
+      {selectedVariant === 'a' && <MegaMart setView={goTo} />}
+      {selectedVariant === 'b' && <AutoPartsPro setView={goTo} />}
+      {selectedVariant === 'c' && <TechTools setView={goTo} />}
+    </InstanceContext.Provider>
   );
 }

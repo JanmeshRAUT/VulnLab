@@ -71,7 +71,7 @@ export default function Labs() {
       title: 'Cross-Site Scripting',
       category: 'Client-Side',
       difficulty: 'Beginner',
-      status: 'Available',
+      status: 'Coming Soon',
       icon: <Code size={24} className="text-pink-500" />,
       desc: 'Execute malicious JavaScript in other users’ browsers.'
     },
