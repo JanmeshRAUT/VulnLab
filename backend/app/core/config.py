@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     MONGO_DB: str = "vuln_ecommerce_new"
     SECRET_KEY: str = "supersecretkey"
     FRONTEND_URL: str = "http://localhost:5173"
+    FRONTEND_URLS: str = ""
     
     GOOGLE_CLIENT_ID: str = "placeholder_id"
     GOOGLE_CLIENT_SECRET: str = "placeholder_secret"

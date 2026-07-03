@@ -39,8 +39,35 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
-frontend_url = settings.FRONTEND_URL.rstrip("/")
-is_production = "localhost" not in frontend_url
+def _normalized_origins() -> list[str]:
+    configured = [settings.FRONTEND_URL]
+    if settings.FRONTEND_URLS:
+        configured.extend(part.strip() for part in settings.FRONTEND_URLS.split(",") if part.strip())
+
+    # Keep localhost origins for local development and preview testing.
+    configured.extend([
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "http://localhost:5175",
+        "http://127.0.0.1:5175",
+    ])
+
+    normalized: list[str] = []
+    seen = set()
+    for origin in configured:
+        value = (origin or "").rstrip("/")
+        if value and value not in seen:
+            normalized.append(value)
+            seen.add(value)
+    return normalized
+
+allowed_origins = _normalized_origins()
+is_production = any(
+    origin.startswith("https://") and "localhost" not in origin and "127.0.0.1" not in origin
+    for origin in allowed_origins
+)
 
 # 1. Inner-most middleware (added first)
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
@@ -58,7 +85,7 @@ app.add_middleware(
 # 3. Outer-most middleware (added last, so it executes FIRST for CORS preflights)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url, "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174", "http://localhost:5175", "http://127.0.0.1:5175"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -2,7 +2,6 @@ import { LogIn, ShieldCheck, Terminal, Key, Eye, EyeOff } from 'lucide-react';
 
 import { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -11,7 +10,6 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,8 +20,19 @@ export default function Login() {
         email,
         password
       }, { withCredentials: true });
-      // Redirect to home/labs after successful login
-      window.location.href = '/labs';
+
+      const statusRes = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/status`, {
+        withCredentials: true
+      });
+
+      if (statusRes.data?.is_authenticated) {
+        // Use full-page navigation so auth-aware sections mount with fresh session state.
+        window.location.href = '/labs';
+        return;
+      }
+
+      setError('Login succeeded, but your browser did not persist the session. Please allow cookies and try again.');
+      setLoading(false);
     } catch (err: any) {
       console.error(err);
       setError(err.response?.data?.detail || 'Invalid email or password.');
