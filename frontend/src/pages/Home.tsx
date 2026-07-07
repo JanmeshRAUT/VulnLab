@@ -147,13 +147,13 @@ export default function Home() {
   return (
     <div className="w-full">
       {/* Hero Section */}
-      <div className="py-20 md:py-32 px-8">
+      <div className="py-20 md:py-32 px-4 md:px-8">
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div className="flex flex-col items-start text-left">
             <div className="inline-block border border-orange-200 bg-brand-orange-50 text-brand-orange text-xs font-bold px-4 py-2 rounded-full tracking-widest uppercase mb-6 shadow-sm">
               VulnLab
             </div>
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-slate-900 leading-[1.1] mb-6 tracking-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-slate-900 leading-[1.1] mb-6 tracking-tight">
               Learn Web Security Through Practical Labs
             </h1>
             <p className="text-xl text-slate-600 max-w-2xl mb-10 leading-relaxed font-medium">
@@ -212,7 +212,7 @@ export default function Home() {
       </div>
 
       {/* Features Section */}
-      <div className="bg-white border-y border-slate-200 py-24 px-8">
+      <div className="bg-white border-y border-slate-200 py-24 px-4 md:px-8">
         <div className="w-full">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-brand-orange transition-all hover:-translate-y-1 group">
@@ -240,8 +240,8 @@ export default function Home() {
       </div>
 
       {/* Stats Section */}
-      <div className="py-24 px-8 w-full border-b border-slate-200 bg-slate-50">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-12 text-center">
+      <div className="py-24 px-4 md:px-8 w-full border-b border-slate-200 bg-slate-50">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 text-center">
           <div>
             <div className="text-5xl font-black text-brand-orange mb-2">150+</div>
             <div className="text-sm font-bold text-slate-600 uppercase tracking-widest">Security Labs</div>
@@ -262,10 +262,10 @@ export default function Home() {
       </div>
 
       {/* CTA Section */}
-      <div className="py-24 px-8 w-full text-center">
-        <div className="bg-brand-orange-50 border border-orange-200 p-16 rounded-3xl relative overflow-hidden shadow-lg">
+      <div className="py-24 px-4 md:px-8 w-full text-center">
+        <div className="bg-brand-orange-50 border border-orange-200 p-8 md:p-16 rounded-3xl relative overflow-hidden shadow-lg">
           <div className="absolute -top-40 -right-40 w-96 h-96 bg-orange-100/50 rounded-full blur-[80px]"></div>
-          <h2 className="text-4xl font-extrabold text-slate-900 mb-6 relative z-10 tracking-tight">Ready to Begin Your Security Journey?</h2>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-6 relative z-10 tracking-tight">Ready to Begin Your Security Journey?</h2>
           <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto relative z-10 font-medium">Join thousands of learners building practical web security skills.</p>
           <Link to="/labs" className="btn-primary text-xl px-12 py-4 shadow-xl relative z-10">Start Learning Today</Link>
         </div>

@@ -87,7 +87,7 @@ export default function Labs() {
   ];
 
   return (
-    <div className="w-full py-12 px-8">
+    <div className="w-full py-12 px-4 md:px-8">
       
       <div className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-slate-200 pb-8">
         <div>
@@ -98,7 +98,7 @@ export default function Labs() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
         {labs.map((lab) => (
           <div key={lab.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-lg hover:border-brand-orange transition-all flex flex-col">
             <div className="flex justify-between items-start mb-6">

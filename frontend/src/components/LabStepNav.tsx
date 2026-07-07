@@ -136,7 +136,7 @@ export default function LabStepNav({ compact = false }: LabStepNavProps) {
         </div>
       )}
 
-      <div className="w-full px-6 py-3 flex items-center justify-between gap-4">
+      <div className="w-full px-4 md:px-6 py-3 flex items-center justify-between gap-2 md:gap-4 flex-wrap sm:flex-nowrap">
         {/* Breadcrumb */}
         <div className="hidden md:flex items-center gap-1.5 text-xs text-slate-500 font-medium flex-wrap">
           {current.breadcrumb.map((crumb, i) => (
@@ -150,7 +150,7 @@ export default function LabStepNav({ compact = false }: LabStepNavProps) {
         </div>
 
         {/* Step counter (mobile) */}
-        <div className="md:hidden text-xs text-slate-500 font-bold">
+        <div className="md:hidden text-xs text-slate-500 font-bold whitespace-nowrap">
           Step {currentIndex + 1} / {LAB_SEQUENCE.length}
         </div>
 

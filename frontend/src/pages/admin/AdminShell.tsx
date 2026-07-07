@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Shield, LayoutDashboard, Users, ShieldAlert, KeyRound, Activity, FileBarChart2, ListChecks, Bell, Search, ChevronRight } from 'lucide-react';
+import { Shield, LayoutDashboard, Users, ShieldAlert, KeyRound, Activity, FileBarChart2, ListChecks, Bell, Search, ChevronRight, Menu, X } from 'lucide-react';
 
 const NAV_ITEMS = [
   { key: 'overview', label: 'Overview', href: '/admin?section=overview', icon: LayoutDashboard },
@@ -19,6 +19,7 @@ export default function AdminShell({ title, subtitle, activeSection, children }:
   const location = useLocation();
   const [auth, setAuth] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -82,11 +83,19 @@ export default function AdminShell({ title, subtitle, activeSection, children }:
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="flex min-h-screen">
-        <aside className="hidden xl:flex xl:w-72 2xl:w-80 bg-white border-r border-slate-200 flex-col sticky top-0 h-screen">
-          <div className="h-16 px-6 flex items-center border-b border-slate-200">
+        {/* Mobile Sidebar Overlay */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 bg-slate-900/50 z-40 xl:hidden backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}></div>
+        )}
+
+        <aside className={`fixed xl:static inset-y-0 left-0 z-50 w-72 2xl:w-80 bg-white border-r border-slate-200 flex-col h-screen transform transition-transform duration-300 flex ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'}`}>
+          <div className="h-16 px-6 flex items-center justify-between border-b border-slate-200">
             <Link to="/" className="flex items-center gap-2 font-black text-xl tracking-tight text-slate-900">
               <Shield className="text-brand-orange" size={24} /> Vuln<span className="text-brand-orange">Lab</span>
             </Link>
+            <button onClick={() => setIsMobileMenuOpen(false)} className="xl:hidden text-slate-400 hover:text-slate-700">
+              <X size={20} />
+            </button>
           </div>
           <div className="p-5 flex-1 overflow-y-auto">
             <div className="rounded-2xl border border-orange-100 bg-brand-orange-50 p-4 mb-5">
@@ -102,6 +111,7 @@ export default function AdminShell({ title, subtitle, activeSection, children }:
                   <Link
                     key={item.key}
                     to={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
                     className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 transition-colors border ${isActive ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-white text-slate-600 border-transparent hover:bg-slate-50 hover:border-slate-200 hover:text-slate-900'}`}
                   >
                     <span className="flex items-center gap-3 font-semibold text-sm">
@@ -128,16 +138,21 @@ export default function AdminShell({ title, subtitle, activeSection, children }:
         <main className="flex-1 min-w-0">
           <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200">
             <div className="px-4 md:px-6 h-16 flex items-center justify-between gap-4">
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.3em] text-brand-orange mb-1">{title}</div>
-                <h1 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">{subtitle}</h1>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setIsMobileMenuOpen(true)} className="xl:hidden text-slate-600 hover:text-brand-orange transition-colors">
+                  <Menu size={24} />
+                </button>
+                <div>
+                  <div className="hidden md:block text-[11px] font-bold uppercase tracking-[0.3em] text-brand-orange mb-1">{title}</div>
+                  <h1 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">{subtitle}</h1>
+                </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="hidden md:flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600"><Search size={14} className="text-slate-400" /> Global search in content</div>
-                <div className="rounded-full border border-orange-200 bg-brand-orange-50 px-3 py-1.5 text-xs font-bold text-brand-orange">{auth?.role || 'student'}</div>
+                <div className="hidden lg:flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600"><Search size={14} className="text-slate-400" /> Global search in content</div>
+                <div className="hidden sm:block rounded-full border border-orange-200 bg-brand-orange-50 px-3 py-1.5 text-xs font-bold text-brand-orange">{auth?.role || 'student'}</div>
                 <Link
                   to="/labs"
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors"
+                  className="hidden md:inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors"
                 >
                   Back to Main Dashboard
                 </Link>
@@ -152,15 +167,7 @@ export default function AdminShell({ title, subtitle, activeSection, children }:
             </div>
           </header>
 
-          <div className="xl:hidden px-4 md:px-6 pt-4">
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {NAV_ITEMS.map(item => (
-                <Link key={item.key} to={item.href} className={`whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${activeSection === item.key ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200 text-slate-600 hover:border-brand-orange hover:text-brand-orange'}`}>
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          </div>
+
 
           <div className="px-4 md:px-6 py-6">{children}</div>
         </main>
