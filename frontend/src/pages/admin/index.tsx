@@ -3,8 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowRight, BarChart3, BadgeCheck, Clock3, Download, GraduationCap, RefreshCcw, Search, ShieldCheck, Sparkles, Activity, AlertTriangle, Users, UserCheck, Lock, X, CheckSquare, Square, FileText } from 'lucide-react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { generatePDFReport } from '@/utils/pdfGenerator';
 import AdminShell from './AdminShell';
 
 const SECTIONS = ['overview', 'students', 'access', 'roles', 'sessions', 'reports', 'notifications'] as const;
@@ -205,155 +204,8 @@ export default function AdminDashboard() {
       console.error("Failed to fetch detailed profile", e);
     }
 
-    const doc = new jsPDF();
-    const name = student.full_name || student.name || 'UNKNOWN SUBJECT';
-    const progress = student.completion_percentage ?? student.learning_progress ?? 0;
-    const solved = student.total_labs_solved ?? student.solved_labs ?? 0;
-    const unsolved = student.total_labs_unsolved ?? student.unsolved_labs ?? 0;
-    const attempted = student.total_labs_attempted ?? (solved + unsolved);
-    const successRate = student.success_rate ?? 0;
-    
-    // Set global font
-    doc.setFont('courier', 'normal');
-    
-    // ----------------------------------------------------
-    // HEADER: Cyber Report Theme
-    // ----------------------------------------------------
-    doc.setFillColor(15, 23, 42); // slate-900
-    doc.rect(0, 0, 210, 35, 'F');
-    
-    doc.setTextColor(249, 115, 22); // brand orange
-    doc.setFontSize(22);
-    doc.setFont('courier', 'bold');
-    doc.text('CYBERSECURITY LAB PLATFORM', 105, 18, { align: 'center' });
-    
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(10);
-    doc.setFont('courier', 'normal');
-    doc.text('AUTOMATED THREAT & INTELLIGENCE REPORTING SYSTEM', 105, 26, { align: 'center' });
-    
-    // Timestamp & Classification
-    doc.setTextColor(220, 38, 38); // red-600
-    doc.setFontSize(12);
-    doc.setFont('courier', 'bold');
-    doc.text('CLASSIFICATION: CONFIDENTIAL / INTERNAL ONLY', 14, 45);
-    
-    doc.setTextColor(100, 116, 139);
-    doc.setFontSize(10);
-    doc.setFont('courier', 'normal');
-    doc.text(`DATE GENERATED: ${new Date().toISOString()}`, 14, 52);
-    doc.text(`REPORT ID: REP-${Math.random().toString(36).substring(2, 10).toUpperCase()}`, 14, 57);
-    
-    doc.setDrawColor(226, 232, 240);
-    doc.line(14, 62, 196, 62);
-    
-    // ----------------------------------------------------
-    // SECTION 1: SUBJECT DOSSIER (Student Info)
-    // ----------------------------------------------------
-    doc.setTextColor(15, 23, 42);
-    doc.setFontSize(14);
-    doc.setFont('courier', 'bold');
-    doc.text('>> SUBJECT DOSSIER', 14, 72);
-    
-    autoTable(doc, {
-      startY: 78,
-      body: [
-        ['FULL NAME', name, 'USERNAME', student.username || 'N/A'],
-        ['EMAIL', student.email || 'N/A', 'SYSTEM ID', student.student_id || 'N/A'],
-        ['ROLE', student.assigned_role || 'N/A', 'STATUS', student.status || 'UNKNOWN'],
-        ['REGISTERED', formatDate(student.registration_date) || 'N/A', 'LAST LOGIN', formatDate(student.last_login) || 'N/A']
-      ],
-      theme: 'plain',
-      styles: { font: 'courier', fontSize: 10, cellPadding: 3, textColor: [15, 23, 42] },
-      columnStyles: {
-        0: { fontStyle: 'bold', textColor: [100, 116, 139], cellWidth: 40 },
-        1: { cellWidth: 50 },
-        2: { fontStyle: 'bold', textColor: [100, 116, 139], cellWidth: 40 },
-        3: { cellWidth: 50 }
-      }
-    });
-    
-    // ----------------------------------------------------
-    // SECTION 2: PERFORMANCE METRICS
-    // ----------------------------------------------------
-    let currentY = (doc as any).lastAutoTable?.finalY + 15 || 120;
-    
-    doc.setTextColor(15, 23, 42);
-    doc.setFontSize(14);
-    doc.setFont('courier', 'bold');
-    doc.text('>> PERFORMANCE & ENGAGEMENT METRICS', 14, currentY);
-    
-    autoTable(doc, {
-      startY: currentY + 6,
-      head: [['METRIC', 'VALUE', 'EVALUATION']],
-      body: [
-        ['Overall Progress', `${progress}%`, progress > 0 ? 'ACTIVE' : 'NO DATA'],
-        ['Total Labs Attempted', attempted.toString(), attempted > 0 ? 'ACTIVE' : 'NO DATA'],
-        ['Successfully Solved', solved.toString(), solved > 0 ? 'VERIFIED' : 'PENDING'],
-        ['Unsolved/Pending', unsolved.toString(), unsolved > 0 ? 'REQUIRES ATTENTION' : 'CLEAR'],
-        ['Overall Success Rate', `${successRate}%`, successRate > 75 ? 'EXCELLENT' : successRate > 40 ? 'AVERAGE' : 'CRITICAL'],
-        ['Active Sessions', (student.current_active_sessions || 0).toString(), 'MONITORING']
-      ],
-      theme: 'grid',
-      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], font: 'courier', fontStyle: 'bold' },
-      styles: { font: 'courier', fontSize: 10, cellPadding: 5, lineColor: [226, 232, 240] },
-      columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 70 },
-        1: { halign: 'center', cellWidth: 40 },
-        2: { cellWidth: 'auto' }
-      }
-    });
-
-    // ----------------------------------------------------
-    // SECTION 3: LAB PROGRESS DETAILS
-    // ----------------------------------------------------
-    let currentY3 = (doc as any).lastAutoTable?.finalY + 15 || 180;
-    
-    if (detailedProfile && detailedProfile.progress_reports && detailedProfile.progress_reports.length > 0) {
-      doc.setTextColor(15, 23, 42);
-      doc.setFontSize(14);
-      doc.setFont('courier', 'bold');
-      doc.text('>> DETAILED LAB PROGRESS', 14, currentY3);
-
-      const labRows = detailedProfile.progress_reports.map((report: any) => [
-        report.lab_title || report.lab_id,
-        report.variant_id || 'default',
-        report.variant_desc || 'N/A',
-        report.is_solved ? 'SOLVED' : 'PENDING',
-        `${report.completion_percentage || 0}%`,
-        formatDate(report.last_activity) || 'N/A'
-      ]);
-
-      autoTable(doc, {
-        startY: currentY3 + 6,
-        head: [['LAB', 'VARIANT', 'THEORY', 'STATUS', 'COMPLETION', 'LAST ACTIVITY']],
-        body: labRows,
-        theme: 'grid',
-        headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], font: 'courier', fontStyle: 'bold' },
-        styles: { font: 'courier', fontSize: 9, cellPadding: 4, lineColor: [226, 232, 240] },
-        columnStyles: {
-          2: { cellWidth: 50 } // Wrap description column so it doesn't overflow
-        }
-      });
-    }
-
-    // ----------------------------------------------------
-    // FOOTER: System Signature
-    // ----------------------------------------------------
-    const finalY = (doc as any).lastAutoTable?.finalY + 30 || 220;
-    
-    doc.setDrawColor(226, 232, 240);
-    doc.line(14, finalY, 196, finalY);
-    
-    doc.setFontSize(10);
-    doc.setFont('courier', 'normal');
-    doc.setTextColor(100, 116, 139);
-    doc.text('END OF REPORT // SYSTEM AUTOMATED GENERATION', 105, finalY + 10, { align: 'center' });
-    doc.text('MODERN ECOMMERCE VULNLAB INSTANCE', 105, finalY + 15, { align: 'center' });
-    
-    const pdfBlob = doc.output('blob');
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    setPreviewPDF({ uri: pdfUrl, name: `REP_${student.student_id}.pdf` });
+    const { uri, name } = await generatePDFReport(student, detailedProfile);
+    setPreviewPDF({ uri, name });
   };
 
   const assignRoleAction = async () => {

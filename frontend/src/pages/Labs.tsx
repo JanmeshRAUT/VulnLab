@@ -88,7 +88,7 @@ export default function Labs() {
 
   return (
     <div className="w-full py-12 px-4 md:px-8">
-      
+
       <div className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-slate-200 pb-8">
         <div>
           <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-3">Lab Catalog</h1>
@@ -106,21 +106,19 @@ export default function Labs() {
                 {lab.icon}
               </div>
               <div className="flex flex-col gap-2 items-end">
-                <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-full ${
-                  lab.difficulty === 'Beginner' ? 'bg-green-100 text-green-700' :
+                <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-full ${lab.difficulty === 'Beginner' ? 'bg-green-100 text-green-700' :
                   lab.difficulty === 'Intermediate' ? 'bg-orange-100 text-orange-700' :
-                  'bg-red-100 text-red-700'
-                }`}>
+                    'bg-red-100 text-red-700'
+                  }`}>
                   {lab.difficulty}
                 </span>
-                <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-full ${
-                  lab.status === 'Available' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'
-                }`}>
+                <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-full ${lab.status === 'Available' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'
+                  }`}>
                   {lab.status}
                 </span>
               </div>
             </div>
-            
+
             <h3 className="text-xl font-bold text-slate-900 mb-2 leading-tight">Lab {lab.id}: {lab.title}</h3>
             <div className="text-sm text-brand-orange font-bold uppercase tracking-wide mb-4">
               {lab.category}
@@ -128,7 +126,7 @@ export default function Labs() {
             <p className="text-slate-600 text-sm leading-relaxed mb-8 flex-1 font-medium">
               {lab.desc}
             </p>
-            
+
             {lab.status === 'Available' ? (
               <Link to={`/labs/${lab.id}`} className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded-lg font-bold text-white bg-brand-orange hover:bg-brand-orange-700 transition-colors mt-auto">
                 Access Lab <ChevronRight size={18} />

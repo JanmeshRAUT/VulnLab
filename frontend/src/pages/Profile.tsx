@@ -1,7 +1,8 @@
 import { API_BASE } from '@/config';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { User, Shield, ShieldCheck, AlertTriangle, Save, Loader2, XCircle, Target, CheckCircle2, Clock } from 'lucide-react';
+import { User, Shield, ShieldCheck, AlertTriangle, Save, Loader2, XCircle, Target, CheckCircle2, Clock, Download, X, FileText } from 'lucide-react';
+import { generatePDFReport } from '@/utils/pdfGenerator';
 import { useNavigate } from 'react-router-dom';
 
 export default function Profile() {
@@ -10,7 +11,18 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [previewPDF, setPreviewPDF] = useState<{uri: string, name: string} | null>(null);
   const navigate = useNavigate();
+
+  const handleDownloadPDF = async () => {
+    if (!profile) return;
+    try {
+      const { uri, name } = await generatePDFReport(profile, null);
+      setPreviewPDF({ uri, name });
+    } catch (err) {
+      console.error("Failed to generate PDF", err);
+    }
+  };
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -235,10 +247,38 @@ export default function Profile() {
           
           <div className="mt-6 pt-6 border-t border-slate-100 flex justify-between items-center">
             <p className="text-sm text-slate-500 font-medium">Your progress is automatically saved to your profile.</p>
-            <button className="text-sm font-bold text-brand-orange hover:text-brand-orange-700">View Detailed Report &rarr;</button>
+            <button 
+              onClick={handleDownloadPDF}
+              className="text-sm font-bold text-brand-orange hover:text-brand-orange-700 flex items-center gap-1"
+            >
+              <FileText size={16} /> View Detailed Report &rarr;
+            </button>
           </div>
         </div>
       </div>
+
+      {/* PDF Preview Modal */}
+      {previewPDF && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8 bg-slate-900/60 backdrop-blur-sm transition-all">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
+              <h3 className="text-lg font-bold text-slate-900">PDF Report Preview</h3>
+              <button onClick={() => setPreviewPDF(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="flex-1 p-0 bg-slate-100/50">
+              <iframe src={previewPDF.uri} className="w-full h-full rounded-b-2xl border-0" title="PDF Preview" />
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 bg-white flex justify-end gap-3">
+              <button onClick={() => setPreviewPDF(null)} className="rounded-xl px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">Close</button>
+              <a href={previewPDF.uri} download={previewPDF.name} className="btn-primary text-sm inline-flex items-center gap-2">
+                <Download size={16} /> Download PDF
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
