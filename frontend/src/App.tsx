@@ -42,7 +42,7 @@ import LabNavigator from './components/LabNavigator';
 const AdminDashboard = lazy(() => import('./pages/admin'));
 const StudentProfile = lazy(() => import('./pages/admin/StudentProfile'));
 import { createPortal } from 'react-dom';
-import { MessageSquare, Flag, X } from 'lucide-react';
+import { MessageSquare, Flag, X, Menu } from 'lucide-react';
 import FlagSubmissionWidget from './components/FlagSubmissionWidget';
 
 function ChatbotWidget() {
@@ -154,6 +154,7 @@ function ChatbotWidget() {
 
 function Navigation() {
   const [auth, setAuth] = useState<any>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     axios.get(`${API_BASE}/api/auth/status`, { withCredentials: true })
@@ -166,11 +167,16 @@ function Navigation() {
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
-      <div className="w-full px-8 h-16 flex items-center justify-between">
+      <div className="w-full px-4 md:px-8 h-16 flex items-center justify-between">
         <div className="font-extrabold text-2xl tracking-tight text-slate-900">
-          <Link to="/">Vuln<span className="text-brand-orange">Lab</span></Link>
+          <Link to="/" onClick={() => setIsMenuOpen(false)}>Vuln<span className="text-brand-orange">Lab</span></Link>
         </div>
-        <nav className="flex items-center gap-6">
+        
+        <button className="md:hidden text-slate-600 hover:text-brand-orange p-1" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+          {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+
+        <nav className="hidden md:flex items-center gap-6">
           <Link to="/labs" className="text-slate-900 hover:text-brand-orange font-semibold transition-colors">Academy Labs</Link>
           
           <div className="w-px h-6 bg-slate-200"></div>
@@ -202,6 +208,35 @@ function Navigation() {
           )}
         </nav>
       </div>
+      
+      {isMenuOpen && (
+        <div className="md:hidden border-t border-slate-200 bg-white px-4 py-4 flex flex-col gap-4 shadow-lg absolute w-full left-0 z-40">
+          <Link to="/labs" className="text-slate-900 font-semibold hover:text-brand-orange" onClick={() => setIsMenuOpen(false)}>Academy Labs</Link>
+          <div className="w-full h-px bg-slate-200"></div>
+          {auth ? (
+            <div className="flex flex-col gap-4">
+              {(auth.role === 'super_admin' || auth.role === 'admin' || auth.role === 'instructor' || auth.role === 'reviewer') && (
+                <Link to="/admin" className="text-slate-900 font-semibold hover:text-brand-orange" onClick={() => setIsMenuOpen(false)}>Admin</Link>
+              )}
+              <Link to="/profile" className="text-slate-900 font-semibold hover:text-brand-orange" onClick={() => setIsMenuOpen(false)}>Profile</Link>
+              <button 
+                onClick={async () => {
+                  await axios.post(`${API_BASE}/api/auth/logout`, {}, { withCredentials: true });
+                  window.location.href = '/login';
+                }}
+                className="text-left text-slate-500 font-bold text-sm bg-transparent border-none cursor-pointer hover:text-slate-900"
+              >
+                Log Out
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <Link to="/login" className="btn-secondary text-sm text-center" onClick={() => setIsMenuOpen(false)}>Sign In</Link>
+              <Link to="/register" className="btn-primary text-sm text-center" onClick={() => setIsMenuOpen(false)}>Register</Link>
+            </div>
+          )}
+        </div>
+      )}
     </header>
   );
 }

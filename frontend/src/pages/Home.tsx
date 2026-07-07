@@ -168,7 +168,7 @@ export default function Home() {
           <div className="relative">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-orange-100/50 rounded-full blur-[60px] -z-10"></div>
             
-            <div className="w-full max-w-2xl bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xl flex flex-col h-[420px]">
+            <div className="w-full max-w-2xl bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xl flex flex-col h-[280px] md:h-[320px]">
               <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-slate-300"></div>
                 <div className="w-3 h-3 rounded-full bg-slate-300"></div>
@@ -194,7 +194,7 @@ export default function Home() {
                   <span className="text-brand-orange font-bold whitespace-nowrap">student@academy:~$</span>
                   <input
                     type="text"
-                    className="flex-1 bg-slate-50 border border-slate-200 text-slate-900 px-4 py-3 rounded-lg focus:outline-none focus:border-brand-orange focus:ring-2 focus:ring-orange-100 transition-all font-mono shadow-inner"
+                    className="flex-1 bg-slate-50 border border-slate-200 text-slate-900 px-3 py-2 rounded-lg focus:outline-none focus:border-brand-orange focus:ring-2 focus:ring-orange-100 transition-all font-mono shadow-inner text-sm"
                     spellCheck="false"
                     autoCapitalize="off"
                     autoComplete="off"
