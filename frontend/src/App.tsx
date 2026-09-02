@@ -285,7 +285,64 @@ function Footer() {
   );
 }
 
+function BackendWarmingUpScreen() {
+  return (
+    <div className="fixed inset-0 z-[9999] bg-slate-900 flex flex-col items-center justify-center text-white p-6">
+      <div className="w-16 h-16 border-4 border-brand-orange border-t-transparent rounded-full animate-spin mb-8"></div>
+      <h2 className="text-3xl font-extrabold mb-4">Waking up the Servers...</h2>
+      <p className="text-slate-300 text-center max-w-md text-lg mb-8">
+        We're spinning up the backend infrastructure for VulnLab. This usually takes about 50 seconds on Render's free tier.
+      </p>
+      <div className="w-full max-w-md bg-slate-800 h-2 rounded-full overflow-hidden">
+        <div className="bg-brand-orange h-full animate-[progress_50s_ease-in-out_forwards]"></div>
+      </div>
+      <style>{`
+        @keyframes progress {
+          0% { width: 0%; }
+          100% { width: 100%; }
+        }
+      `}
+      </style>
+    </div>
+  );
+}
+
 function App() {
+  const [isWarmingUp, setIsWarmingUp] = useState(false);
+
+  useEffect(() => {
+    const handleWarmingUp = () => setIsWarmingUp(true);
+    window.addEventListener('backend-warming-up', handleWarmingUp);
+    return () => window.removeEventListener('backend-warming-up', handleWarmingUp);
+  }, []);
+
+  useEffect(() => {
+    let interval: any;
+    if (isWarmingUp) {
+      interval = setInterval(async () => {
+        try {
+          const res = await axios.get(`${API_BASE}/api/auth/status`, { 
+            // Avoid triggering the global interceptor's redirect logic if not needed, 
+            // but the interceptor is global so it will run.
+          });
+          const contentType = res.headers['content-type'] || '';
+          if (!contentType.includes('text/html')) {
+            setIsWarmingUp(false);
+            window.location.reload();
+          }
+        } catch (e: any) {
+          const contentType = e.response?.headers?.['content-type'] || '';
+          // If the server is up but returned a 401 or 500 (JSON format), it means it's ready.
+          if (e.response && !contentType.includes('text/html')) {
+            setIsWarmingUp(false);
+            window.location.reload();
+          }
+        }
+      }, 5000);
+    }
+    return () => clearInterval(interval);
+  }, [isWarmingUp]);
+
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const step = searchParams.get('step');
@@ -297,6 +354,7 @@ function App() {
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
+      {isWarmingUp && <BackendWarmingUpScreen />}
       {!isLabEnvironment && !isAdminRoute && <Navigation />}
       
       <main className="flex-1 w-full">
