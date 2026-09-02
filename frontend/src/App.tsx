@@ -325,13 +325,13 @@ function App() {
             // Avoid triggering the global interceptor's redirect logic if not needed, 
             // but the interceptor is global so it will run.
           });
-          const contentType = res.headers['content-type'] || '';
+          const contentType = String(res.headers['content-type'] || '');
           if (!contentType.includes('text/html')) {
             setIsWarmingUp(false);
             window.location.reload();
           }
         } catch (e: any) {
-          const contentType = e.response?.headers?.['content-type'] || '';
+          const contentType = String(e.response?.headers?.['content-type'] || '');
           // If the server is up but returned a 401 or 500 (JSON format), it means it's ready.
           if (e.response && !contentType.includes('text/html')) {
             setIsWarmingUp(false);

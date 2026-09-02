@@ -9,7 +9,7 @@ import toast from 'react-hot-toast'
 // Global Axios Interceptor for Error Handling & Redirection
 axios.interceptors.response.use(
   (response) => {
-    const contentType = response.headers?.['content-type'] || '';
+    const contentType = String(response.headers?.['content-type'] || '');
     if (typeof response.data === 'string' && contentType.includes('text/html') && response.config?.url?.includes('/api/')) {
       window.dispatchEvent(new Event('backend-warming-up'));
       return Promise.reject(new Error('Backend is warming up'));
@@ -17,7 +17,7 @@ axios.interceptors.response.use(
     return response;
   },
   (error) => {
-    const contentType = error.response?.headers?.['content-type'] || '';
+    const contentType = String(error.response?.headers?.['content-type'] || '');
     if (error.response && typeof error.response.data === 'string' && contentType.includes('text/html') && error.config?.url?.includes('/api/')) {
       window.dispatchEvent(new Event('backend-warming-up'));
       return Promise.reject(error);
