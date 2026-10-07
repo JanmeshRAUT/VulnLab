@@ -6,10 +6,10 @@ from app.api.admin import has_permission
 async def get_valid_instance(
     request: Request,
     x_instance_id: str = Header(None, alias="X-Variant-Session-ID"),
-    instance_id: str = Query(None, description="Optional query parameter for direct links"),
+    q_instance_id: str = Query(None, alias="instance_id", description="Optional query parameter for direct links"),
     user: dict = Depends(get_current_user)
 ):
-    final_id = x_instance_id or instance_id
+    final_id = x_instance_id or q_instance_id
     if not final_id and request:
         final_id = request.cookies.get("instance_id")
         

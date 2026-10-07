@@ -43,7 +43,7 @@ async def launch(req: LaunchRequest, request: Request, user: dict = Depends(get_
     return InstanceResponse(**instance)
 
 @router.post("/{instance_id}/heartbeat")
-async def heartbeat(instance: dict = Depends(get_valid_instance)):
+async def heartbeat(instance_id: str, instance: dict = Depends(get_valid_instance)):
     # get_valid_instance already checked ownership and existence/status
     instance_id = instance["instance_id"]
     updated_instance = await heartbeat_instance(instance_id)
@@ -57,7 +57,7 @@ class EventRequest(BaseModel):
     type: str
 
 @router.post("/{instance_id}/event")
-async def handle_event(req: EventRequest, instance: dict = Depends(get_valid_instance)):
+async def handle_event(instance_id: str, req: EventRequest, instance: dict = Depends(get_valid_instance)):
     instance_id = instance["instance_id"]
     if req.type == "abandon":
         await update_instance_status(instance_id, "ABANDONED")
