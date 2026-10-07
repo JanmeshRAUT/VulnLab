@@ -403,7 +403,9 @@ export default function PortlineFreight({ setView }: any) {
                             <p className="text-[10px] uppercase tracking-widest font-semibold text-gray-400">Carrier API Response</p>
                           </div>
                           {result.type === 'html' ? (
-                            <div className="bg-gray-50 border border-gray-200 rounded p-4 overflow-auto max-h-64 text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: result.content }} />
+                            <div className="bg-gray-50 border border-gray-200 rounded p-4 overflow-auto max-h-64 text-sm text-gray-700">
+                                <iframe sandbox="" srcDoc={result.content} className="w-full h-full border-0" />
+                            </div>
                           ) : (
                             <pre className="bg-gray-900 text-emerald-400 p-4 font-mono text-xs overflow-x-auto max-h-64 rounded leading-relaxed">
                               {result.content}

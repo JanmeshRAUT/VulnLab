@@ -404,7 +404,9 @@ export default function CloudInfra({ setView }: any) {
                       <div className="mt-6 bg-slate-900 rounded-md border border-slate-800 p-4 font-mono text-xs overflow-x-auto max-h-[300px] shadow-inner">
                         <div className="text-slate-400 mb-3 select-none flex items-center gap-2"><Terminal size={12}/> Response Data:</div>
                         {result.type === 'html' ? (
-                          <div className="text-slate-300" dangerouslySetInnerHTML={{ __html: result.content }} />
+                          <div className="text-slate-300">
+                              <iframe sandbox="" srcDoc={result.content} className="w-full h-full border-0" />
+                          </div>
                         ) : (
                           <pre className="text-emerald-400 leading-relaxed">
                             {result.content}

@@ -1,43 +1,100 @@
-from fastapi import APIRouter, Request, HTTPException, Depends, UploadFile, File
-from fastapi.responses import HTMLResponse, Response, FileResponse
 import os
-import shutil
-from pathlib import Path
+import re
+from fastapi import APIRouter, Request, HTTPException, Depends, UploadFile, File
+from fastapi.responses import HTMLResponse, Response
 from app.api.deps import get_valid_instance
 from app.services.validation_service import issue_flag_for_instance
-from app.core.config import settings
+from app.core.database import db
+from app.core.limiter import limiter
 
 router = APIRouter()
 
-# Base upload directory
-UPLOAD_DIR = Path("data/uploads")
+MAX_UPLOAD_SIZE = 1 * 1024 * 1024  # 1 MB
+MAX_FILES_PER_INSTANCE = 5
 
-def get_instance_upload_dir(instance_id: str, variant: str, level: str = "1") -> Path:
-    path = UPLOAD_DIR / instance_id / f"lab5_{level}_{variant}" / "avatars"
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+def sanitize_filename(filename: str) -> str:
+    base = os.path.basename(filename)
+    # Strip control chars and limit length
+    base = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', base)
+    return base[:100]
+
+async def store_upload(instance_id: str, variant: str, level: str, file: UploadFile):
+    content = await file.read()
+    if len(content) > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail="File too large. Max 1MB.")
+        
+    safe_filename = sanitize_filename(file.filename or "unknown")
+    
+    # Check max files
+    count = await db.lab_uploads.count_documents({"instance_id": instance_id})
+    if count >= MAX_FILES_PER_INSTANCE:
+        # Delete oldest or just reject
+        raise HTTPException(status_code=400, detail="Too many files uploaded for this instance.")
+        
+    doc = {
+        "instance_id": instance_id,
+        "variant": variant,
+        "level": level,
+        "filename": safe_filename,
+        "content": content,
+        "content_type": file.content_type
+    }
+    
+    await db.lab_uploads.update_one(
+        {"instance_id": instance_id, "variant": variant, "level": level, "filename": safe_filename},
+        {"$set": doc},
+        upsert=True
+    )
+    return safe_filename
+
+async def serve_upload(instance_id: str, variant: str, level: str, filename: str):
+    safe_filename = sanitize_filename(filename)
+    doc = await db.lab_uploads.find_one({
+        "instance_id": instance_id,
+        "variant": variant,
+        "level": level,
+        "filename": safe_filename
+    })
+    
+    if not doc:
+        raise HTTPException(status_code=404, detail="File not found")
+        
+    content = doc["content"]
+    
+    headers = {
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "sandbox; default-src 'none'"
+    }
+    
+    if safe_filename.lower().endswith(".php"):
+        content_str = content.decode('utf-8', errors='ignore')
+        if "file_get_contents('/home/carlos/secret')" in content_str or 'file_get_contents("/home/carlos/secret")' in content_str:
+            try:
+                record = await issue_flag_for_instance(instance_id, f'lab5:{level}{variant}')
+                flag = record['flag_value'] if record else "FLAG{ERROR_GENERATING_FLAG}"
+                return Response(content=f"Secret contents:\n{flag}", media_type="text/plain", headers=headers)
+            except Exception:
+                return Response(content="FLAG{ERROR_GENERATING_FLAG}", media_type="text/plain", headers=headers)
+        return Response(content=content_str, media_type="text/plain", headers=headers)
+        
+    # Always serve as text/plain to prevent XSS/execution
+    return Response(content=content, media_type="text/plain", headers=headers)
+
 
 @router.post("/lab5/1/{variant}/upload")
+@limiter.limit("10/minute")
 async def upload_file(
+    request: Request,
     variant: str, 
     file: UploadFile = File(...), 
     instance: dict = Depends(get_valid_instance)
 ):
-    """
-    Vulnerable upload endpoint. Does not check file extension or mime type.
-    """
     if instance.get("lab_id") != "5" or instance.get("variant_id") != f"1{variant}":
         raise HTTPException(status_code=403, detail="Instance mismatch")
         
-    instance_id = instance['instance_id']
-    upload_path = get_instance_upload_dir(instance_id, variant, "1")
-    
-    file_location = upload_path / file.filename
-    
-    with open(file_location, "wb+") as file_object:
-        shutil.copyfileobj(file.file, file_object)
-        
-    return {"message": "File uploaded successfully", "filename": file.filename}
+    filename = await store_upload(instance['instance_id'], variant, "1", file)
+    return {"message": "File uploaded successfully", "filename": filename}
+
 
 @router.get("/lab5/1/{variant}/files/avatars/{filename}")
 async def get_uploaded_file(
@@ -45,68 +102,30 @@ async def get_uploaded_file(
     filename: str, 
     instance: dict = Depends(get_valid_instance)
 ):
-    """
-    Serves the uploaded file.
-    """
     if instance.get("lab_id") != "5" or instance.get("variant_id") != f"1{variant}":
         raise HTTPException(status_code=403, detail="Instance mismatch")
         
-    instance_id = instance['instance_id']
-    upload_path = get_instance_upload_dir(instance_id, variant, "1")
-    file_location = upload_path / filename
-    
-    if not file_location.exists():
-        raise HTTPException(status_code=404, detail="File not found")
-        
-    # Simulate PHP execution
-    if filename.lower().endswith(".php"):
-        with open(file_location, "r", encoding="utf-8", errors="ignore") as f:
-            content = f.read()
-            
-        # Check if the user is trying to read Carlos's secret
-        if "file_get_contents('/home/carlos/secret')" in content or 'file_get_contents("/home/carlos/secret")' in content:
-            # Issue the flag for Lab 5.1
-            try:
-                record = await issue_flag_for_instance(instance_id, f'lab5:1{variant}')
-                flag = record['flag_value'] if record else "FLAG{ERROR_GENERATING_FLAG}"
-                return Response(content=f"Secret contents:\n{flag}", media_type="text/plain")
-            except Exception as e:
-                return Response(content="FLAG{ERROR_GENERATING_FLAG}", media_type="text/plain")
-        else:
-            # Return raw PHP if it doesn't match the specific exploit, 
-            # or just return the text as if executed poorly
-            return Response(content=content, media_type="text/plain")
-            
-    # For regular files (like images), just serve them
-    return FileResponse(path=file_location)
+    return await serve_upload(instance['instance_id'], variant, "1", filename)
+
 
 @router.post("/lab5/2/{variant}/upload")
+@limiter.limit("10/minute")
 async def upload_file_level2(
+    request: Request,
     variant: str, 
     file: UploadFile = File(...), 
     instance: dict = Depends(get_valid_instance)
 ):
-    """
-    Vulnerable upload endpoint for Lab 5.2 (Content-Type bypass).
-    Only checks the MIME type header provided by the client.
-    """
     if instance.get("lab_id") != "5" or instance.get("variant_id") != f"2{variant}":
         raise HTTPException(status_code=403, detail="Instance mismatch")
         
-    # Lab 5.2 logic: Only allow specific Content-Types
     allowed_content_types = ["image/jpeg", "image/png"]
     if file.content_type not in allowed_content_types:
         raise HTTPException(status_code=400, detail=f"Only {', '.join(allowed_content_types)} allowed.")
 
-    instance_id = instance['instance_id']
-    upload_path = get_instance_upload_dir(instance_id, variant, "2")
-    
-    file_location = upload_path / file.filename
-    
-    with open(file_location, "wb+") as file_object:
-        shutil.copyfileobj(file.file, file_object)
-        
-    return {"message": "File uploaded successfully", "filename": file.filename}
+    filename = await store_upload(instance['instance_id'], variant, "2", file)
+    return {"message": "File uploaded successfully", "filename": filename}
+
 
 @router.get("/lab5/2/{variant}/files/avatars/{filename}")
 async def get_uploaded_file_level2(
@@ -114,34 +133,7 @@ async def get_uploaded_file_level2(
     filename: str, 
     instance: dict = Depends(get_valid_instance)
 ):
-    """
-    Serves the uploaded file for Lab 5.2.
-    """
     if instance.get("lab_id") != "5" or instance.get("variant_id") != f"2{variant}":
         raise HTTPException(status_code=403, detail="Instance mismatch")
         
-    instance_id = instance['instance_id']
-    upload_path = get_instance_upload_dir(instance_id, variant, "2")
-    file_location = upload_path / filename
-    
-    if not file_location.exists():
-        raise HTTPException(status_code=404, detail="File not found")
-        
-    # Simulate PHP execution
-    if filename.lower().endswith(".php"):
-        with open(file_location, "r", encoding="utf-8", errors="ignore") as f:
-            content = f.read()
-            
-        # Check if the user is trying to read Carlos's secret
-        if "file_get_contents('/home/carlos/secret')" in content or 'file_get_contents("/home/carlos/secret")' in content:
-            # Issue the flag for Lab 5.2
-            try:
-                record = await issue_flag_for_instance(instance_id, f'lab5:2{variant}')
-                flag = record['flag_value'] if record else "FLAG{ERROR_GENERATING_FLAG}"
-                return Response(content=f"Secret contents:\n{flag}", media_type="text/plain")
-            except Exception as e:
-                return Response(content="FLAG{ERROR_GENERATING_FLAG}", media_type="text/plain")
-        else:
-            return Response(content=content, media_type="text/plain")
-            
-    return FileResponse(path=file_location)
+    return await serve_upload(instance['instance_id'], variant, "2", filename)

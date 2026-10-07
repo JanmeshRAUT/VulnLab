@@ -138,17 +138,39 @@ def normalize_lab_id(lab_id: Any) -> str:
     return value if value.startswith("lab-") else f"lab-{value}"
 
 
-def get_session_identity(request: Request) -> dict[str, str]:
+from bson import ObjectId
+
+async def get_session_identity(request: Request) -> dict[str, str]:
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return {
+            "email": "guest@vulnlab.local",
+            "role": "student",
+            "user_id": "guest_user",
+        }
+        
+    db = get_database()
+    try:
+        user = await db.users.find_one({"_id": ObjectId(user_id)})
+    except Exception:
+        user = None
+        
+    if not user:
+        return {
+            "email": "guest@vulnlab.local",
+            "role": "student",
+            "user_id": "guest_user",
+        }
+        
     return {
-        "email": str(request.session.get("email", "guest@vulnlab.local")),
-        "role": normalize_role(str(request.session.get("role", "student"))),
-        "user_id": str(request.session.get("user_id") or request.session.get("email", "guest@vulnlab.local")),
+        "email": str(user.get("email", "guest@vulnlab.local")),
+        "role": normalize_role(str(user.get("role", "student"))),
+        "user_id": str(user_id),
     }
 
-
-def require_admin(request: Request) -> dict[str, str]:
-    identity = get_session_identity(request)
-    if not request.session.get("user_id"):
+async def require_admin(request: Request) -> dict[str, str]:
+    identity = await get_session_identity(request)
+    if identity["user_id"] == "guest_user":
         raise HTTPException(status_code=401, detail="Authentication required")
     if identity["role"] not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Admin privileges required")
@@ -206,7 +228,7 @@ async def has_permission(role: str, permission: str) -> bool:
 
 
 async def require_permission(request: Request, permission: str) -> dict[str, str]:
-    identity = require_admin(request)
+    identity = await require_admin(request)
     if not await has_permission(identity["role"], permission):
         raise HTTPException(status_code=403, detail=f"Missing permission: {permission}")
     return identity
@@ -547,7 +569,7 @@ async def get_dashboard(
     category: str = Query(default=""),
     range: str = Query(default="weekly"),
 ):
-    require_admin(request)
+    await require_admin(request)
 
     sessions = await aggregate_instances()
     students = await aggregate_students(sessions)

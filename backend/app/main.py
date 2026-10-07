@@ -36,8 +36,13 @@ async def lifespan(app: FastAPI):
     task.cancel()
 
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from app.core.limiter import limiter
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 def _normalized_origins() -> list[str]:
     configured = [settings.FRONTEND_URL]
@@ -70,16 +75,44 @@ is_production = any(
 )
 
 # 1. Inner-most middleware (added first)
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+import secrets
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+@app.middleware("http")
+async def csrf_middleware(request: Request, call_next):
+    if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
+        if request.url.path.startswith("/api/") and not request.url.path.startswith("/api/auth/callback"):
+            csrf_header = request.headers.get("X-CSRF-Token")
+            csrf_cookie = request.cookies.get("csrf_token")
+            if not csrf_header or not csrf_cookie or csrf_header != csrf_cookie:
+                return JSONResponse(status_code=403, content={"detail": "CSRF token missing or mismatch"})
+            
+    response = await call_next(request)
+    
+    if "csrf_token" not in request.cookies:
+        response.set_cookie(
+            "csrf_token", 
+            secrets.token_urlsafe(32),
+            httponly=False,
+            samesite="lax",
+            secure=settings.ENVIRONMENT == "prod",
+            domain=settings.COOKIE_DOMAIN
+        )
+    return response
+
+trusted_hosts = [ip.strip() for ip in settings.FORWARDED_ALLOW_IPS.split(",")] if settings.FORWARDED_ALLOW_IPS else ["127.0.0.1"]
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=trusted_hosts)
 
 # 2. Session middleware (added second)
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.SECRET_KEY,
-    session_cookie="secure_session",
-    max_age=14 * 24 * 60 * 60, # 14 days
-    same_site="none" if is_production else "lax",
-    https_only=is_production
+    session_cookie="vulnlab_session",
+    max_age=8 * 60 * 60, # 8 hours
+    same_site="lax",
+    https_only=settings.ENVIRONMENT == "prod",
+    domain=settings.COOKIE_DOMAIN
 )
 
 # 3. Outer-most middleware (added last, so it executes FIRST for CORS preflights)

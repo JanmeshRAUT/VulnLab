@@ -29,12 +29,15 @@ def _extract_lab_id(path: str) -> str | None:
     if "mobile" in path     or "/labs/9" in path:      return "9"
     return None
 
+from app.core.limiter import limiter
+
 class ChatMessage(BaseModel):
     message: str
     path: str
 
 @router.post("/chatbot")
-async def chatbot_endpoint(chat_request: ChatMessage):
+@limiter.limit("5/minute")
+async def chatbot_endpoint(request: Request, chat_request: ChatMessage):
     lab_id = _extract_lab_id(chat_request.path)
     reply = engine.process(chat_request.message, lab_id)
     return {"reply": reply}

@@ -14,6 +14,20 @@ def _compute_expiry(now_ts: float, ttl_seconds: int) -> float:
 def _new_flag_value() -> str:
     return f"FLAG{{{secrets.token_hex(6).upper()}}}"
 
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+WORDLISTS_DIR = os.path.join(BASE_DIR, "data", "wordlists")
+
+try:
+    with open(os.path.join(WORDLISTS_DIR, "usernames.txt"), "r") as f:
+        USERNAMES = [line.strip() for line in f if line.strip()]
+    with open(os.path.join(WORDLISTS_DIR, "passwords.txt"), "r") as f:
+        PASSWORDS = [line.strip() for line in f if line.strip()]
+except Exception:
+    USERNAMES = ["admin"]
+    PASSWORDS = ["password123"]
+
 async def create_instance(user_id: str, lab_id: str, variant_id: str):
     db = get_database()
     now = time.time()
@@ -22,23 +36,11 @@ async def create_instance(user_id: str, lab_id: str, variant_id: str):
     state_data = {}
     if lab_id == "2" and variant_id.startswith("5"):
         import string
-        import random
-        chars = "".join(random.choices(string.ascii_uppercase + string.digits, k=5))
+        chars = "".join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(5))
         state_data["admin_password"] = f"{chars}-Admin"
     elif lab_id == "3" and variant_id.startswith("1"):
-        import random
-        import os
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-        try:
-            with open(os.path.join(base_dir, "old_backend", "data", "wordlists", "usernames.txt"), "r") as f:
-                usernames = [line.strip() for line in f if line.strip()]
-            with open(os.path.join(base_dir, "old_backend", "data", "wordlists", "passwords.txt"), "r") as f:
-                passwords = [line.strip() for line in f if line.strip()]
-            state_data["target_username"] = random.choice(usernames)
-            state_data["target_password"] = random.choice(passwords)
-        except Exception as e:
-            state_data["target_username"] = "admin"
-            state_data["target_password"] = "password123"
+        state_data["target_username"] = secrets.choice(USERNAMES)
+        state_data["target_password"] = secrets.choice(PASSWORDS)
 
     doc = {
         'instance_id': instance_id,

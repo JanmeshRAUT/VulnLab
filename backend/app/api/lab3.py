@@ -68,6 +68,9 @@ async def lab3_1_profile(variant: str, id: str, instance: dict = Depends(get_val
         "flag": flag_value
     })
 
+from app.services.instance_service import get_instance, update_instance_state
+import secrets
+
 class Lab32LoginRequest(BaseModel):
     username: str
     password: str
@@ -75,21 +78,22 @@ class Lab32LoginRequest(BaseModel):
 class Lab32VerifyRequest(BaseModel):
     mfa_code: str
 
-lab3_2_otps = {}
-
 @router.post("/2/{variant}/login")
 async def lab3_2_login(variant: str, req: Lab32LoginRequest, instance: dict = Depends(get_valid_instance)):
     if instance.get("lab_id") != "3" or instance.get("variant_id") != f"2{variant}":
         raise HTTPException(status_code=403, detail="Instance mismatch")
         
+    otp = str(secrets.choice(range(1000, 10000)))
+    state = instance.get("state", {})
+    state["otp"] = otp
+    await update_instance_state(instance["instance_id"], state)
+    
     if req.username == "wiener" and req.password == "peter":
-        lab3_2_otps[instance['instance_id']] = str(random.randint(1000, 9999))
         return JSONResponse({
             "session_token": f"partial_session_wiener_{instance['instance_id']}",
             "requires_mfa": True
         })
     elif req.username == "carlos" and req.password == "montoya":
-        lab3_2_otps[instance['instance_id']] = str(random.randint(1000, 9999))
         return JSONResponse({
             "session_token": f"partial_session_carlos_{instance['instance_id']}",
             "requires_mfa": True
@@ -102,8 +106,7 @@ async def lab3_2_email(variant: str, instance: dict = Depends(get_valid_instance
     if instance.get("lab_id") != "3" or instance.get("variant_id") != f"2{variant}":
         raise HTTPException(status_code=403, detail="Instance mismatch")
     
-    # Wiener's email inbox
-    otp = lab3_2_otps.get(instance['instance_id'], "1337")
+    otp = instance.get("state", {}).get("otp", "1337")
     return JSONResponse({
         "emails": [
             {
@@ -126,7 +129,7 @@ async def lab3_2_verify(variant: str, req: Lab32VerifyRequest, request: Request,
         
     token = auth_header.split(" ")[1]
     
-    expected_otp = lab3_2_otps.get(instance['instance_id'], "1337")
+    expected_otp = instance.get("state", {}).get("otp", "1337")
     if "partial_session_wiener" in token and req.mfa_code == expected_otp:
         return JSONResponse({
             "success": True,

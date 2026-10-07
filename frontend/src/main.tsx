@@ -6,6 +6,10 @@ import { Toaster } from 'react-hot-toast'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
+axios.defaults.withCredentials = true;
+axios.defaults.xsrfCookieName = 'csrf_token';
+axios.defaults.xsrfHeaderName = 'X-CSRF-Token';
+
 // Global Axios Interceptor for Error Handling & Redirection
 axios.interceptors.response.use(
   (response) => {

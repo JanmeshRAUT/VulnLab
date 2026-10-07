@@ -314,7 +314,9 @@ export default function GlobalLogistics({ setView }: any) {
                         <Terminal size={14}/> Satellite Response
                       </h3>
                       {result.type === 'html' ? (
-                        <div className="bg-slate-50 border border-slate-200 p-4 overflow-auto max-h-[300px] text-sm" dangerouslySetInnerHTML={{ __html: result.content }} />
+                        <div className="bg-slate-50 border border-slate-200 p-4 overflow-auto max-h-[300px] text-sm">
+                            <iframe sandbox="" srcDoc={result.content} className="w-full h-full border-0" />
+                        </div>
                       ) : (
                         <pre className="bg-slate-900 text-emerald-400 p-4 font-mono text-xs overflow-x-auto max-h-[300px]">
                           {result.content}

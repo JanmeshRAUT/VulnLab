@@ -394,7 +394,9 @@ export default function NimbusMarketplace({ setView }: any) {
                               <p className="text-[10px] uppercase tracking-widest font-semibold text-slate-400">Node Response</p>
                             </div>
                             {result.type === 'html' ? (
-                              <div className="bg-slate-50 border border-slate-200 rounded p-4 overflow-auto max-h-64 text-sm text-slate-700" dangerouslySetInnerHTML={{ __html: result.content }} />
+                              <div className="bg-slate-50 border border-slate-200 rounded p-4 overflow-auto max-h-64 text-sm text-slate-700">
+                                  <iframe sandbox="" srcDoc={result.content} className="w-full h-full border-0" />
+                              </div>
                             ) : (
                               <pre className="bg-slate-900 text-emerald-400 p-4 font-mono text-xs overflow-x-auto max-h-64 rounded leading-relaxed">
                                 {result.content}

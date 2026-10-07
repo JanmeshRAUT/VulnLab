@@ -21,15 +21,13 @@ async def lab2_1_navigate(variant: str, path: str = "/", instance: dict = Depend
     
     # robots.txt logic
     if path == "robots.txt":
-        import os
-        clean_variant = variant.replace('1', '')
-        file_path = os.path.join(os.getcwd(), f"public/static/lab2/1/{clean_variant}/robots.txt")
-        if os.path.exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            return PlainTextResponse(content)
-        else:
-            return PlainTextResponse("User-agent: *\nDisallow: /\n")
+        admin_paths = {
+            "1a": "tech_admin_console",
+            "1b": "fashion_control_panel",
+            "1c": "kitchen_admin_zone"
+        }
+        admin_path = admin_paths.get(variant, "admin")
+        return PlainTextResponse(f"User-agent: *\nDisallow: /{admin_path}\n")
         
     # Admin panel logic
     admin_paths = {
@@ -93,15 +91,7 @@ async def lab2_2_navigate(variant: str, path: str = "/", instance: dict = Depend
         path = path.split("?")[0]
     
     if path == "" or path == "index.html":
-        import os
-        clean_variant = variant.replace('2', '')
-        file_path = os.path.join(os.getcwd(), f"public/static/lab2/2/{clean_variant}/index.html")
-        if os.path.exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            return HTMLResponse(content)
-        else:
-            return HTMLResponse(f"<html><body>Static storefront not found at {file_path}</body></html>")
+        return HTMLResponse(f"<html><body><h1>Storefront {variant}</h1><p>Welcome to our store.</p></body></html>")
             
     if path in ["admin-w98t57", "cms_admin_portal", "moderator_control_panel", "docs_sysadmin"]:
         from fastapi.responses import RedirectResponse

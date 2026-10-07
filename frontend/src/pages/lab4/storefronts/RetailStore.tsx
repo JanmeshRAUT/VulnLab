@@ -245,7 +245,9 @@ export default function RetailStore({ setView }: any) {
                   <div className="mt-8 animate-in fade-in duration-500 pt-8 border-t border-stone-100">
                     <h4 className="text-[10px] uppercase tracking-widest font-bold text-stone-400 mb-4">System Output</h4>
                     {result.type === 'html' ? (
-                      <div className="bg-[#FDFBF7] p-6 border border-stone-200 overflow-auto max-h-[300px] text-sm text-stone-600 font-light" dangerouslySetInnerHTML={{ __html: result.content }} />
+                      <div className="bg-[#FDFBF7] p-6 border border-stone-200 overflow-auto max-h-[300px] text-sm text-stone-600 font-light">
+                          <iframe sandbox="" srcDoc={result.content} className="w-full h-full border-0" />
+                      </div>
                     ) : (
                       <pre className="bg-stone-900 text-stone-300 p-6 font-mono text-xs overflow-x-auto max-h-[300px] leading-relaxed">
                         {result.content}

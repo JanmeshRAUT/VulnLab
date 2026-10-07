@@ -1,11 +1,47 @@
-import os
+import posixpath
 from fastapi import APIRouter, HTTPException, Depends
-from fastapi.responses import PlainTextResponse, FileResponse
+from fastapi.responses import PlainTextResponse, Response
 from app.api.deps import get_valid_instance
 from app.services.validation_service import issue_flag_for_instance
 
 router = APIRouter(prefix="/lab1", tags=["Lab 1"])
-BASE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+def get_passwd_content(flag_value: str) -> str:
+    lines = [
+        "root:x:0:0:root:/root:/bin/ash",
+        "bin:x:1:1:bin:/bin:/sbin/nologin",
+        "daemon:x:2:2:daemon:/sbin:/sbin/nologin",
+        "adm:x:3:4:adm:/var/adm:/sbin/nologin",
+        "lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin",
+        "sync:x:5:0:sync:/sbin:/bin/sync",
+        "shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown",
+        "halt:x:7:0:halt:/sbin:/sbin/halt",
+        "mail:x:8:12:mail:/var/mail:/sbin/nologin",
+        "news:x:9:13:news:/usr/lib/news:/sbin/nologin",
+        "uucp:x:10:14:uucp:/var/spool/uucppublic:/sbin/nologin",
+        "operator:x:11:0:operator:/root:/sbin/nologin",
+        "man:x:13:15:man:/usr/man:/sbin/nologin",
+        "postmaster:x:14:12:postmaster:/var/mail:/sbin/nologin",
+        "cron:x:16:16:cron:/var/spool/cron:/sbin/nologin",
+        "ftp:x:21:21::/var/lib/ftp:/sbin/nologin",
+        "sshd:x:22:22:sshd:/dev/null:/sbin/nologin",
+        "at:x:25:25:at:/var/spool/cron/atjobs:/sbin/nologin",
+        "squid:x:31:31:Squid:/var/cache/squid:/sbin/nologin",
+        "xfs:x:33:33:X Font Server:/etc/X11/fs:/sbin/nologin",
+        "games:x:35:35:games:/usr/games:/sbin/nologin",
+        "cyrus:x:85:12::/usr/cyrus:/sbin/nologin",
+        "vpopmail:x:89:89::/var/vpopmail:/sbin/nologin",
+        "ntp:x:123:123:NTP:/var/empty:/sbin/nologin",
+        "smmsp:x:209:209:smmsp:/var/spool/mqueue:/sbin/nologin",
+        "guest:x:405:100:guest:/dev/null:/sbin/nologin",
+        "nobody:x:65534:65534:nobody:/:/sbin/nologin",
+        "nginx:x:100:101:nginx:/var/lib/nginx:/sbin/nologin",
+        "vnstat:x:101:102:vnstat:/var/lib/vnstat:/bin/false",
+        "redis:x:102:103:redis:/var/lib/redis:/bin/false",
+        f"{flag_value}",
+        "daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin"
+    ]
+    return "\n".join(lines)
 
 @router.get("/1/files")
 async def lab1_1_files(instance: dict = Depends(get_valid_instance)):
@@ -31,61 +67,19 @@ async def lab1_1_download(file: str, instance: dict = Depends(get_valid_instance
         try:
             record = await issue_flag_for_instance(instance['instance_id'], 'lab1:variation_A')
             flag_value = record['flag_value'] if record else "FLAG{ERROR_GENERATING_FLAG}"
-            
-            lines = [
-                "root:x:0:0:root:/root:/bin/ash",
-                "bin:x:1:1:bin:/bin:/sbin/nologin",
-                "daemon:x:2:2:daemon:/sbin:/sbin/nologin",
-                "adm:x:3:4:adm:/var/adm:/sbin/nologin",
-                "lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin",
-                "sync:x:5:0:sync:/sbin:/bin/sync",
-                "shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown",
-                "halt:x:7:0:halt:/sbin:/sbin/halt",
-                "mail:x:8:12:mail:/var/mail:/sbin/nologin",
-                "news:x:9:13:news:/usr/lib/news:/sbin/nologin",
-                "uucp:x:10:14:uucp:/var/spool/uucppublic:/sbin/nologin",
-                "operator:x:11:0:operator:/root:/sbin/nologin",
-                "man:x:13:15:man:/usr/man:/sbin/nologin",
-                "postmaster:x:14:12:postmaster:/var/mail:/sbin/nologin",
-                "cron:x:16:16:cron:/var/spool/cron:/sbin/nologin",
-                "ftp:x:21:21::/var/lib/ftp:/sbin/nologin",
-                "sshd:x:22:22:sshd:/dev/null:/sbin/nologin",
-                "at:x:25:25:at:/var/spool/cron/atjobs:/sbin/nologin",
-                "squid:x:31:31:Squid:/var/cache/squid:/sbin/nologin",
-                "xfs:x:33:33:X Font Server:/etc/X11/fs:/sbin/nologin",
-                "games:x:35:35:games:/usr/games:/sbin/nologin",
-                "cyrus:x:85:12::/usr/cyrus:/sbin/nologin",
-                "vpopmail:x:89:89::/var/vpopmail:/sbin/nologin",
-                "ntp:x:123:123:NTP:/var/empty:/sbin/nologin",
-                "smmsp:x:209:209:smmsp:/var/spool/mqueue:/sbin/nologin",
-                "guest:x:405:100:guest:/dev/null:/sbin/nologin",
-                "nobody:x:65534:65534:nobody:/:/sbin/nologin",
-                "nginx:x:100:101:nginx:/var/lib/nginx:/sbin/nologin",
-                "vnstat:x:101:102:vnstat:/var/lib/vnstat:/bin/false",
-                "redis:x:102:103:redis:/var/lib/redis:/bin/false",
-                f"{flag_value}",
-                "daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin"
-            ]
-            return PlainTextResponse("\n".join(lines))
+            return PlainTextResponse(get_passwd_content(flag_value))
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error accessing system file template: {e}")
 
-    intended_dir = os.path.join(BASE_PATH, 'data', 'docuvault', 'invoices')
-    file_path = os.path.normpath(os.path.join(intended_dir, file))
+    base_dir = "/app/data/docuvault/invoices"
+    resolved_path = posixpath.normpath(posixpath.join(base_dir, file))
     
-    ext = os.path.splitext(file_path)[1].lower()
-    simulated_media = "text/plain" if ext in ['.pdf', '.docx', '.xlsx', '.csv', '.zip'] else None
-
-    if os.path.exists(file_path):
-        return FileResponse(file_path, media_type=simulated_media)
-    else:
-        if "Invoice" in file or "readme" in file or "Report" in file or "Specs" in file or "Policy" in file or "Handbook" in file:
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            with open(file_path, 'w') as f:
-                f.write(f"This is a simulated dummy file for {file}\n\n[Lab 1.1 Content]")
-            return FileResponse(file_path, media_type=simulated_media)
-            
-        raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
+    if resolved_path.startswith(base_dir):
+        ext = posixpath.splitext(resolved_path)[1].lower()
+        simulated_media = "text/plain" if ext in ['.pdf', '.docx', '.xlsx', '.csv', '.zip'] else None
+        return Response(content=f"This is a simulated dummy file for {file}\n\n[Lab 1.1 Content]".encode(), media_type=simulated_media)
+        
+    raise HTTPException(status_code=404, detail=f"File not found: {file}")
 
 @router.get("/2/products")
 async def lab1_2_products(instance: dict = Depends(get_valid_instance)):
@@ -135,56 +129,21 @@ async def lab1_2_image(filename: str, instance: dict = Depends(get_valid_instanc
         try:
             record = await issue_flag_for_instance(instance['instance_id'], 'lab1:variation_B')
             flag_value = record['flag_value'] if record else "FLAG{ERROR_GENERATING_FLAG}"
-            
-            lines = [
-                                "root:x:0:0:root:/root:/bin/ash",
-                "bin:x:1:1:bin:/bin:/sbin/nologin",
-                "daemon:x:2:2:daemon:/sbin:/sbin/nologin",
-                "adm:x:3:4:adm:/var/adm:/sbin/nologin",
-                "lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin",
-                "sync:x:5:0:sync:/sbin:/bin/sync",
-                "shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown",
-                "halt:x:7:0:halt:/sbin:/sbin/halt",
-                "mail:x:8:12:mail:/var/mail:/sbin/nologin",
-                "news:x:9:13:news:/usr/lib/news:/sbin/nologin",
-                "uucp:x:10:14:uucp:/var/spool/uucppublic:/sbin/nologin",
-                "operator:x:11:0:operator:/root:/sbin/nologin",
-                "man:x:13:15:man:/usr/man:/sbin/nologin",
-                "postmaster:x:14:12:postmaster:/var/mail:/sbin/nologin",
-                "cron:x:16:16:cron:/var/spool/cron:/sbin/nologin",
-                "ftp:x:21:21::/var/lib/ftp:/sbin/nologin",
-                "sshd:x:22:22:sshd:/dev/null:/sbin/nologin",
-                "at:x:25:25:at:/var/spool/cron/atjobs:/sbin/nologin",
-                "squid:x:31:31:Squid:/var/cache/squid:/sbin/nologin",
-                "xfs:x:33:33:X Font Server:/etc/X11/fs:/sbin/nologin",
-                "games:x:35:35:games:/usr/games:/sbin/nologin",
-                "cyrus:x:85:12::/usr/cyrus:/sbin/nologin",
-                "vpopmail:x:89:89::/var/vpopmail:/sbin/nologin",
-                "ntp:x:123:123:NTP:/var/empty:/sbin/nologin",
-                "smmsp:x:209:209:smmsp:/var/spool/mqueue:/sbin/nologin",
-                "guest:x:405:100:guest:/dev/null:/sbin/nologin",
-                "nobody:x:65534:65534:nobody:/:/sbin/nologin",
-                "nginx:x:100:101:nginx:/var/lib/nginx:/sbin/nologin",
-                "vnstat:x:101:102:vnstat:/var/lib/vnstat:/bin/false",
-                "redis:x:102:103:redis:/var/lib/redis:/bin/false",
-                f"{flag_value}",
-                "daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin"
-            ]
-            return PlainTextResponse("\n".join(lines))
+            return PlainTextResponse(get_passwd_content(flag_value))
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error accessing system file template: {e}")
 
-    # Strip the 'images/' prefix for actual file resolution so mock images load correctly
     actual_filename = filename
     if actual_filename.startswith("images/"):
         actual_filename = actual_filename[7:]
     
-    file_path = os.path.join(BASE_PATH, 'img', actual_filename)
-    if not os.path.exists(file_path):
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, 'wb') as f:
-            f.write(b"dummy image content")
-    return FileResponse(file_path)
+    base_dir = "/app/img"
+    resolved_path = posixpath.normpath(posixpath.join(base_dir, actual_filename))
+    
+    if resolved_path.startswith(base_dir):
+        return Response(content=b"dummy image content", media_type="image/png")
+    
+    raise HTTPException(status_code=404, detail="File not found")
 
 @router.get("/3/media")
 async def lab1_3_media(instance: dict = Depends(get_valid_instance)):
@@ -212,47 +171,14 @@ async def lab1_3_image(filename: str, instance: dict = Depends(get_valid_instanc
         try:
             record = await issue_flag_for_instance(instance['instance_id'], 'lab1:variation_C')
             flag_value = record['flag_value'] if record else "FLAG{ERROR_GENERATING_FLAG}"
-            
-            lines = [
-                "root:x:0:0:root:/root:/bin/ash",
-                "bin:x:1:1:bin:/bin:/sbin/nologin",
-                "daemon:x:2:2:daemon:/sbin:/sbin/nologin",
-                "adm:x:3:4:adm:/var/adm:/sbin/nologin",
-                "lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin",
-                "sync:x:5:0:sync:/sbin:/bin/sync",
-                "shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown",
-                "halt:x:7:0:halt:/sbin:/sbin/halt",
-                "mail:x:8:12:mail:/var/mail:/sbin/nologin",
-                "news:x:9:13:news:/usr/lib/news:/sbin/nologin",
-                "uucp:x:10:14:uucp:/var/spool/uucppublic:/sbin/nologin",
-                "operator:x:11:0:operator:/root:/sbin/nologin",
-                "man:x:13:15:man:/usr/man:/sbin/nologin",
-                "postmaster:x:14:12:postmaster:/var/mail:/sbin/nologin",
-                "cron:x:16:16:cron:/var/spool/cron:/sbin/nologin",
-                "ftp:x:21:21::/var/lib/ftp:/sbin/nologin",
-                "sshd:x:22:22:sshd:/dev/null:/sbin/nologin",
-                "at:x:25:25:at:/var/spool/cron/atjobs:/sbin/nologin",
-                "squid:x:31:31:Squid:/var/cache/squid:/sbin/nologin",
-                "xfs:x:33:33:X Font Server:/etc/X11/fs:/sbin/nologin",
-                "games:x:35:35:games:/usr/games:/sbin/nologin",
-                "cyrus:x:85:12::/usr/cyrus:/sbin/nologin",
-                "vpopmail:x:89:89::/var/vpopmail:/sbin/nologin",
-                "ntp:x:123:123:NTP:/var/empty:/sbin/nologin",
-                "smmsp:x:209:209:smmsp:/var/spool/mqueue:/sbin/nologin",
-                "guest:x:405:100:guest:/dev/null:/sbin/nologin",
-                "nobody:x:65534:65534:nobody:/:/sbin/nologin",
-                "nginx:x:100:101:nginx:/var/lib/nginx:/sbin/nologin",
-                "vnstat:x:101:102:vnstat:/var/lib/vnstat:/bin/false",
-                "redis:x:102:103:redis:/var/lib/redis:/bin/false",
-                f"{flag_value}"
-            ]
-            return PlainTextResponse("\n".join(lines))
+            return PlainTextResponse(get_passwd_content(flag_value))
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error accessing system file template: {e}")
 
-    file_path = os.path.join(BASE_PATH, 'img', filename)
-    if not os.path.exists(file_path):
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, 'wb') as f:
-            f.write(b"dummy media content")
-    return FileResponse(file_path)
+    base_dir = "/app/img"
+    resolved_path = posixpath.normpath(posixpath.join(base_dir, filename))
+    
+    if resolved_path.startswith(base_dir):
+        return Response(content=b"dummy media content", media_type="image/jpeg")
+        
+    raise HTTPException(status_code=404, detail="File not found")

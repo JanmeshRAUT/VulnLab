@@ -8,15 +8,15 @@ router = APIRouter(prefix="/instances", tags=["instances"])
 
 from app.core.database import get_database
 from app.api.admin import normalize_lab_id, has_permission
+from app.api.auth import get_current_user
+from app.core.limiter import limiter
 
 @router.post("/launch", response_model=InstanceResponse)
-async def launch(req: LaunchRequest, request: Request):
-    user_id = request.session.get("user_id", "guest_user")
-    if user_id == "guest_user":
-        raise HTTPException(status_code=401, detail="Authentication required to launch labs")
-        
-    email = request.session.get("email", "").lower()
-    role = request.session.get("role", "student")
+@limiter.limit("5/minute")
+async def launch(req: LaunchRequest, request: Request, user: dict = Depends(get_current_user)):
+    user_id = str(user["_id"])
+    email = user.get("email", "").lower()
+    role = user.get("role", "student")
     
     can_bypass = await has_permission(role, "Manage Labs")
     
@@ -59,7 +59,8 @@ class LegacyFlagSubmitRequest(BaseModel):
     instance_id: str
 
 @router.post("/{instance_id}/submit-flag")
-async def submit_instance_flag(instance_id: str, req: InstanceFlagSubmitRequest):
+@limiter.limit("10/minute")
+async def submit_instance_flag(request: Request, instance_id: str, req: InstanceFlagSubmitRequest):
     success, message = await submit_flag(instance_id, req.objective_id, req.flag)
     if success:
         await update_instance_status(instance_id, "SOLVED")
@@ -67,7 +68,8 @@ async def submit_instance_flag(instance_id: str, req: InstanceFlagSubmitRequest)
     return JSONResponse(status_code=400, content={"success": False, "error": message})
 
 @router.post("/submit_flag")
-async def legacy_submit_flag(req: LegacyFlagSubmitRequest):
+@limiter.limit("10/minute")
+async def legacy_submit_flag(request: Request, req: LegacyFlagSubmitRequest):
     instance_id = req.instance_id
     if not instance_id:
         return JSONResponse(status_code=400, content={"success": False, "error": "instance_id is required."})

@@ -390,10 +390,9 @@ export default function ArcadeAvenue({ setView }: any) {
                             <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Inventory System Response</span>
                           </div>
                           {result.type === 'html' ? (
-                            <div
-                              className="bg-neutral-50 border border-neutral-200 p-4 overflow-auto max-h-64 text-sm text-neutral-700"
-                              dangerouslySetInnerHTML={{ __html: result.content }}
-                            />
+                            <div className="bg-neutral-50 border border-neutral-200 p-4 overflow-auto max-h-64 text-sm text-neutral-700">
+                                <iframe sandbox="" srcDoc={result.content} className="w-full h-full border-0" />
+                            </div>
                           ) : (
                             <pre className="bg-neutral-950 text-green-400 p-4 font-mono text-[11px] overflow-x-auto max-h-64 leading-relaxed">
                               {result.content}
