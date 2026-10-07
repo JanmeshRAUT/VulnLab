@@ -89,7 +89,7 @@ class ChatbotEngine:
             if self._calculate_score(tokens, impact_kws) >= 1.0:
                 return f"Real world impact of {target_lab['title']}: {target_lab.get('real_world_impact', 'Can lead to unauthorized access and data breaches.')}"
             
-            if self._calculate_score(tokens, explain_kws) >= 1.0 or True: 
+            if self._calculate_score(tokens, explain_kws) >= 1.0: 
                 # Default lab response if lab is identified
                 return f"About {target_lab['title']}: {target_lab.get('what_it_is', 'This is a security vulnerability.')} You can ask me how to prevent it or its real-world impact!"
 

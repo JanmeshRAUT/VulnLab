@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
 from app.models.instance import LaunchRequest, InstanceResponse, InstanceFlagSubmitRequest
 from app.services.instance_service import create_instance, get_instance, heartbeat_instance, update_instance_status

@@ -31,9 +31,11 @@ def _extract_lab_id(path: str) -> str | None:
 
 from app.core.limiter import limiter
 
+from pydantic import BaseModel, Field
+
 class ChatMessage(BaseModel):
-    message: str
-    path: str
+    message: str = Field(..., max_length=500)
+    path: str = Field(..., max_length=500)
 
 @router.post("/chatbot")
 @limiter.limit("5/minute")
