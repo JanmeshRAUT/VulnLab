@@ -1,4 +1,5 @@
 import time
+import hmac
 from app.core.database import get_database
 
 async def submit_flag(instance_id: str, objective_id: str, submitted_flag: str):
@@ -20,48 +21,96 @@ async def submit_flag(instance_id: str, objective_id: str, submitted_flag: str):
         return False, "Already solved."
 
     stored_flag = record.get("flag_value", "")
-    if submitted_flag != stored_flag:
+    
+    # Use hmac.compare_digest for constant-time comparison
+    if not hmac.compare_digest(submitted_flag.encode("utf-8"), stored_flag.encode("utf-8")):
+        # Log attempt (atomic push to state.attempts)
+        await db.instances.update_one(
+            {'instance_id': instance_id},
+            {
+                '$inc': {'state.failed_attempts': 1},
+                '$push': {
+                    'state.attempt_logs': {
+                        'objective_id': objective_id,
+                        'timestamp': time.time(),
+                        'success': False
+                    }
+                }
+            }
+        )
         return False, "Invalid flag."
 
-    # Mark as solved
     now = time.time()
-    await db.instances.update_one(
+    
+    # Atomic update to mark solved, preventing race conditions
+    update_result = await db.instances.update_one(
         {
             'instance_id': instance_id,
-            'state.flag_records.flag_value': stored_flag
+            'state.flag_records': {
+                '$elemMatch': {
+                    'objective_id': objective_id,
+                    'solved_status': False
+                }
+            }
         },
         {
             '$set': {
                 'state.flag_records.$.solved_status': True,
                 'state.flag_records.$.solved_at': now,
+            },
+            '$push': {
+                'state.attempt_logs': {
+                    'objective_id': objective_id,
+                    'timestamp': now,
+                    'success': True
+                }
             }
         }
     )
     
-    # Track Progress
+    if update_result.modified_count == 0:
+        return False, "Already solved or failed to update."
+        
+    # Re-fetch instance to check overall completion
+    instance = await db.instances.find_one({'instance_id': instance_id})
+    updated_records = instance.get("state", {}).get("flag_records", [])
+    
+    total_objectives = len(updated_records)
+    solved_objectives = sum(1 for r in updated_records if r.get("solved_status"))
+    
+    all_solved = (total_objectives > 0 and solved_objectives == total_objectives)
+    
     user_id = instance.get('user_id')
+    user = await db.users.find_one({"_id": user_id}) if user_id else None
+    email = user.get('email') if user else user_id
+    
     lab_id = instance.get('lab_id')
     variant_id = instance.get('variant_id', 'default')
     
     if user_id:
+        completion_percentage = (solved_objectives / total_objectives * 100) if total_objectives > 0 else 100.0
+        
         await db.progress.update_one(
             {
-                'email': user_id,
+                'user_id': user_id,
                 'lab_id': lab_id,
                 'variant_id': variant_id
             },
             {
                 '$set': {
-                    'is_solved': True,
+                    'is_solved': all_solved,
                     'updated_at': now,
-                    'completion_percentage': 100.0,
-                    'schema_version': 1
+                    'completion_percentage': completion_percentage,
+                    'email': email,
+                    'schema_version': 2
                 },
                 '$inc': {
                     'attempts': 1
                 },
                 '$setOnInsert': {
-                    'email': user_id,
+                    'user_id': user_id,
+                    'lab_id': lab_id,
+                    'variant_id': variant_id
                 }
             },
             upsert=True

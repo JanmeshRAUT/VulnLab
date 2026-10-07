@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from app.models.instance import LaunchRequest, InstanceResponse, InstanceFlagSubmitRequest
 from app.services.instance_service import create_instance, get_instance, heartbeat_instance, update_instance_status
 from app.services.validation_service import submit_flag
+from app.api.deps import get_valid_instance
 
 router = APIRouter(prefix="/instances", tags=["instances"])
 
@@ -30,18 +31,25 @@ async def launch(req: LaunchRequest, request: Request, user: dict = Depends(get_
             "lab_id": normalized_lab
         })
         
-        if not access_doc or access_doc.get("permission") != "Allowed":
+        settings = await db.settings.find_one({"_id": "platform_settings"})
+        default_access = settings.get("default_lab_access", "Allowed") if settings else "Allowed"
+        
+        permission = access_doc.get("permission") if access_doc else default_access
+        
+        if permission != "Allowed":
             raise HTTPException(status_code=403, detail="You do not have permission to access this lab.")
 
     instance = await create_instance(user_id, req.lab_id, req.variant_id)
     return InstanceResponse(**instance)
 
 @router.post("/{instance_id}/heartbeat")
-async def heartbeat(instance_id: str):
-    instance = await heartbeat_instance(instance_id)
-    if not instance or instance.get("status") not in ["CREATED", "ACTIVE"]:
-        raise HTTPException(status_code=404, detail="Instance not found, expired, or terminal")
-    return {"status": "ok", "instance_status": instance.get("status")}
+async def heartbeat(instance: dict = Depends(get_valid_instance)):
+    # get_valid_instance already checked ownership and existence/status
+    instance_id = instance["instance_id"]
+    updated_instance = await heartbeat_instance(instance_id)
+    if not updated_instance:
+        raise HTTPException(status_code=404, detail="Instance not found")
+    return {"status": "ok", "instance_status": updated_instance.get("status")}
 
 from pydantic import BaseModel
 
@@ -49,7 +57,8 @@ class EventRequest(BaseModel):
     type: str
 
 @router.post("/{instance_id}/event")
-async def handle_event(instance_id: str, req: EventRequest):
+async def handle_event(req: EventRequest, instance: dict = Depends(get_valid_instance)):
+    instance_id = instance["instance_id"]
     if req.type == "abandon":
         await update_instance_status(instance_id, "ABANDONED")
     return {"status": "ok"}

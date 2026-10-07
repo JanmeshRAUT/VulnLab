@@ -987,3 +987,77 @@ async def delete_student(request: Request, student_id: str):
         },
     )
     return {"success": True, "message": "Student deleted successfully"}
+
+from fastapi import UploadFile, File
+
+@router.post("/access/csv-import")
+async def csv_import(request: Request, file: UploadFile = File(...)):
+    identity = await require_permission(request, "Manage Access Control")
+    content = await file.read()
+    reader = csv.DictReader(io.StringIO(content.decode("utf-8")))
+    db = get_database()
+    count = 0
+    now = time.time()
+    for row in reader:
+        email = row.get("email")
+        cohort = row.get("cohort", "default")
+        if email:
+            await db.users.update_one(
+                {"email": email.strip()},
+                {"$set": {"cohort": cohort.strip()}}
+            )
+            count += 1
+    return {"success": True, "count": count}
+
+class BulkGrantRequest(BaseModel):
+    cohort: Optional[str] = None
+    role: Optional[str] = None
+    email_domain: Optional[str] = None
+    lab_ids: list[str]
+    permission: str = "Allowed"
+
+@router.post("/access/bulk-grant")
+async def bulk_grant(request: Request, data: BulkGrantRequest):
+    identity = await require_permission(request, "Manage Access Control")
+    db = get_database()
+    query = {}
+    if data.cohort:
+        query["cohort"] = data.cohort
+    if data.role:
+        query["role"] = data.role
+    if data.email_domain:
+        query["email"] = {"$regex": f"@{data.email_domain}$", "$options": "i"}
+        
+    users = await db.users.find(query).to_list(None)
+    timestamp = now_ts()
+    count = 0
+    for user in users:
+        student_id = str(user.get("email") or user.get("_id")).lower()
+        for lab_id in data.lab_ids:
+            normalized_lab = normalize_lab_id(lab_id)
+            await safe_upsert(
+                "lab_access",
+                {"student_id": student_id, "lab_id": normalized_lab},
+                {
+                    "student_id": student_id,
+                    "lab_id": normalized_lab,
+                    "permission": data.permission.title(),
+                    "updated_at": timestamp,
+                },
+            )
+        count += 1
+    return {"success": True, "users_affected": count}
+
+class SettingsUpdateRequest(BaseModel):
+    default_lab_access: str
+
+@router.post("/settings")
+async def update_settings(request: Request, data: SettingsUpdateRequest):
+    identity = await require_permission(request, "Platform Settings")
+    db = get_database()
+    await db.settings.update_one(
+        {"_id": "platform_settings"},
+        {"$set": {"default_lab_access": data.default_lab_access.title()}},
+        upsert=True
+    )
+    return {"success": True}

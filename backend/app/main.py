@@ -6,7 +6,6 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.core.config import settings
 from app.api.catalog import router as catalog_router
 from app.api.instances import router as instances_router
-from app.api.events import router as events_router
 from app.api.auth import router as auth_router
 from app.api.lab1 import router as lab1_router
 from app.api.lab2 import router as lab2_router
@@ -131,7 +130,6 @@ async def health_check():
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(catalog_router, prefix=settings.API_V1_STR)
 app.include_router(instances_router, prefix=settings.API_V1_STR)
-app.include_router(events_router, prefix=settings.API_V1_STR)
 app.include_router(lab1_router, prefix=settings.API_V1_STR)
 app.include_router(lab2_router, prefix=settings.API_V1_STR)
 app.include_router(lab3_router, prefix=settings.API_V1_STR)
