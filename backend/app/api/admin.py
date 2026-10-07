@@ -16,7 +16,7 @@ from app.services.instance_service import update_instance_status
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-ADMIN_ROLES = {"superadmin", "super_admin", "admin", "instructor"}
+ADMIN_ROLES = {"super_admin", "admin", "instructor"}
 PERMISSION_CATEGORIES = [
     "Manage Users",
     "Manage Labs",
@@ -40,7 +40,7 @@ PERMISSION_ALIASES = {
 }
 
 DEFAULT_ROLE_DEFINITIONS = {
-    "superadmin": PERMISSION_CATEGORIES,
+    "super_admin": PERMISSION_CATEGORIES,
     "admin": [
         "Manage Users",
         "Manage Students",
@@ -177,35 +177,44 @@ async def require_admin(request: Request) -> dict[str, str]:
     return identity
 
 
-async def safe_find(collection_name: str, query: Optional[dict[str, Any]] = None, sort: Optional[list[tuple[str, int]]] = None) -> list[dict[str, Any]]:
+import logging
+logger = logging.getLogger(__name__)
+
+async def safe_find(collection_name: str, query: dict | None = None, sort: list | None = None) -> list[dict]:
     db = get_database()
     try:
         cursor = db[collection_name].find(query or {})
         if sort:
             cursor = cursor.sort(sort)
-        docs = await cursor.to_list(length=5000)
+        docs = await cursor.to_list(length=None)
         for doc in docs:
             if "_id" in doc:
                 doc["_id"] = str(doc["_id"])
         return docs
-    except Exception:
-        return []
+    except Exception as e:
+        logger.error(f"Error in safe_find for {collection_name}: {e}")
+        raise
 
 
-async def safe_upsert(collection_name: str, filter_query: dict[str, Any], update_fields: dict[str, Any]) -> None:
+async def safe_upsert(collection_name: str, filter_query: dict, update_fields: dict) -> None:
     db = get_database()
     try:
         await db[collection_name].update_one(filter_query, {"$set": update_fields}, upsert=True)
-    except Exception:
-        return
+    except Exception as e:
+        logger.error(f"Error in safe_upsert for {collection_name}: {e}")
+        raise
 
 
-async def safe_insert(collection_name: str, document: dict[str, Any]) -> None:
+async def safe_insert(collection_name: str, document: dict) -> None:
     db = get_database()
     try:
         await db[collection_name].insert_one(document)
-    except Exception:
-        return
+    except Exception as e:
+        logger.error(f"Error in safe_insert for {collection_name}: {e}")
+        if collection_name == "audit_logs":
+            from fastapi import HTTPException
+            raise HTTPException(status_code=500, detail="Failed to write audit log")
+        raise
 
 
 async def role_permissions(role: str) -> list[str]:
@@ -410,7 +419,15 @@ async def aggregate_access_matrix(students: list[dict[str, Any]]) -> dict[str, A
     return {"labs": labs, "rows": rows}
 
 
-def build_overview(students: list[dict[str, Any]], sessions: list[dict[str, Any]], progress_docs: list[dict[str, Any]], roles: list[dict[str, Any]]) -> dict[str, Any]:
+import time
+_overview_cache = {"time": 0, "data": None}
+
+def build_overview(students: list[dict], sessions: list[dict], progress_docs: list[dict], roles: list[dict]) -> dict:
+    global _overview_cache
+    now_time = time.time()
+    if _overview_cache["data"] and now_time - _overview_cache["time"] < 30:
+        return _overview_cache["data"]
+        
     labs = get_lab_catalog()
     total_variants = sum(int(lab.get("variant_count", 0) or 0) for lab in labs)
 
@@ -474,7 +491,7 @@ def build_overview(students: list[dict[str, Any]], sessions: list[dict[str, Any]
     weekly_statistics = [{"label": f"Week {i + 1}", "value": count_active_in_range((i + 1) * 7), "solved": count_solved_in_range((i + 1) * 7)} for i in range(4)]
     monthly_statistics = [{"label": label, "value": count_active_in_range((i + 1) * 30), "solved": count_solved_in_range((i + 1) * 30)} for i, label in enumerate(["This Month", "Last Month", "2 Months Ago"])]
 
-    return {
+    result = {
         "total_students": len(students),
         "total_labs": len(labs),
         "total_variants": total_variants,
@@ -494,6 +511,9 @@ def build_overview(students: list[dict[str, Any]], sessions: list[dict[str, Any]
         "monthly_statistics": monthly_statistics,
         "role_count": len(roles),
     }
+    _overview_cache["data"] = result
+    _overview_cache["time"] = now_time
+    return result
 
 
 def build_reports(students: list[dict[str, Any]], sessions: list[dict[str, Any]]) -> dict[str, Any]:
@@ -840,8 +860,22 @@ async def assign_role(request: Request, data: AssignRoleRequest):
     role_name = normalize_role(data.role)
     db = get_database()
     
+    # Check if modifying own role
+    if identity["user_id"] == data.student_id or identity["email"] == data.student_id:
+        raise HTTPException(status_code=403, detail="Cannot change your own role")
+        
+    # Check if demoting last super_admin
+    target_user = await db.users.find_one({"$or": [{"user_id": data.student_id}, {"email": data.student_id}, {"username": data.student_id}]})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    if target_user.get("role") == "super_admin" and role_name != "super_admin":
+        super_admins = await db.users.count_documents({"role": "super_admin"})
+        if super_admins <= 1:
+            raise HTTPException(status_code=403, detail="Cannot demote the last super_admin")
+
     result = await db["users"].update_one(
-        {"$or": [{"user_id": data.student_id}, {"email": data.student_id}, {"username": data.student_id}]},
+        {"_id": target_user["_id"]},
         {"$set": {"role": role_name}}
     )
     
@@ -939,23 +973,16 @@ async def export_reports(request: Request, format: str = Query(default="csv"), s
         for key, items in reports.items():
             if isinstance(items, list):
                 for item in items:
-                    writer.writerow(
-                        [
-                            key,
-                            item.get("title") or item.get("name") or item.get("lab_id") or "item",
-                            item.get("success_rate") or item.get("completion_rate") or item.get("learning_progress") or "",
-                        ]
-                    )
+                    label = str(item.get("title") or item.get("name") or item.get("lab_id") or "item")
+                    if label and label[0] in ('=', '+', '-', '@'):
+                        label = "'" + label
+                    val = str(item.get("success_rate") or item.get("completion_rate") or item.get("learning_progress") or "")
+                    if val and val[0] in ('=', '+', '-', '@'):
+                        val = "'" + val
+                    writer.writerow([key, label, val])
         return Response(content=buffer.getvalue(), media_type="text/csv")
-
-    if format_lower == "excel":
-        buffer = io.StringIO()
-        writer = csv.writer(buffer, delimiter="\t")
-        writer.writerow(["scope", "label", "value"])
-        writer.writerow([scope, "Workbook", "Generated from admin report data"])
-        return Response(content=buffer.getvalue(), media_type="application/vnd.ms-excel")
-
-    return Response(content=f"PDF export queued for {scope} reports", media_type="application/pdf")
+    
+    raise HTTPException(status_code=400, detail="Only CSV export is supported")
 
 @router.delete("/students/{student_id}")
 async def delete_student(request: Request, student_id: str):
@@ -970,7 +997,24 @@ async def delete_student(request: Request, student_id: str):
     except Exception:
         pass
         
-    result = await db["users"].delete_one({"$or": query})
+    target_user = await db["users"].find_one({"$or": query})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Student not found")
+        
+    if target_user.get("role") == "super_admin":
+        super_admins = await db.users.count_documents({"role": "super_admin"})
+        if super_admins <= 1:
+            raise HTTPException(status_code=403, detail="Cannot delete the last super_admin")
+            
+    # Delete related docs
+    uid = target_user.get("user_id", str(target_user["_id"]))
+    email = target_user.get("email")
+    
+    await db.progress.delete_many({"$or": [{"user_id": uid}, {"email": email}]})
+    await db.instances.delete_many({"user_id": uid})
+    await db.lab_access.delete_many({"$or": [{"student_id": uid.lower()}, {"student_id": email.lower() if email else ""}]})
+    
+    result = await db["users"].delete_one({"_id": target_user["_id"]})
     
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Student not found")

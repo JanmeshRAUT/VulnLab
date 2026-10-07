@@ -30,6 +30,23 @@ async def expiration_worker():
 async def lifespan(app: FastAPI):
     # Startup
     task = asyncio.create_task(expiration_worker())
+    
+    # Create indexes
+    from app.core.database import get_database
+    import pymongo
+    db = get_database()
+    try:
+        await db.users.create_index("email", unique=True, sparse=True)
+        await db.users.create_index("enrollment_id")
+        await db.instances.create_index("instance_id", unique=True)
+        await db.instances.create_index([("user_id", 1), ("status", 1)])
+        await db.instances.create_index("expires_at", expireAfterSeconds=0)
+        await db.progress.create_index([("user_id", 1), ("lab_id", 1), ("variant_id", 1)], unique=True)
+        await db.lab_access.create_index([("student_id", 1), ("lab_id", 1)], unique=True)
+        await db.audit_logs.create_index([("timestamp", -1)])
+    except Exception as e:
+        print(f"Error creating indexes: {e}")
+        
     yield
     # Shutdown
     task.cancel()

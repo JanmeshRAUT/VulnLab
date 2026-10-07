@@ -264,7 +264,11 @@ async def register(request: Request, user_data: SafeUserCreate):
         "created_at": datetime.utcnow()
     }
     
-    result = await db.users.insert_one(new_user)
+    import pymongo.errors
+    try:
+        result = await db.users.insert_one(new_user)
+    except pymongo.errors.DuplicateKeyError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
     
     request.session.clear()
     request.session['user_id'] = str(result.inserted_id)
