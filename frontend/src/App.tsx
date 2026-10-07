@@ -183,7 +183,7 @@ function Navigation() {
           
           {auth ? (
             <div className="flex items-center gap-4">
-              {(auth.role === 'super_admin' || auth.role === 'admin' || auth.role === 'instructor' || auth.role === 'reviewer') && (
+              {(auth.role === 'super_admin' || auth.role === 'admin' || auth.role === 'instructor') && (
                 <Link to="/admin" className="text-slate-900 hover:text-brand-orange font-semibold">Admin</Link>
               )}
               <Link to="/profile" className="text-slate-900 hover:text-brand-orange font-semibold">Profile</Link>
@@ -215,7 +215,7 @@ function Navigation() {
           <div className="w-full h-px bg-slate-200"></div>
           {auth ? (
             <div className="flex flex-col gap-4">
-              {(auth.role === 'super_admin' || auth.role === 'admin' || auth.role === 'instructor' || auth.role === 'reviewer') && (
+              {(auth.role === 'super_admin' || auth.role === 'admin' || auth.role === 'instructor') && (
                 <Link to="/admin" className="text-slate-900 font-semibold hover:text-brand-orange" onClick={() => setIsMenuOpen(false)}>Admin</Link>
               )}
               <Link to="/profile" className="text-slate-900 font-semibold hover:text-brand-orange" onClick={() => setIsMenuOpen(false)}>Profile</Link>
@@ -307,6 +307,32 @@ function BackendWarmingUpScreen() {
   );
 }
 
+function AdminRouteGuard({ children }: { children: any }) {
+  const [auth, setAuth] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    axios.get(`${API_BASE}/api/auth/status`, { withCredentials: true })
+      .then(res => {
+        setAuth(res.data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center font-bold text-slate-500">Checking authorization...</div>;
+  
+  const role = String(auth?.role || '').toLowerCase();
+  const allowed = ['super_admin', 'admin', 'instructor'].includes(role);
+  
+  if (!auth?.is_authenticated || !allowed) {
+    window.location.href = '/login?error=unauthorized';
+    return null;
+  }
+  
+  return children;
+}
+
 function App() {
   const [isWarmingUp, setIsWarmingUp] = useState(false);
 
@@ -368,8 +394,8 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/help" element={<Help />} />
             <Route path="/labs" element={<Labs />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/students/:studentId" element={<StudentProfile />} />
+            <Route path="/admin" element={<AdminRouteGuard><AdminDashboard /></AdminRouteGuard>} />
+            <Route path="/admin/students/:studentId" element={<AdminRouteGuard><StudentProfile /></AdminRouteGuard>} />
             <Route path="/labs/1" element={<Lab1Index />} />
             <Route path="/labs/2" element={<Lab2Index />} />
             <Route path="/labs/3" element={<Lab3Index />} />

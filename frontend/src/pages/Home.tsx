@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { KeyboardEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Terminal, Shield, Key, Activity } from 'lucide-react';
+import DOMPurify from 'dompurify';
 
 export default function Home() {
   const [history, setHistory] = useState<string[]>([]);
@@ -185,7 +186,7 @@ export default function Home() {
                     <div 
                       key={idx} 
                       className={`break-words ${getTypeStyles(line.type)}`} 
-                      dangerouslySetInnerHTML={{__html: line.content}} 
+                      dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(line.content)}} 
                     />
                   ))}
                 </div>

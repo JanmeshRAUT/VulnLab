@@ -55,6 +55,9 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.core.limiter import limiter
+from app.core.logger import setup_logging
+
+setup_logging()
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 app.state.limiter = limiter
@@ -65,15 +68,16 @@ def _normalized_origins() -> list[str]:
     if settings.FRONTEND_URLS:
         configured.extend(part.strip() for part in settings.FRONTEND_URLS.split(",") if part.strip())
 
-    # Keep localhost origins for local development and preview testing.
-    configured.extend([
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5174",
-        "http://localhost:5175",
-        "http://127.0.0.1:5175",
-    ])
+    # Keep localhost origins for local development and preview testing only if not in prod.
+    if settings.ENVIRONMENT != "prod":
+        configured.extend([
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:5174",
+            "http://127.0.0.1:5174",
+            "http://localhost:5175",
+            "http://127.0.0.1:5175",
+        ])
 
     normalized: list[str] = []
     seen = set()
@@ -96,7 +100,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 
 @app.middleware("http")
-async def csrf_middleware(request: Request, call_next):
+async def security_middleware(request: Request, call_next):
     if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
         if request.url.path.startswith("/api/") and not request.url.path.startswith("/api/auth/callback"):
             csrf_header = request.headers.get("X-CSRF-Token")
@@ -115,6 +119,15 @@ async def csrf_middleware(request: Request, call_next):
             secure=settings.ENVIRONMENT == "prod",
             domain=settings.COOKIE_DOMAIN
         )
+
+    # Security headers
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://accounts.google.com;"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    response.headers["X-Frame-Options"] = "DENY"
+    
     return response
 
 trusted_hosts = [ip.strip() for ip in settings.FORWARDED_ALLOW_IPS.split(",")] if settings.FORWARDED_ALLOW_IPS else ["127.0.0.1"]
@@ -136,8 +149,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "Accept"],
 )
 
 @app.get("/health")

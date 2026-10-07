@@ -45,7 +45,7 @@ export default function AdminShell({ title, subtitle, activeSection, children }:
   };
 
   const role = String(auth?.role || '').toLowerCase();
-  const allowed = ['super_admin', 'admin', 'instructor', 'reviewer'].includes(role);
+  const allowed = ['super_admin', 'admin', 'instructor'].includes(role);
 
   if (loading) {
     return (

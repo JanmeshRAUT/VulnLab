@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { ShieldAlert, ArrowLeft, Bug } from 'lucide-react';
+import SandboxedIframe from '@/components/SandboxedIframe';
 
 export default function Lab8Sub1() {
   const { variantId } = useParams<{ variantId: string }>();
@@ -90,10 +91,9 @@ export default function Lab8Sub1() {
                 <p className="text-slate-500 mb-2 font-bold text-sm">Server Response:</p>
                 
                 {/* VULNERABILITY SIMULATION: dangerouslySetInnerHTML simulates lack of escaping */}
-                <div 
-                  className="bg-red-50 p-6 rounded border border-red-200 text-red-900 overflow-hidden"
-                  dangerouslySetInnerHTML={{ __html: `Processed input: <strong>${result.reflected}</strong>` }}
-                />
+                <div className="bg-red-50 p-6 rounded border border-red-200 text-red-900 overflow-hidden">
+                  <SandboxedIframe html={`Processed input: <strong>${result.reflected}</strong>`} />
+                </div>
                 
                 {result.payload_detected && (
                   <div className="mt-6 p-4 bg-green-100 border-l-4 border-green-500 text-green-800 rounded flex items-center gap-3">

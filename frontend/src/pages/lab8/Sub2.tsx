@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { ShieldAlert, ArrowLeft, Bug, User } from 'lucide-react';
 import { getLabSessionId } from '../../utils/sessionId';
+import SandboxedIframe from '@/components/SandboxedIframe';
 
 export default function Lab8Sub2() {
   const [profile, setProfile] = useState<any>(null);
@@ -124,20 +125,20 @@ export default function Lab8Sub2() {
               
               {!isEditing && profile ? (
                 <div className="space-y-6">
-                  {/* VULNERABILITY: Displaying stored data via dangerouslySetInnerHTML */}
+                  {/* VULNERABILITY: Displaying stored data via SandboxedIframe */}
                   <div>
-                    <h3 className="text-2xl font-bold text-slate-900" dangerouslySetInnerHTML={{ __html: profile.full_name }} />
-                    <p className="text-slate-500 font-medium" dangerouslySetInnerHTML={{ __html: profile.email }} />
+                    <h3 className="text-2xl font-bold text-slate-900"><SandboxedIframe html={profile.full_name} /></h3>
+                    <p className="text-slate-500 font-medium"><SandboxedIframe html={profile.email} /></p>
                   </div>
                   
                   <div>
                     <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Address</h4>
-                    <p className="text-slate-800" dangerouslySetInnerHTML={{ __html: profile.address }} />
+                    <p className="text-slate-800"><SandboxedIframe html={profile.address} /></p>
                   </div>
                   
                   <div>
                     <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Bio</h4>
-                    <p className="text-slate-800 leading-relaxed" dangerouslySetInnerHTML={{ __html: profile.bio }} />
+                    <p className="text-slate-800 leading-relaxed"><SandboxedIframe html={profile.bio} /></p>
                   </div>
                 </div>
               ) : (
