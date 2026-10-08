@@ -17,7 +17,7 @@ export default function Lab7Index() {
       
       if (existing) {
         try {
-          await axios.post(`${API_BASE}/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
+          await axios.post(`${API_BASE}/api/instances/${existing}/heartbeat`, {}, { withCredentials: true, headers: { 'X-Variant-Session-ID': existing } });
         } catch (err) {
           newInstanceId = null;
         }
@@ -27,7 +27,7 @@ export default function Lab7Index() {
         const res = await axios.post(`${API_BASE}/api/instances/launch`, {
           lab_id: '7',
           variant_id: variant,
-        }, { withCredentials: true });
+        }, { withCredentials: true, headers: { 'X-Variant-Session-ID': existing } });
         newInstanceId = res.data.instance_id;
       }
       

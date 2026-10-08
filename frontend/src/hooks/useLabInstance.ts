@@ -110,7 +110,7 @@ export function useLabInstance(options: string | UseLabInstanceLegacyOptions) {
 
       if (slug) clearInstance(slug);
 
-      const eventUrl = `${API_BASE}/api/instances/${instanceId}/event`;
+      const eventUrl = `${API_BASE}/api/instances/${instanceId}/event?instance_id=${instanceId}`;
       const payload = JSON.stringify({ type: 'abandon' });
 
       if (navigator.sendBeacon) {

@@ -157,6 +157,17 @@ app.add_middleware(
 async def health_check():
     return {"status": "ok", "message": "New FastAPI Backend is running!"}
 
+import os
+if os.environ.get("DEBUG_IP") == "1":
+    @app.get("/api/debug/ip")
+    async def debug_ip(request: Request):
+        return {
+            "x-forwarded-for": request.headers.get("x-forwarded-for"),
+            "cf-connecting-ip": request.headers.get("cf-connecting-ip"),
+            "true-client-ip": request.headers.get("true-client-ip"),
+            "client_host": request.client.host if request.client else None
+        }
+
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(catalog_router, prefix=settings.API_V1_STR)
 app.include_router(instances_router, prefix=settings.API_V1_STR)

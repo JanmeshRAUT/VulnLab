@@ -24,7 +24,7 @@ export default function Lab2Sub2({ variantIdProp }: { variantIdProp?: string }) 
       // Try to heartbeat existing instance first
       if (existing) {
         try {
-          await axios.post(`${API_BASE}/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
+          await axios.post(`${API_BASE}/api/instances/${existing}/heartbeat`, {}, { withCredentials: true, headers: { 'X-Variant-Session-ID': existing } });
         } catch (e) {
           newInstanceId = null; // Heartbeat failed, need a new instance
         }
@@ -35,7 +35,7 @@ export default function Lab2Sub2({ variantIdProp }: { variantIdProp?: string }) 
         const res = await axios.post(`${API_BASE}/api/instances/launch`, {
           lab_id: '2',
           variant_id: variant,
-        }, { withCredentials: true });
+        }, { withCredentials: true, headers: { 'X-Variant-Session-ID': existing } });
         newInstanceId = res.data.instance_id;
       }
       

@@ -38,7 +38,7 @@ export default function Lab5Sub2({ variantIdProp }: { variantIdProp?: string }) 
       
       if (existing) {
         try {
-          await axios.post(`${API_BASE}/api/instances/${existing}/heartbeat`, {}, { withCredentials: true });
+          await axios.post(`${API_BASE}/api/instances/${existing}/heartbeat`, {}, { withCredentials: true, headers: { 'X-Variant-Session-ID': existing } });
         } catch (err) {
           newInstanceId = null;
         }
@@ -48,7 +48,7 @@ export default function Lab5Sub2({ variantIdProp }: { variantIdProp?: string }) 
         const res = await axios.post(`${API_BASE}/api/instances/launch`, {
           lab_id: '5',
           variant_id: `2${variant}`,
-        }, { withCredentials: true });
+        }, { withCredentials: true, headers: { 'X-Variant-Session-ID': existing } });
         newInstanceId = res.data.instance_id;
       }
       

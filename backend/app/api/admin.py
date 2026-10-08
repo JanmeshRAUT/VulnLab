@@ -830,8 +830,12 @@ async def create_or_update_role(request: Request, data: RoleMutationRequest):
     if role_name in ["super_admin", "admin", "instructor", "student"]:
         raise HTTPException(status_code=403, detail="Cannot edit built-in roles")
 
-    if len(data.permissions) >= len(PERMISSION_CATEGORIES) and identity["role"] != "super_admin":
-        raise HTTPException(status_code=403, detail="Only super_admin can create roles with all permissions")
+    if identity["role"] != "super_admin":
+        for perm in data.permissions:
+            if not await has_permission(identity["role"], perm):
+                raise HTTPException(status_code=403, detail=f"Cannot assign permission you do not have: {perm}")
+            if perm in ["Manage Roles", "Platform Settings"]:
+                raise HTTPException(status_code=403, detail=f"Cannot assign restricted permission: {perm}")
 
     await safe_upsert(
         "roles",
