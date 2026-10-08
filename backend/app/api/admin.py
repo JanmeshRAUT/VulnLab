@@ -827,6 +827,12 @@ async def create_or_update_role(request: Request, data: RoleMutationRequest):
     timestamp = now_ts()
     role_name = normalize_role(data.name)
 
+    if role_name in ["super_admin", "admin", "instructor", "student"]:
+        raise HTTPException(status_code=403, detail="Cannot edit built-in roles")
+
+    if len(data.permissions) >= len(PERMISSION_CATEGORIES) and identity["role"] != "super_admin":
+        raise HTTPException(status_code=403, detail="Only super_admin can create roles with all permissions")
+
     await safe_upsert(
         "roles",
         {"name": role_name},
@@ -860,6 +866,9 @@ async def assign_role(request: Request, data: AssignRoleRequest):
     role_name = normalize_role(data.role)
     db = get_database()
     
+    if role_name == "super_admin" and identity["role"] != "super_admin":
+        raise HTTPException(status_code=403, detail="Only super_admin can assign the super_admin role")
+
     # Check if modifying own role
     if identity["user_id"] == data.student_id or identity["email"] == data.student_id:
         raise HTTPException(status_code=403, detail="Cannot change your own role")
@@ -1038,6 +1047,9 @@ from fastapi import UploadFile, File
 async def csv_import(request: Request, file: UploadFile = File(...)):
     identity = await require_permission(request, "Manage Access Control")
     content = await file.read()
+    if len(content) > 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size exceeds 1 MB limit")
+        
     reader = csv.DictReader(io.StringIO(content.decode("utf-8")))
     db = get_database()
     count = 0
@@ -1045,6 +1057,9 @@ async def csv_import(request: Request, file: UploadFile = File(...)):
     for row in reader:
         email = row.get("email")
         cohort = row.get("cohort", "default")
+        if len(cohort) > 100:
+            cohort = cohort[:100]
+
         if email:
             await db.users.update_one(
                 {"email": email.strip()},
@@ -1070,7 +1085,9 @@ async def bulk_grant(request: Request, data: BulkGrantRequest):
     if data.role:
         query["role"] = data.role
     if data.email_domain:
-        query["email"] = {"$regex": f"@{data.email_domain}$", "$options": "i"}
+        import re
+        escaped_domain = re.escape(data.email_domain)
+        query["email"] = {"$regex": f"@{escaped_domain}$", "$options": "i"}
         
     users = await db.users.find(query).to_list(None)
     timestamp = now_ts()

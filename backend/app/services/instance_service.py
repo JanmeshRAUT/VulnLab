@@ -111,29 +111,22 @@ async def cleanup_expired_instances():
     db = get_database()
     now = time.time()
     
-    # Mongo lock (lease) to prevent concurrent workers
-    lock_result = await db.locks.find_one_and_update(
-        {"_id": "cleanup_worker", "locked_until": {"$lt": now}},
-        {"$set": {"locked_until": now + 50}}, # 50 seconds lock
-        upsert=True
-    )
-    
-    # Note: If it didn't find the doc (because locked_until > now), upsert won't happen if another worker created it
-    # We can handle it robustly using update_one with upsert=True and returning the matched doc
-    lock_status = await db.locks.update_one(
-        {
-            "_id": "cleanup_worker",
-            "$or": [
-                {"locked_until": {"$exists": False}},
-                {"locked_until": {"$lt": now}}
-            ]
-        },
-        {"$set": {"locked_until": now + 50}},
-        upsert=True
-    )
-    
-    if lock_status.modified_count == 0 and lock_status.upserted_id is None:
-        # Lock not acquired
+    import pymongo.errors
+    try:
+        lock_status = await db.locks.update_one(
+            {
+                "_id": "cleanup_worker",
+                "$or": [
+                    {"locked_until": {"$exists": False}},
+                    {"locked_until": {"$lt": now}}
+                ]
+            },
+            {"$set": {"locked_until": now + 50}},
+            upsert=True
+        )
+        if lock_status.modified_count == 0 and lock_status.upserted_id is None:
+            return False
+    except pymongo.errors.DuplicateKeyError:
         return False
 
     # Mark active/created instances as expired if past TTL

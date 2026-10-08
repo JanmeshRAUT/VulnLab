@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
 from pydantic import validator
-from typing import List, Optional
+from typing import List, Optional, Any, Union
+import json
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Modern E-commerce Lab Backend"
@@ -18,11 +19,29 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     
-    ALLOWED_EMAIL_DOMAINS: List[str] = []
-    SUPER_ADMIN_EMAILS: List[str] = []
+    ALLOWED_EMAIL_DOMAINS: Any = []
+    SUPER_ADMIN_EMAILS: Any = []
     COOKIE_DOMAIN: Optional[str] = None
     
     FORWARDED_ALLOW_IPS: str = "127.0.0.1"
+
+    @validator('ALLOWED_EMAIL_DOMAINS', 'SUPER_ADMIN_EMAILS', pre=True)
+    def parse_string_list(cls, v: Any) -> List[str]:
+        if not v:
+            return []
+        if isinstance(v, list):
+            return [str(item).strip().lower() for item in v if str(item).strip()]
+        if isinstance(v, str):
+            v = v.strip()
+            if v.startswith('[') and v.endswith(']'):
+                try:
+                    parsed = json.loads(v)
+                    if isinstance(parsed, list):
+                        return [str(item).strip().lower() for item in parsed if str(item).strip()]
+                except json.JSONDecodeError:
+                    pass
+            return [item.strip().lower() for item in v.split(',') if item.strip()]
+        return []
 
     @validator('SECRET_KEY')
     def validate_secret_key(cls, v):

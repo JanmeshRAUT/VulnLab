@@ -38,7 +38,10 @@ export function useLabInstance(options: string | UseLabInstanceLegacyOptions) {
           const existingId = localStorage.getItem(storageKey);
           if (existingId) {
             try {
-              const res = await axios.post(`${API_BASE}/api/instances/${existingId}/heartbeat`, {}, { withCredentials: true });
+              const res = await axios.post(`${API_BASE}/api/instances/${existingId}/heartbeat`, {}, { 
+                withCredentials: true,
+                headers: { 'X-Variant-Session-ID': existingId }
+              });
               if (res.data.instance_status !== 'SOLVED' && res.data.instance_status !== 'ABANDONED') {
                 if (active) {
                   setInstanceId(existingId);
@@ -140,7 +143,10 @@ export function useLabInstance(options: string | UseLabInstanceLegacyOptions) {
       
       lastHeartbeat = now;
       heartbeatInFlight = true;
-      axios.post(`${API_BASE}/api/instances/${instanceId}/heartbeat`, {}, { withCredentials: true })
+      axios.post(`${API_BASE}/api/instances/${instanceId}/heartbeat`, {}, { 
+        withCredentials: true,
+        headers: { 'X-Variant-Session-ID': instanceId }
+      })
         .then(res => {
           if (res.data.instance_status === 'SOLVED' || res.data.instance_status === 'ABANDONED') {
             if (slug) clearInstance(slug);

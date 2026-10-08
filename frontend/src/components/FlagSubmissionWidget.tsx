@@ -26,7 +26,10 @@ export default function FlagSubmissionWidget() {
       const res = await axios.post(`${API_BASE}/api/instances/submit_flag`, {
         flag: flag.trim(),
         instance_id: instanceId
-      }, { withCredentials: true });
+      }, { 
+        withCredentials: true,
+        headers: { 'X-Variant-Session-ID': instanceId }
+      });
       
       if (res.data.success) {
         setStatus({type: 'success', message: res.data.message || 'Correct!'});

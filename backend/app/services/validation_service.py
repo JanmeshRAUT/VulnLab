@@ -6,19 +6,19 @@ async def submit_flag(instance_id: str, objective_id: str, submitted_flag: str):
     db = get_database()
     instance = await db.instances.find_one({'instance_id': instance_id})
     if not instance:
-        return False, "Instance not found."
+        return False, "Instance not found.", False
     
     if instance.get("status") not in ["ACTIVE", "CREATED"]:
-        return False, f"Instance is {instance.get('status')} and does not accept submissions."
+        return False, f"Instance is {instance.get('status')} and does not accept submissions.", False
 
     records = instance.get("state", {}).get("flag_records", [])
     record = next((item for item in records if item.get("objective_id") == objective_id), None)
     
     if not record:
-        return False, "Objective not found for this instance."
+        return False, "Objective not found for this instance.", False
     
     if record.get("solved_status"):
-        return False, "Already solved."
+        return False, "Already solved.", False
 
     stored_flag = record.get("flag_value", "")
     
@@ -38,7 +38,7 @@ async def submit_flag(instance_id: str, objective_id: str, submitted_flag: str):
                 }
             }
         )
-        return False, "Invalid flag."
+        return False, "Invalid flag.", False
 
     now = time.time()
     
@@ -69,7 +69,7 @@ async def submit_flag(instance_id: str, objective_id: str, submitted_flag: str):
     )
     
     if update_result.modified_count == 0:
-        return False, "Already solved or failed to update."
+        return False, "Already solved or failed to update.", False
         
     # Re-fetch instance to check overall completion
     instance = await db.instances.find_one({'instance_id': instance_id})
@@ -116,7 +116,7 @@ async def submit_flag(instance_id: str, objective_id: str, submitted_flag: str):
             upsert=True
         )
 
-    return True, "Correct!"
+    return True, "Correct!", all_solved
 
 async def issue_flag_for_instance(instance_id: str, objective_id: str):
     db = get_database()

@@ -120,14 +120,14 @@ async def auth_callback(request: Request):
     target = f"{settings.FRONTEND_URL}{next_url}" if next_url.startswith("/") else f"{settings.FRONTEND_URL}/labs"
     return RedirectResponse(url=target)
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 
 class ProfileUpdate(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=100)
     enrollment_id: str = Field(..., min_length=2, max_length=50)
 
 class SafeUserCreate(BaseModel):
-    email: str
+    email: EmailStr
     password: str = Field(..., min_length=12, max_length=128)
     full_name: str = Field(..., min_length=2, max_length=100)
     enrollment_id: str = Field(..., min_length=2, max_length=50)
@@ -237,7 +237,8 @@ async def update_profile(data: ProfileUpdate, user: dict = Depends(get_current_u
         )
         return {"success": True, "message": "Profile updated"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error updating profile: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while updating the profile")
 
 @router.post("/register")
 @limiter.limit("5/minute")

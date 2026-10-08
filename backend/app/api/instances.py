@@ -69,32 +69,34 @@ class LegacyFlagSubmitRequest(BaseModel):
 
 @router.post("/{instance_id}/submit-flag")
 @limiter.limit("10/minute")
-async def submit_instance_flag(request: Request, instance_id: str, req: InstanceFlagSubmitRequest):
-    success, message = await submit_flag(instance_id, req.objective_id, req.flag)
+async def submit_instance_flag(request: Request, instance_id: str, req: InstanceFlagSubmitRequest, instance: dict = Depends(get_valid_instance)):
+    # Use the verified instance_id from the dependency
+    valid_id = instance["instance_id"]
+    if instance_id != valid_id:
+        raise HTTPException(status_code=403, detail="Instance ID mismatch")
+    success, message, all_solved = await submit_flag(valid_id, req.objective_id, req.flag)
     if success:
-        await update_instance_status(instance_id, "SOLVED")
+        if all_solved:
+            await update_instance_status(valid_id, "SOLVED")
         return {"success": True, "message": message}
     return JSONResponse(status_code=400, content={"success": False, "error": message})
 
 @router.post("/submit_flag")
 @limiter.limit("10/minute")
-async def legacy_submit_flag(request: Request, req: LegacyFlagSubmitRequest):
-    instance_id = req.instance_id
-    if not instance_id:
-        return JSONResponse(status_code=400, content={"success": False, "error": "instance_id is required."})
+async def legacy_submit_flag(request: Request, req: LegacyFlagSubmitRequest, instance: dict = Depends(get_valid_instance)):
+    valid_id = instance["instance_id"]
+    if req.instance_id != valid_id:
+        raise HTTPException(status_code=403, detail="Instance ID mismatch")
     
-    instance = await get_instance(instance_id)
-    if not instance:
-        return JSONResponse(status_code=404, content={"success": False, "error": "Instance not found."})
-
     records = instance.get("state", {}).get("flag_records", [])
     matching = [r for r in records if r.get("flag_value", "").strip() == req.flag.strip()]
     
     if len(matching) != 1:
         return JSONResponse(status_code=400, content={"success": False, "error": "Invalid flag."})
 
-    success, message = await submit_flag(instance_id, matching[0].get("objective_id", ""), req.flag)
+    success, message, all_solved = await submit_flag(valid_id, matching[0].get("objective_id", ""), req.flag)
     if success:
-        await update_instance_status(instance_id, "SOLVED")
+        if all_solved:
+            await update_instance_status(valid_id, "SOLVED")
         return {"success": True, "message": message}
     return JSONResponse(status_code=400, content={"success": False, "error": message})
