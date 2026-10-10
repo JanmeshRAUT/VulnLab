@@ -38,7 +38,7 @@ class ChatMessage(BaseModel):
     path: str = Field(..., max_length=500)
 
 @router.post("/chatbot")
-@limiter.limit("5/minute")
+@limiter.limit("20/minute")
 async def chatbot_endpoint(request: Request, chat_request: ChatMessage):
     lab_id = _extract_lab_id(chat_request.path)
     reply = engine.process(chat_request.message, lab_id)

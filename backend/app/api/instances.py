@@ -13,7 +13,7 @@ from app.api.auth import get_current_user
 from app.core.limiter import limiter
 
 @router.post("/launch", response_model=InstanceResponse)
-@limiter.limit("5/minute")
+@limiter.limit("10/minute")
 async def launch(req: LaunchRequest, request: Request, user: dict = Depends(get_current_user)):
     user_id = str(user["_id"])
     email = user.get("email", "").lower()
@@ -68,7 +68,8 @@ class LegacyFlagSubmitRequest(BaseModel):
     instance_id: str
 
 @router.post("/{instance_id}/submit-flag")
-@limiter.limit("10/minute")
+@limiter.limit("20/minute")
+@limiter.limit("5/minute", key_func=lambda req: f"obj:{getattr(req.scope.get('parsed_body', {}), 'objective_id', 'none')}")
 async def submit_instance_flag(request: Request, instance_id: str, req: InstanceFlagSubmitRequest, instance: dict = Depends(get_valid_instance)):
     # Use the verified instance_id from the dependency
     valid_id = instance["instance_id"]
@@ -82,7 +83,7 @@ async def submit_instance_flag(request: Request, instance_id: str, req: Instance
     return JSONResponse(status_code=400, content={"success": False, "error": message})
 
 @router.post("/submit_flag")
-@limiter.limit("10/minute")
+@limiter.limit("20/minute")
 async def legacy_submit_flag(request: Request, req: LegacyFlagSubmitRequest, instance: dict = Depends(get_valid_instance)):
     valid_id = instance["instance_id"]
     if req.instance_id != valid_id:

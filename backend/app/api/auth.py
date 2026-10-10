@@ -11,7 +11,7 @@ from app.models.user import UserCreate, UserLogin
 from app.api.admin import role_permissions
 from bson import ObjectId
 import logging
-from app.core.limiter import limiter
+from app.core.limiter import limiter, get_strict_ip
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +46,7 @@ def is_valid_domain(email: str, hd: str = None) -> bool:
     return True
 
 @router.get("/login")
+@limiter.limit("10/minute", key_func=get_strict_ip)
 async def login(request: Request, source: str = 'login', next_url: str = ''):
     """Initiate Google OAuth flow."""
     request.session['oauth_source'] = source
@@ -241,7 +242,7 @@ async def update_profile(data: ProfileUpdate, user: dict = Depends(get_current_u
         raise HTTPException(status_code=500, detail="An error occurred while updating the profile")
 
 @router.post("/register")
-@limiter.limit("5/minute")
+@limiter.limit("5/minute", key_func=get_strict_ip)
 async def register(request: Request, user_data: SafeUserCreate):
     if settings.ENVIRONMENT == "prod":
         raise HTTPException(status_code=403, detail="Local registration is disabled in production")
@@ -276,7 +277,7 @@ async def register(request: Request, user_data: SafeUserCreate):
     return {"success": True, "message": "User registered successfully"}
 
 @router.post("/login/local")
-@limiter.limit("10/minute")
+@limiter.limit("10/minute", key_func=get_strict_ip)
 async def login_local(request: Request, data: UserLogin):
     db = get_database()
     user = await db.users.find_one({"email": data.email})
