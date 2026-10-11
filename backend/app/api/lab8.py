@@ -6,7 +6,7 @@ from typing import Optional, Dict, Any
 
 from app.api.deps import get_valid_instance
 from app.services.validation_service import issue_flag_for_instance
-from app.core.database import get_database
+import app.core.database as database_module
 
 router = APIRouter(prefix="/lab8", tags=["Lab 8"])
 
@@ -154,7 +154,7 @@ async def update_lab8_profile(
     if instance.get("lab_id") != "8":
         raise HTTPException(status_code=403, detail="Instance mismatch: lab is not 8")
 
-    db = get_database()
+    db = database_module.get_database()
     profile_dict = req.model_dump() if hasattr(req, "model_dump") else req.dict()
 
     combined = " ".join(str(v) for v in profile_dict.values())

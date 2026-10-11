@@ -62,6 +62,8 @@ export default function AdminDashboard() {
   const [filterRole, setFilterRole] = useState(searchParams.get('role') || '');
   const [filterCategory, setFilterCategory] = useState(searchParams.get('category') || '');
   const [range, setRange] = useState(searchParams.get('range') || 'weekly');
+  const [page, setPage] = useState(1);
+  const [limit] = useState(50);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [opNotice, setOpNotice] = useState<{ text: string; tone: 'green' | 'red' } | null>(null);
@@ -86,6 +88,10 @@ export default function AdminDashboard() {
   }, [searchParams]);
 
   useEffect(() => {
+    setPage(1);
+  }, [query, filterStatus, filterRole, filterCategory, activeSection]);
+
+  useEffect(() => {
     const params = new URLSearchParams();
     params.set('section', activeSection);
     if (query) params.set('q', query);
@@ -100,7 +106,7 @@ export default function AdminDashboard() {
     setLoading(true);
     try {
       const res = await axios.get(`${API_BASE}/api/admin/dashboard`, {
-        params: { q: query, status: filterStatus, role: filterRole, category: filterCategory, range },
+        params: { q: query, status: filterStatus, role: filterRole, category: filterCategory, range, page, limit },
         withCredentials: true,
       });
       setData(res.data);
@@ -116,7 +122,7 @@ export default function AdminDashboard() {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
-  }, [query, filterStatus, filterRole, filterCategory, range]);
+  }, [query, filterStatus, filterRole, filterCategory, range, page, limit]);
 
   useEffect(() => {
     if (!opNotice) return;
@@ -137,9 +143,10 @@ export default function AdminDashboard() {
   const auditLogs = data?.audit_logs || [];
   const notifications = data?.notifications || [];
   const stats = data?.statistics || [];
+  const pagination = data?.pagination || { page: 1, limit: 50, total_students: students.length, total_sessions: sessions.length, total_audit_logs: auditLogs.length, total_pages_students: 1, total_pages_sessions: 1, total_pages_audit_logs: 1 };
 
-  const visibleStudents = useMemo(() => students.slice(0, 12), [students]);
-  const visibleSessions = useMemo(() => sessions.slice(0, 12), [sessions]);
+  const visibleStudents = students;
+  const visibleSessions = sessions;
 
   const submitAccessAction = async () => {
     const student = selectedStudent.trim().toLowerCase();
@@ -342,6 +349,27 @@ export default function AdminDashboard() {
                 </tbody>
               </table>
             </div>
+            <div className="flex items-center justify-between border-t border-slate-100 pt-4 mt-4 text-xs font-semibold text-slate-500">
+              <div>
+                Showing {students.length} of {pagination.total_students || students.length} students (Page {page} of {pagination.total_pages_students || 1})
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={page <= 1}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 hover:bg-slate-50 disabled:opacity-40 transition-colors"
+                >
+                  Previous
+                </button>
+                <button
+                  disabled={page >= (pagination.total_pages_students || 1)}
+                  onClick={() => setPage(p => p + 1)}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 hover:bg-slate-50 disabled:opacity-40 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </SectionCard>
         )}
 
@@ -428,6 +456,27 @@ export default function AdminDashboard() {
                     {visibleSessions.map((session: any) => <tr key={session.instance_id} className="hover:bg-slate-50/80"><td className="py-4 pr-4 font-mono text-xs text-slate-500">{session.instance_id}</td><td className="py-4 pr-4 font-semibold text-slate-900">{session.student}</td><td className="py-4 pr-4 text-slate-700">{session.lab}</td><td className="py-4 pr-4 text-slate-700">{session.variant}</td><td className="py-4 pr-4"><Badge value={session.status} tone={session.status === 'SOLVED' ? 'green' : session.status === 'ABANDONED' ? 'red' : session.status === 'EXPIRED' ? 'slate' : 'orange'} /></td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.started_time}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.last_activity}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.solved_time || '-'}</td><td className="py-4 pr-4 text-slate-600 whitespace-nowrap">{session.expiration_time}</td><td className="py-4 pr-4 text-right whitespace-nowrap"><div className="inline-flex items-center gap-2"><button onClick={() => navigator.clipboard?.writeText(session.instance_id)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">View Session</button><button onClick={() => runSessionAction(session.instance_id, 'expire')} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">Force Expire</button><button onClick={() => runSessionAction(session.instance_id, 'terminate')} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">Terminate</button><button onClick={() => runSessionAction(session.instance_id, 'reset')} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-brand-orange hover:text-brand-orange transition-colors">Reset</button></div></td></tr>)}
                   </tbody>
                 </table>
+              </div>
+              <div className="flex items-center justify-between border-t border-slate-100 pt-4 mt-4 text-xs font-semibold text-slate-500">
+                <div>
+                  Showing {sessions.length} of {pagination.total_sessions || sessions.length} sessions (Page {page} of {pagination.total_pages_sessions || 1})
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    disabled={page <= 1}
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 hover:bg-slate-50 disabled:opacity-40 transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    disabled={page >= (pagination.total_pages_sessions || 1)}
+                    onClick={() => setPage(p => p + 1)}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 hover:bg-slate-50 disabled:opacity-40 transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </SectionCard>
             <SectionCard title="Audit Logs" subtitle="Track every administrative action across modules with role and IP context">

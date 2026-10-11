@@ -64,3 +64,91 @@ async def test_cannot_edit_builtin_roles(mock_has_perm, mock_identity):
         }, headers={"X-CSRF-Token": "test"}, cookies={"csrf_token": "test"})
         assert res.status_code == 403
         assert "Cannot edit built-in roles" in res.text
+
+
+@pytest.mark.asyncio
+@patch('app.api.admin.get_session_identity')
+@patch('app.api.admin.has_permission')
+async def test_dashboard_permission_filtering(mock_has_perm, mock_identity):
+    mock_identity.return_value = {"email": "admin@test.com", "role": "admin", "user_id": "123"}
+
+    # Case 1: Caller only has Manage Students
+    async def fake_has_perm(role, perm):
+        return perm == "Manage Students"
+
+    mock_has_perm.side_effect = fake_has_perm
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        res = await ac.get("/api/admin/dashboard")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["roles"] == []
+        assert data["sessions"] == []
+        assert data["audit_logs"] == []
+
+    # Case 2: Caller only has Manage Roles
+    async def fake_has_perm_roles(role, perm):
+        return perm == "Manage Roles"
+
+    mock_has_perm.side_effect = fake_has_perm_roles
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        res = await ac.get("/api/admin/dashboard")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["students"] == []
+        assert data["sessions"] == []
+        assert data["audit_logs"] == []
+
+
+@pytest.mark.asyncio
+@patch('app.api.admin.get_session_identity')
+@patch('app.api.admin.has_permission')
+async def test_dashboard_pagination_bounds(mock_has_perm, mock_identity):
+    mock_identity.return_value = {"email": "admin@test.com", "role": "admin", "user_id": "123"}
+    mock_has_perm.return_value = True
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        # Limit > 200 is rejected by FastAPI bounds
+        res_over = await ac.get("/api/admin/dashboard?limit=250")
+        assert res_over.status_code == 422
+
+        # Limit < 1 is rejected by FastAPI bounds
+        res_under = await ac.get("/api/admin/dashboard?limit=0")
+        assert res_under.status_code == 422
+
+        # Valid pagination returns 200 and pagination metadata
+        res_valid = await ac.get("/api/admin/dashboard?page=1&limit=50")
+        assert res_valid.status_code == 200
+        data = res_valid.json()
+        assert "pagination" in data
+        assert data["pagination"]["page"] == 1
+        assert data["pagination"]["limit"] == 50
+
+
+@pytest.mark.asyncio
+@patch('app.api.admin.get_session_identity')
+@patch('app.api.admin.has_permission')
+async def test_bulk_grant_empty_filter_rejected(mock_has_perm, mock_identity):
+    mock_identity.return_value = {"email": "admin@test.com", "role": "admin", "user_id": "123"}
+    mock_has_perm.return_value = True
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        # No filter and all_users=False -> 400
+        res_rejected = await ac.post(
+            "/api/admin/access/bulk-grant",
+            json={"lab_ids": ["lab-1"], "permission": "Allowed"},
+            headers={"X-CSRF-Token": "test"},
+            cookies={"csrf_token": "test"},
+        )
+        assert res_rejected.status_code == 400
+        assert "At least one filter" in res_rejected.text
+
+        # With all_users=True -> accepted
+        res_allowed = await ac.post(
+            "/api/admin/access/bulk-grant",
+            json={"lab_ids": ["lab-1"], "permission": "Allowed", "all_users": True},
+            headers={"X-CSRF-Token": "test"},
+            cookies={"csrf_token": "test"},
+        )
+        assert res_allowed.status_code == 200
+        assert res_allowed.json().get("success") is True
+

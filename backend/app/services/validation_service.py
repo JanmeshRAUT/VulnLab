@@ -1,9 +1,9 @@
 import time
 import hmac
-from app.core.database import get_database
+import app.core.database as database_module
 
 async def submit_flag(instance_id: str, objective_id: str, submitted_flag: str):
-    db = get_database()
+    db = database_module.get_database()
     instance = await db.instances.find_one({'instance_id': instance_id})
     if not instance:
         return False, "Instance not found.", False
@@ -119,7 +119,7 @@ async def submit_flag(instance_id: str, objective_id: str, submitted_flag: str):
     return True, "Correct!", all_solved
 
 async def issue_flag_for_instance(instance_id: str, objective_id: str):
-    db = get_database()
+    db = database_module.get_database()
     from app.services.instance_service import _new_flag_value
     
     instance = await db.instances.find_one({'instance_id': instance_id})

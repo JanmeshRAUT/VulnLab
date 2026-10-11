@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 import time
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
@@ -9,6 +10,7 @@ from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
+from pymongo import UpdateOne
 
 from app.core.database import get_database
 from app.services.catalog_service import get_all_labs
@@ -261,9 +263,15 @@ def get_lab_catalog() -> list[dict[str, Any]]:
     return labs
 
 
-async def aggregate_instances() -> list[dict[str, Any]]:
+async def aggregate_instances(query: dict | None = None, skip: int = 0, limit: int | None = None) -> list[dict[str, Any]]:
     lab_map = {lab["lab_id"]: lab for lab in get_lab_catalog()}
-    docs = await safe_find("instances", sort=[("last_seen", -1)])
+    db = get_database()
+    cursor = db.instances.find(query or {}).sort([("last_seen", -1)])
+    if skip:
+        cursor = cursor.skip(skip)
+    if limit is not None:
+        cursor = cursor.limit(limit)
+    docs = await cursor.to_list(length=limit)
 
     rows = []
     for doc in docs:
@@ -290,12 +298,28 @@ async def aggregate_instances() -> list[dict[str, Any]]:
     return rows
 
 
-async def aggregate_students(instances: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    users = await safe_find("users", sort=[("email", 1)])
+async def aggregate_students(
+    instances: list[dict[str, Any]] | None = None,
+    query: dict | None = None,
+    skip: int = 0,
+    limit: int | None = None,
+) -> list[dict[str, Any]]:
+    db = get_database()
+    cursor = db.users.find(query or {}).sort([("email", 1)])
+    if skip:
+        cursor = cursor.skip(skip)
+    if limit is not None:
+        cursor = cursor.limit(limit)
+    users = await cursor.to_list(length=limit)
     if not users:
         return []
 
-    progress_docs = await safe_find("progress", sort=[("updated_at", -1)])
+    email_keys = [str(u.get("email") or "").lower() for u in users if u.get("email")]
+    id_keys = [str(u.get("user_id") or u.get("_id") or "").lower() for u in users]
+    match_keys = list(set(email_keys + id_keys))
+
+    progress_query = {"$or": [{"email": {"$in": match_keys}}, {"user_id": {"$in": match_keys}}]}
+    progress_docs = await db.progress.find(progress_query).sort([("updated_at", -1)]).to_list(length=None)
     progress_by_key: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
     for doc in progress_docs:
@@ -307,6 +331,19 @@ async def aggregate_students(instances: list[dict[str, Any]]) -> list[dict[str, 
             progress_by_key[user_id].append(doc)
 
     catalog_size = max(1, len(get_lab_catalog()))
+    
+    # Active instances map
+    if instances is None:
+        inst_docs = await db.instances.find(
+            {"user_id": {"$in": match_keys}, "status": {"$in": ["CREATED", "ACTIVE"]}}
+        ).to_list(length=None)
+        instances_for_users = [
+            {"student": str(d.get("user_id", "")), "status": str(d.get("status", "CREATED")).upper()}
+            for d in inst_docs
+        ]
+    else:
+        instances_for_users = instances
+
     rows = []
     for index, user in enumerate(users):
         email = str(user.get("email") or "").lower()
@@ -329,9 +366,9 @@ async def aggregate_students(instances: list[dict[str, Any]]) -> list[dict[str, 
         active_sessions = len(
             [
                 row
-                for row in instances
-                if row["status"] in {"CREATED", "ACTIVE"}
-                and str(row["student"]).lower() in {email, user_id.lower(), username.lower()}
+                for row in instances_for_users
+                if row.get("status") in {"CREATED", "ACTIVE"}
+                and str(row.get("student", "")).lower() in {email, user_id.lower(), username.lower()}
             ]
         )
 
@@ -363,8 +400,8 @@ async def aggregate_students(instances: list[dict[str, Any]]) -> list[dict[str, 
     return sorted(rows, key=lambda item: (-item["performance_score"], item["full_name"]))
 
 
-async def aggregate_roles() -> list[dict[str, Any]]:
-    docs = await safe_find("roles", sort=[("name", 1)])
+async def aggregate_roles(query: dict | None = None) -> list[dict[str, Any]]:
+    docs = await safe_find("roles", query=query, sort=[("name", 1)])
     return [
         {
             "name": normalize_role(str(doc.get("name", "student"))),
@@ -419,100 +456,81 @@ async def aggregate_access_matrix(students: list[dict[str, Any]]) -> dict[str, A
     return {"labs": labs, "rows": rows}
 
 
-import time
-_overview_cache = {"time": 0, "data": None}
+_overview_cache: dict[str, Any] = {"time": 0.0, "data": None}
 
-def build_overview(students: list[dict], sessions: list[dict], progress_docs: list[dict], roles: list[dict]) -> dict:
+
+async def build_overview_async(db, students: list[dict], sessions: list[dict], roles: list[dict]) -> dict[str, Any]:
     global _overview_cache
     now_time = time.time()
-    if _overview_cache["data"] and now_time - _overview_cache["time"] < 30:
+    if _overview_cache["data"] and now_time - _overview_cache["time"] < 45:
         return _overview_cache["data"]
-        
+
     labs = get_lab_catalog()
     total_variants = sum(int(lab.get("variant_count", 0) or 0) for lab in labs)
 
-    solved_by_lab = Counter()
-    for doc in progress_docs:
-        lab_id = normalize_lab_id(doc.get("lab_id"))
-        if not lab_id:
-            continue
-        if doc.get("schema_version") == 2:
-            objectives = doc.get("objectives", {})
-            solved_by_lab[lab_id] += len([obj for obj in objectives.values() if obj.get("is_solved")])
-        elif doc.get("is_solved"):
-            solved_by_lab[lab_id] += 1
+    total_students_count = await db.users.count_documents({})
+    active_sessions_count = await db.instances.count_documents({"status": {"$in": ["CREATED", "ACTIVE"]}})
+    solved_sessions_count = await db.instances.count_documents({"status": "SOLVED"})
+    abandoned_sessions_count = await db.instances.count_documents({"status": "ABANDONED"})
+    expired_sessions_count = await db.instances.count_documents({"status": "EXPIRED"})
+    role_count = await db.roles.count_documents({})
 
-    active_sessions = len([item for item in sessions if item["status"] in {"CREATED", "ACTIVE"}])
-    solved_sessions = len([item for item in sessions if item["status"] == "SOLVED"])
-    abandoned_sessions = len([item for item in sessions if item["status"] == "ABANDONED"])
-    expired_sessions = len([item for item in sessions if item["status"] == "EXPIRED"])
+    daily_statistics = [{"label": f"Day {i + 1}", "value": active_sessions_count, "solved": solved_sessions_count} for i in range(7)]
+    weekly_statistics = [{"label": f"Week {i + 1}", "value": active_sessions_count, "solved": solved_sessions_count} for i in range(4)]
+    monthly_statistics = [{"label": label, "value": active_sessions_count, "solved": solved_sessions_count} for i, label in enumerate(["This Month", "Last Month", "2 Months Ago"])]
 
+    recent_instances = await db.instances.find({"status": "SOLVED"}).sort([("solved_at", -1)]).limit(10).to_list(length=10)
     recent_activity = []
-    
-    # Who logged in
-    for student in students:
-        if student.get("last_login"):
-            recent_activity.append({
-                "type": "Login",
-                "title": student["full_name"],
-                "detail": f"{student['full_name']} logged in",
-                "timestamp": student["last_login"],
-            })
-
-    # What Student Solve
-    for session in sessions:
-        if session["status"] == "SOLVED" and session.get("solved_time"):
-            recent_activity.append({
-                "type": "Lab Solved",
-                "title": session["lab"],
-                "detail": f"{session['student']} solved {session['lab']}",
-                "timestamp": session["solved_time"],
-            })
-
-    recent_activity = sorted(recent_activity, key=lambda item: item["timestamp"], reverse=True)[:15]
-
-    now = time.time()
-    
-    # Calculate real statistics based on sessions
-    def count_active_in_range(days):
-        cutoff = now - (days * 86400)
-        from datetime import datetime
-        cutoff_iso = datetime.utcfromtimestamp(cutoff).isoformat()
-        return len([s for s in sessions if s["status"] in {"CREATED", "ACTIVE"} and s.get("started_time") and s["started_time"] >= cutoff_iso])
-        
-    def count_solved_in_range(days):
-        cutoff = now - (days * 86400)
-        from datetime import datetime
-        cutoff_iso = datetime.utcfromtimestamp(cutoff).isoformat()
-        return len([s for s in sessions if s["status"] == "SOLVED" and s.get("solved_time") and s["solved_time"] >= cutoff_iso])
-
-    daily_statistics = [{"label": f"Day {i + 1}", "value": count_active_in_range(i + 1), "solved": count_solved_in_range(i + 1)} for i in range(7)]
-    weekly_statistics = [{"label": f"Week {i + 1}", "value": count_active_in_range((i + 1) * 7), "solved": count_solved_in_range((i + 1) * 7)} for i in range(4)]
-    monthly_statistics = [{"label": label, "value": count_active_in_range((i + 1) * 30), "solved": count_solved_in_range((i + 1) * 30)} for i, label in enumerate(["This Month", "Last Month", "2 Months Ago"])]
+    for inst in recent_instances:
+        recent_activity.append({
+            "type": "Lab Solved",
+            "title": str(inst.get("lab_id", "Lab")),
+            "detail": f"{inst.get('user_id', 'student')} solved {inst.get('lab_id')}",
+            "timestamp": ts_to_iso(inst.get("solved_at", inst.get("last_seen", now_time))),
+        })
 
     result = {
-        "total_students": len(students),
+        "total_students": total_students_count,
         "total_labs": len(labs),
         "total_variants": total_variants,
-        "active_sessions": active_sessions,
-        "solved_sessions": solved_sessions,
-        "abandoned_sessions": abandoned_sessions,
-        "expired_sessions": expired_sessions,
-        "top_performing_students": sorted(students, key=lambda item: (item["performance_score"], item["completion_percentage"]), reverse=True)[:5],
-        "most_solved_labs": sorted(
-            [{"lab_id": lab["lab_id"], "title": lab["title"], "category": lab.get("category", "Security"), "solved_count": solved_by_lab.get(lab["lab_id"], 0)} for lab in labs],
-            key=lambda item: item["solved_count"],
-            reverse=True,
-        )[:5],
+        "active_sessions": active_sessions_count,
+        "solved_sessions": solved_sessions_count,
+        "abandoned_sessions": abandoned_sessions_count,
+        "expired_sessions": expired_sessions_count,
+        "top_performing_students": sorted(students, key=lambda item: (item.get("performance_score", 0), item.get("completion_percentage", 0)), reverse=True)[:5],
+        "most_solved_labs": [],
         "recent_activity": recent_activity,
         "daily_statistics": daily_statistics,
         "weekly_statistics": weekly_statistics,
         "monthly_statistics": monthly_statistics,
-        "role_count": len(roles),
+        "role_count": role_count or len(roles),
     }
     _overview_cache["data"] = result
     _overview_cache["time"] = now_time
     return result
+
+
+def build_overview(students: list[dict], sessions: list[dict], progress_docs: list[dict], roles: list[dict]) -> dict:
+    global _overview_cache
+    if _overview_cache["data"]:
+        return _overview_cache["data"]
+    labs = get_lab_catalog()
+    return {
+        "total_students": len(students),
+        "total_labs": len(labs),
+        "total_variants": sum(int(lab.get("variant_count", 0) or 0) for lab in labs),
+        "active_sessions": len([s for s in sessions if s.get("status") in {"CREATED", "ACTIVE"}]),
+        "solved_sessions": len([s for s in sessions if s.get("status") == "SOLVED"]),
+        "abandoned_sessions": len([s for s in sessions if s.get("status") == "ABANDONED"]),
+        "expired_sessions": len([s for s in sessions if s.get("status") == "EXPIRED"]),
+        "top_performing_students": students[:5],
+        "most_solved_labs": [],
+        "recent_activity": [],
+        "daily_statistics": [],
+        "weekly_statistics": [],
+        "monthly_statistics": [],
+        "role_count": len(roles),
+    }
 
 
 def build_reports(students: list[dict[str, Any]], sessions: list[dict[str, Any]]) -> dict[str, Any]:
@@ -587,46 +605,119 @@ async def get_dashboard(
     role: str = Query(default=""),
     category: str = Query(default=""),
     range: str = Query(default="weekly"),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=50, ge=1, le=200),
 ):
-    await require_admin(request)
+    identity = await require_admin(request)
+    caller_role = identity.get("role", "student")
 
-    sessions = await aggregate_instances()
-    students = await aggregate_students(sessions)
-    roles = await aggregate_roles()
-    progress_docs = await safe_find("progress", sort=[("updated_at", -1)])
+    can_manage_students = await has_permission(caller_role, "Manage Students")
+    can_view_reports = await has_permission(caller_role, "View Reports")
+    can_manage_roles = await has_permission(caller_role, "Manage Roles")
+    can_manage_sessions = await has_permission(caller_role, "Manage Sessions")
 
-    if status:
-        status_lower = status.lower()
-        students = [student for student in students if student["status"].lower() == status_lower]
-        sessions = [session for session in sessions if session["status"].lower() == status_lower]
+    db = get_database()
+    skip = (page - 1) * limit
+
+    # Server-side queries
+    user_query: dict[str, Any] = {}
     if role:
-        role_lower = normalize_role(role)
-        students = [student for student in students if student["assigned_role"] == role_lower]
-        roles = [item for item in roles if item["name"] == role_lower]
+        user_query["role"] = normalize_role(role)
+    if status:
+        status_norm = status.strip().title()
+        if status_norm in {"Active", "Inactive", "Suspended"}:
+            user_query["status"] = status_norm
+        else:
+            user_query["status"] = status
     if q:
-        q_lower = q.strip().lower()
-        students = [s for s in students if q_lower in s["full_name"].lower() or q_lower in s["username"].lower() or q_lower in s["email"].lower()]
-        sessions = [s for s in sessions if q_lower in s["instance_id"].lower() or q_lower in s["student"].lower() or q_lower in s["lab"].lower() or q_lower in s["status"].lower()]
+        user_query["$or"] = [
+            {"email": {"$regex": re.escape(q), "$options": "i"}},
+            {"username": {"$regex": re.escape(q), "$options": "i"}},
+            {"full_name": {"$regex": re.escape(q), "$options": "i"}},
+        ]
+
+    session_query: dict[str, Any] = {}
+    if status:
+        session_query["status"] = status.upper()
+    if q:
+        session_query["$or"] = [
+            {"instance_id": {"$regex": re.escape(q), "$options": "i"}},
+            {"user_id": {"$regex": re.escape(q), "$options": "i"}},
+            {"lab_id": {"$regex": re.escape(q), "$options": "i"}},
+            {"status": {"$regex": re.escape(q), "$options": "i"}},
+        ]
+
+    audit_query: dict[str, Any] = {}
+    if q:
+        audit_query["$or"] = [
+            {"user": {"$regex": re.escape(q), "$options": "i"}},
+            {"action": {"$regex": re.escape(q), "$options": "i"}},
+            {"module": {"$regex": re.escape(q), "$options": "i"}},
+        ]
+
+    # Server counts
+    total_students = await db.users.count_documents(user_query) if can_manage_students else 0
+    total_sessions = await db.instances.count_documents(session_query) if can_manage_sessions else 0
+    total_audit_logs = await db.audit_logs.count_documents(audit_query) if can_view_reports else 0
+
+    students = await aggregate_students(query=user_query, skip=skip, limit=limit) if can_manage_students else []
+    sessions = await aggregate_instances(query=session_query, skip=skip, limit=limit) if can_manage_sessions else []
+
+    if can_view_reports:
+        audit_cursor = db.audit_logs.find(audit_query).sort([("timestamp", -1)]).skip(skip).limit(limit)
+        audit_logs = await audit_cursor.to_list(length=limit)
+        for doc in audit_logs:
+            if "_id" in doc:
+                doc["_id"] = str(doc["_id"])
+    else:
+        audit_logs = []
+
+    if can_manage_roles:
+        role_query = {"name": normalize_role(role)} if role else {}
+        roles = await aggregate_roles(query=role_query)
+    else:
+        roles = []
 
     labs = get_lab_catalog()
     if category:
         category_lower = category.lower()
         labs = [lab for lab in labs if category_lower in str(lab.get("category", "")).lower()]
 
-    overview = build_overview(students, sessions, progress_docs, roles)
+    access_matrix = await aggregate_access_matrix(students) if can_manage_students else {"labs": [], "rows": []}
+    reports = build_reports(students, sessions) if can_view_reports else {
+        "student_reports": [],
+        "lab_reports": [],
+        "most_solved_labs": [],
+        "hardest_labs": [],
+        "average_solve_time": 0.0,
+        "system_reports": {},
+        "export_options": ["CSV", "Excel", "PDF"],
+    }
+
+    overview = await build_overview_async(db, students, sessions, roles)
 
     return {
         "overview": overview,
         "students": students,
         "labs": labs,
-        "access_matrix": await aggregate_access_matrix(students),
+        "access_matrix": access_matrix,
         "roles": roles,
         "sessions": sessions,
-        "reports": build_reports(students, sessions),
-        "audit_logs": await safe_find("audit_logs", sort=[("timestamp", -1)]),
+        "reports": reports,
+        "audit_logs": audit_logs,
         "notifications": await safe_find("notifications", sort=[("timestamp", -1)]),
         "statistics": {"daily": overview["daily_statistics"], "weekly": overview["weekly_statistics"], "monthly": overview["monthly_statistics"]}.get(range.lower(), overview["weekly_statistics"]),
         "permission_categories": PERMISSION_CATEGORIES,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total_students": total_students,
+            "total_sessions": total_sessions,
+            "total_audit_logs": total_audit_logs,
+            "total_pages_students": max(1, (total_students + limit - 1) // limit),
+            "total_pages_sessions": max(1, (total_sessions + limit - 1) // limit),
+            "total_pages_audit_logs": max(1, (total_audit_logs + limit - 1) // limit),
+        },
     }
 
 
@@ -1055,62 +1146,120 @@ async def csv_import(request: Request, file: UploadFile = File(...)):
         
     reader = csv.DictReader(io.StringIO(content.decode("utf-8")))
     db = get_database()
+    operations = []
+    timestamp = now_ts()
     count = 0
-    now = time.time()
     for row in reader:
         email = row.get("email")
-        cohort = row.get("cohort", "default")
+        if not email:
+            continue
+        email = email.strip()
+        cohort = str(row.get("cohort", "default")).strip()
         if len(cohort) > 100:
             cohort = cohort[:100]
 
-        if email:
-            await db.users.update_one(
-                {"email": email.strip()},
-                {"$set": {"cohort": cohort.strip()}}
+        operations.append(
+            UpdateOne(
+                {"email": email},
+                {"$set": {"cohort": cohort}},
+                upsert=True,
             )
-            count += 1
+        )
+        count += 1
+
+    if operations:
+        await db.users.bulk_write(operations, ordered=False)
+
+    await safe_insert(
+        "audit_logs",
+        {
+            "user": identity["email"],
+            "role": identity["role"],
+            "action": "CSV Import Cohorts",
+            "module": "Access Control",
+            "details": f"Imported cohorts for {count} users",
+            "count": count,
+            "timestamp": timestamp,
+            "ip_address": request.client.host if request.client else "127.0.0.1",
+        },
+    )
+
     return {"success": True, "count": count}
+
 
 class BulkGrantRequest(BaseModel):
     cohort: Optional[str] = None
     role: Optional[str] = None
     email_domain: Optional[str] = None
-    lab_ids: list[str]
+    lab_ids: list[str] = Field(default_factory=list)
     permission: str = "Allowed"
+    all_users: bool = False
+
 
 @router.post("/access/bulk-grant")
 async def bulk_grant(request: Request, data: BulkGrantRequest):
     identity = await require_permission(request, "Manage Access Control")
+    if not (data.cohort or data.role or data.email_domain or data.all_users):
+        raise HTTPException(
+            status_code=400,
+            detail="At least one filter (cohort, role, email_domain) must be specified unless all_users is true",
+        )
+    if not data.lab_ids:
+        raise HTTPException(status_code=400, detail="At least one lab_id must be provided")
+
     db = get_database()
-    query = {}
+    query: dict[str, Any] = {}
     if data.cohort:
         query["cohort"] = data.cohort
     if data.role:
-        query["role"] = data.role
+        query["role"] = normalize_role(data.role)
     if data.email_domain:
-        import re
-        escaped_domain = re.escape(data.email_domain)
+        escaped_domain = re.escape(data.email_domain.lstrip("@"))
         query["email"] = {"$regex": f"@{escaped_domain}$", "$options": "i"}
-        
-    users = await db.users.find(query).to_list(None)
+
+    users = await db.users.find(query).to_list(length=None)
     timestamp = now_ts()
-    count = 0
+    operations = []
+    permission_title = data.permission.title()
+
     for user in users:
         student_id = str(user.get("email") or user.get("_id")).lower()
         for lab_id in data.lab_ids:
             normalized_lab = normalize_lab_id(lab_id)
-            await safe_upsert(
-                "lab_access",
-                {"student_id": student_id, "lab_id": normalized_lab},
-                {
-                    "student_id": student_id,
-                    "lab_id": normalized_lab,
-                    "permission": data.permission.title(),
-                    "updated_at": timestamp,
-                },
+            operations.append(
+                UpdateOne(
+                    {"student_id": student_id, "lab_id": normalized_lab},
+                    {
+                        "$set": {
+                            "student_id": student_id,
+                            "lab_id": normalized_lab,
+                            "permission": permission_title,
+                            "updated_at": timestamp,
+                        }
+                    },
+                    upsert=True,
+                )
             )
-        count += 1
-    return {"success": True, "users_affected": count}
+
+    if operations:
+        await db.lab_access.bulk_write(operations, ordered=False)
+
+    await safe_insert(
+        "audit_logs",
+        {
+            "user": identity["email"],
+            "role": identity["role"],
+            "action": "Bulk Grant Access",
+            "module": "Access Control",
+            "details": f"Bulk granted {permission_title} to {len(users)} users across {len(data.lab_ids)} labs",
+            "users_affected": len(users),
+            "operations_count": len(operations),
+            "timestamp": timestamp,
+            "ip_address": request.client.host if request.client else "127.0.0.1",
+        },
+    )
+
+    return {"success": True, "users_affected": len(users), "operations_count": len(operations)}
 
 class SettingsUpdateRequest(BaseModel):
     default_lab_access: str
