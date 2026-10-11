@@ -10,7 +10,7 @@ router = APIRouter(prefix="/instances", tags=["instances"])
 from app.core.database import get_database
 from app.api.admin import normalize_lab_id, has_permission
 from app.api.auth import get_current_user
-from app.core.limiter import limiter
+from app.core.limiter import limiter, get_user_objective_key
 
 @router.post("/launch", response_model=InstanceResponse)
 @limiter.limit("10/minute")
@@ -69,7 +69,7 @@ class LegacyFlagSubmitRequest(BaseModel):
 
 @router.post("/{instance_id}/submit-flag")
 @limiter.limit("20/minute")
-@limiter.limit("5/minute", key_func=lambda request: f"obj:{getattr(request.scope.get('parsed_body', {}), 'objective_id', 'none')}")
+@limiter.limit("5/minute", key_func=get_user_objective_key)
 async def submit_instance_flag(request: Request, instance_id: str, req: InstanceFlagSubmitRequest, instance: dict = Depends(get_valid_instance)):
     # Use the verified instance_id from the dependency
     valid_id = instance["instance_id"]
