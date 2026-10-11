@@ -186,6 +186,14 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "Accept"],
 )
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception processing {request.method} {request.url.path}: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {str(exc)}"}
+    )
+
 @app.get("/health")
 async def health_check():
     from app.core.database import get_database

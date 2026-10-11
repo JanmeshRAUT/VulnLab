@@ -195,7 +195,7 @@ async def safe_find(collection_name: str, query: dict | None = None, sort: list 
         return docs
     except Exception as e:
         logger.error(f"Error in safe_find for {collection_name}: {e}")
-        raise
+        return []
 
 
 async def safe_upsert(collection_name: str, filter_query: dict, update_fields: dict) -> None:
@@ -402,16 +402,29 @@ async def aggregate_students(
 
 async def aggregate_roles(query: dict | None = None) -> list[dict[str, Any]]:
     docs = await safe_find("roles", query=query, sort=[("name", 1)])
-    return [
-        {
-            "name": normalize_role(str(doc.get("name", "student"))),
+    found_names = set()
+    roles_list = []
+    for doc in docs:
+        name = normalize_role(str(doc.get("name", "student")))
+        found_names.add(name)
+        roles_list.append({
+            "name": name,
             "description": str(doc.get("description", "")),
             "permissions": list(doc.get("permissions", [])),
             "is_default": bool(doc.get("is_default", False)),
             "updated_at": ts_to_iso(doc.get("updated_at", now_ts())),
-        }
-        for doc in docs
-    ]
+        })
+    if not query:
+        for def_role, def_perms in DEFAULT_ROLE_DEFINITIONS.items():
+            if def_role not in found_names:
+                roles_list.append({
+                    "name": def_role,
+                    "description": f"System defined {def_role.replace('_', ' ')}",
+                    "permissions": list(def_perms),
+                    "is_default": def_role == "student",
+                    "updated_at": ts_to_iso(now_ts()),
+                })
+    return roles_list
 
 
 async def aggregate_access_matrix(students: list[dict[str, Any]]) -> dict[str, Any]:
@@ -655,70 +668,75 @@ async def get_dashboard(
             {"module": {"$regex": re.escape(q), "$options": "i"}},
         ]
 
-    # Server counts
-    total_students = await db.users.count_documents(user_query) if can_manage_students else 0
-    total_sessions = await db.instances.count_documents(session_query) if can_manage_sessions else 0
-    total_audit_logs = await db.audit_logs.count_documents(audit_query) if can_view_reports else 0
+    try:
+        total_students = await db.users.count_documents(user_query) if can_manage_students else 0
+        total_sessions = await db.instances.count_documents(session_query) if can_manage_sessions else 0
+        total_audit_logs = await db.audit_logs.count_documents(audit_query) if can_view_reports else 0
 
-    students = await aggregate_students(query=user_query, skip=skip, limit=limit) if can_manage_students else []
-    sessions = await aggregate_instances(query=session_query, skip=skip, limit=limit) if can_manage_sessions else []
+        students = await aggregate_students(query=user_query, skip=skip, limit=limit) if can_manage_students else []
+        sessions = await aggregate_instances(query=session_query, skip=skip, limit=limit) if can_manage_sessions else []
 
-    if can_view_reports:
-        audit_cursor = db.audit_logs.find(audit_query).sort([("timestamp", -1)]).skip(skip).limit(limit)
-        audit_logs = await audit_cursor.to_list(length=limit)
-        for doc in audit_logs:
-            if "_id" in doc:
-                doc["_id"] = str(doc["_id"])
-    else:
-        audit_logs = []
+        if can_view_reports:
+            audit_cursor = db.audit_logs.find(audit_query).sort([("timestamp", -1)]).skip(skip).limit(limit)
+            audit_logs = await audit_cursor.to_list(length=limit)
+            for doc in audit_logs:
+                if "_id" in doc:
+                    doc["_id"] = str(doc["_id"])
+                if "timestamp" in doc:
+                    doc["timestamp"] = ts_to_iso(doc["timestamp"])
+        else:
+            audit_logs = []
 
-    if can_manage_roles:
-        role_query = {"name": normalize_role(role)} if role else {}
-        roles = await aggregate_roles(query=role_query)
-    else:
-        roles = []
+        if can_manage_roles:
+            role_query = {"name": normalize_role(role)} if role else {}
+            roles = await aggregate_roles(query=role_query)
+        else:
+            roles = []
 
-    labs = get_lab_catalog()
-    if category:
-        category_lower = category.lower()
-        labs = [lab for lab in labs if category_lower in str(lab.get("category", "")).lower()]
+        labs = get_lab_catalog()
+        if category:
+            category_lower = category.lower()
+            labs = [lab for lab in labs if category_lower in str(lab.get("category", "")).lower()]
 
-    access_matrix = await aggregate_access_matrix(students) if can_manage_students else {"labs": [], "rows": []}
-    reports = build_reports(students, sessions) if can_view_reports else {
-        "student_reports": [],
-        "lab_reports": [],
-        "most_solved_labs": [],
-        "hardest_labs": [],
-        "average_solve_time": 0.0,
-        "system_reports": {},
-        "export_options": ["CSV", "Excel", "PDF"],
-    }
+        access_matrix = await aggregate_access_matrix(students) if can_manage_students else {"labs": [], "rows": []}
+        reports = build_reports(students, sessions) if can_view_reports else {
+            "student_reports": [],
+            "lab_reports": [],
+            "most_solved_labs": [],
+            "hardest_labs": [],
+            "average_solve_time": 0.0,
+            "system_reports": {},
+            "export_options": ["CSV", "Excel", "PDF"],
+        }
 
-    overview = await build_overview_async(db, students, sessions, roles)
+        overview = await build_overview_async(db, students, sessions, roles)
 
-    return {
-        "overview": overview,
-        "students": students,
-        "labs": labs,
-        "access_matrix": access_matrix,
-        "roles": roles,
-        "sessions": sessions,
-        "reports": reports,
-        "audit_logs": audit_logs,
-        "notifications": await safe_find("notifications", sort=[("timestamp", -1)]),
-        "statistics": {"daily": overview["daily_statistics"], "weekly": overview["weekly_statistics"], "monthly": overview["monthly_statistics"]}.get(range.lower(), overview["weekly_statistics"]),
-        "permission_categories": PERMISSION_CATEGORIES,
-        "pagination": {
-            "page": page,
-            "limit": limit,
-            "total_students": total_students,
-            "total_sessions": total_sessions,
-            "total_audit_logs": total_audit_logs,
-            "total_pages_students": max(1, (total_students + limit - 1) // limit),
-            "total_pages_sessions": max(1, (total_sessions + limit - 1) // limit),
-            "total_pages_audit_logs": max(1, (total_audit_logs + limit - 1) // limit),
-        },
-    }
+        return {
+            "overview": overview,
+            "students": students,
+            "labs": labs,
+            "access_matrix": access_matrix,
+            "roles": roles,
+            "sessions": sessions,
+            "reports": reports,
+            "audit_logs": audit_logs,
+            "notifications": await safe_find("notifications", sort=[("timestamp", -1)]),
+            "statistics": {"daily": overview["daily_statistics"], "weekly": overview["weekly_statistics"], "monthly": overview["monthly_statistics"]}.get(range.lower(), overview["weekly_statistics"]),
+            "permission_categories": PERMISSION_CATEGORIES,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total_students": total_students,
+                "total_sessions": total_sessions,
+                "total_audit_logs": total_audit_logs,
+                "total_pages_students": max(1, (total_students + limit - 1) // limit),
+                "total_pages_sessions": max(1, (total_sessions + limit - 1) // limit),
+                "total_pages_audit_logs": max(1, (total_audit_logs + limit - 1) // limit),
+            },
+        }
+    except Exception as e:
+        logger.error("Error generating admin dashboard: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Server error generating dashboard: {str(e)}")
 
 
 @router.get("/students/{student_key}")

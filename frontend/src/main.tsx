@@ -43,7 +43,7 @@ axios.interceptors.response.use(
         }
       } else if (error.response.status >= 500) {
         if (!isLabEndpoint) {
-          toast.error('A server error occurred. Please try again later.');
+          toast.error(error.response.data?.detail || 'A server error occurred. Please try again later.');
         }
       }
     }
