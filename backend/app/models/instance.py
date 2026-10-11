@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List, Dict, Any
 
 class LaunchRequest(BaseModel):
@@ -6,11 +6,9 @@ class LaunchRequest(BaseModel):
     variant_id: str
 
 class InstanceFlagSubmitRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
     objective_id: Optional[str] = Field(None, alias="objectiveId")
     flag: str
-    
-    class Config:
-        populate_by_name = True
 
 
 class InstanceResponse(BaseModel):

@@ -4,27 +4,42 @@ services:
     env: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2
+    healthCheckPath: /health
     envVars:
+      # MongoDB Atlas connection string (e.g. mongodb+srv://<user>:<password>@cluster.mongodb.net/)
       - key: MONGO_URI
         sync: false
+      # MongoDB database name
       - key: MONGO_DB
         value: vuln_ecommerce_new
+      # 32+ character cryptographic secret key for signing session cookies
       - key: SECRET_KEY
         generateValue: true
+      # Primary frontend origin URL (e.g. https://vulnlab.vercel.app)
       - key: FRONTEND_URL
         sync: false
+      # Additional comma-separated frontend origins allowed for CORS
       - key: FRONTEND_URLS
         sync: false
+      # Google OAuth 2.0 Web Client credentials
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
+      # Environment profile: 'prod' activates strict session security, DB checks, and CSP
       - key: ENVIRONMENT
         value: prod
+      # Comma-separated list of allowed email domains for students (e.g. university.edu)
       - key: ALLOWED_EMAIL_DOMAINS
         sync: false
+      # Comma-separated list of super admin email addresses seeded on Google login
       - key: SUPER_ADMIN_EMAILS
         sync: false
+      # Trusted proxy IP/CIDR list for X-Forwarded-For resolution
       - key: FORWARDED_ALLOW_IPS
-        sync: false
+        value: "10.0.0.0/8,127.0.0.1"
+      # Set to 1 only if deploying without an initial super admin email
+      - key: ALLOW_NO_SUPERADMIN
+        value: "0"
+
