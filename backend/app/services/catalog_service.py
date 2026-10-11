@@ -89,8 +89,12 @@ LAB_CATALOG = [
         title="Cross-Site Scripting (XSS)",
         description="Inject malicious scripts into the application to execute arbitrary code.",
         variants=[
-            LabVariant(variant_id="a", title="CommentSection", description="Stored XSS."),
-            LabVariant(variant_id="b", title="SearchPage", description="Reflected XSS.")
+            LabVariant(variant_id="1a", title="HealthPlus Search", description="Basic Reflected XSS.", submodule="Reflected XSS"),
+            LabVariant(variant_id="1b", title="Support Tickets", description="Attribute & Event Handler XSS.", submodule="Reflected XSS"),
+            LabVariant(variant_id="1c", title="DevHub Feedback", description="Filter Bypass XSS.", submodule="Reflected XSS"),
+            LabVariant(variant_id="1d", title="SocialHub Feed", description="JavaScript Pseudo-protocol XSS.", submodule="Reflected XSS"),
+            LabVariant(variant_id="1e", title="DocVault Upload", description="Breakout Tag XSS.", submodule="Reflected XSS"),
+            LabVariant(variant_id="2", title="TechFusion Portal", description="Stored XSS in User Profile.", submodule="Stored XSS"),
         ]
     ),
 ]

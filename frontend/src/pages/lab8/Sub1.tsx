@@ -4,11 +4,17 @@ import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { ShieldAlert, ArrowLeft, Bug } from 'lucide-react';
 import SandboxedIframe from '@/components/SandboxedIframe';
+import { useLabInstance } from '../../hooks/useLabInstance';
 
 export default function Lab8Sub1() {
   const { variantId } = useParams<{ variantId: string }>();
   const variant = variantId || 'a';
   
+  const { instanceId } = useLabInstance({ 
+    labId: '8', 
+    variantId: `1${variant}` 
+  });
+
   const [inputVal, setInputVal] = useState('');
   const [result, setResult] = useState<any>(null);
   
@@ -28,7 +34,8 @@ export default function Lab8Sub1() {
     
     try {
       const res = await axios.post(`${API_BASE}/api/lab8/1/detect`, { payload: inputVal, variant }, {
-        withCredentials: true
+        withCredentials: true,
+        headers: instanceId ? { 'X-Variant-Session-ID': instanceId } : {}
       });
       setResult(res.data);
     } catch (err: any) {

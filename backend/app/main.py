@@ -14,6 +14,7 @@ from app.api.lab4 import router as lab4_router
 from app.api.lab5 import router as lab5_router
 from app.api.lab6 import router as lab6_router
 from app.api.lab7 import router as lab7_router
+from app.api.lab8 import router as lab8_router
 from app.api.admin import router as admin_router
 from app.api.chatbot import router as chatbot_router
 from app.services.instance_service import cleanup_expired_instances
@@ -169,6 +170,7 @@ app.include_router(lab4_router, prefix=settings.API_V1_STR)
 app.include_router(lab5_router, prefix=settings.API_V1_STR)
 app.include_router(lab6_router, prefix=settings.API_V1_STR)
 app.include_router(lab7_router, prefix=settings.API_V1_STR)
+app.include_router(lab8_router, prefix=settings.API_V1_STR)
 app.include_router(admin_router, prefix=settings.API_V1_STR)
 app.include_router(chatbot_router, prefix=settings.API_V1_STR)
 if __name__ == "__main__":

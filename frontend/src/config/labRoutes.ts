@@ -76,7 +76,15 @@ export const LAB_ROUTES: Record<string, LabRouteConfig> = {
   'deserialization/basic-a':          { labId: '8', variantId: '1a', title: 'Insecure Deserialization (A)', labTitle: 'Lab 8: Deserialization' },
   'deserialization/basic-b':          { labId: '8', variantId: '1b', title: 'Insecure Deserialization (B)', labTitle: 'Lab 8: Deserialization' },
   'deserialization/basic-c':          { labId: '8', variantId: '1c', title: 'Insecure Deserialization (C)', labTitle: 'Lab 8: Deserialization' },
-  'deserialization/advanced':         { labId: '8', variantId: '2', title: 'Advanced Deserialization', labTitle: 'Lab 8: Deserialization' }
+  'deserialization/advanced':         { labId: '8', variantId: '2', title: 'Advanced Deserialization', labTitle: 'Lab 8: Deserialization' },
+
+  // Lab 8: Cross-Site Scripting (XSS)
+  'xss/sub1-a':                       { labId: '8', variantId: '1a', title: 'HealthPlus Search', labTitle: 'Lab 8: XSS' },
+  'xss/sub1-b':                       { labId: '8', variantId: '1b', title: 'Support Tickets', labTitle: 'Lab 8: XSS' },
+  'xss/sub1-c':                       { labId: '8', variantId: '1c', title: 'DevHub Feedback', labTitle: 'Lab 8: XSS' },
+  'xss/sub1-d':                       { labId: '8', variantId: '1d', title: 'SocialHub Feed', labTitle: 'Lab 8: XSS' },
+  'xss/sub1-e':                       { labId: '8', variantId: '1e', title: 'DocVault Upload', labTitle: 'Lab 8: XSS' },
+  'xss/sub2':                         { labId: '8', variantId: '2', title: 'TechFusion Portal', labTitle: 'Lab 8: XSS' }
 };
 
 /**

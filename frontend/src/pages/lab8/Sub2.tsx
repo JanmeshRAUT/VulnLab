@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { ShieldAlert, ArrowLeft, Bug, User } from 'lucide-react';
-import { getLabSessionId } from '../../utils/sessionId';
+import { useLabInstance } from '../../hooks/useLabInstance';
 import SandboxedIframe from '@/components/SandboxedIframe';
 
 export default function Lab8Sub2() {
@@ -17,12 +17,10 @@ export default function Lab8Sub2() {
     bio: ''
   });
 
-  const [instanceId, setInstanceId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const newId = getLabSessionId('lab8', 'sub2', 'default', true);
-    setInstanceId(newId);
-  }, []);
+  const { instanceId } = useLabInstance({ 
+    labId: '8', 
+    variantId: '2' 
+  });
 
   const fetchProfile = async (currentInstanceId: string) => {
     try {
