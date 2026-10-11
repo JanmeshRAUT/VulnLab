@@ -19,17 +19,22 @@ def sanitize_filename(filename: str) -> str:
     return base[:100]
 
 async def store_upload(instance_id: str, variant: str, level: str, file: UploadFile):
-    content = await file.read()
-    if len(content) > MAX_UPLOAD_SIZE:
+    chunk = await file.read(MAX_UPLOAD_SIZE + 1)
+    if len(chunk) > MAX_UPLOAD_SIZE:
         raise HTTPException(status_code=413, detail="File too large. Max 1MB.")
+    content = chunk
         
     safe_filename = sanitize_filename(file.filename or "unknown")
     
-    # Check max files
+    # Check max files; auto-evict oldest if needed
     count = await db.lab_uploads.count_documents({"instance_id": instance_id})
     if count >= MAX_FILES_PER_INSTANCE:
-        # Delete oldest or just reject
-        raise HTTPException(status_code=400, detail="Too many files uploaded for this instance.")
+        oldest = await db.lab_uploads.find_one(
+            {"instance_id": instance_id},
+            sort=[("_id", 1)]
+        )
+        if oldest:
+            await db.lab_uploads.delete_one({"_id": oldest["_id"]})
         
     doc = {
         "instance_id": instance_id,
@@ -46,6 +51,7 @@ async def store_upload(instance_id: str, variant: str, level: str, file: UploadF
         upsert=True
     )
     return safe_filename
+
 
 async def serve_upload(instance_id: str, variant: str, level: str, filename: str):
     safe_filename = sanitize_filename(filename)
@@ -89,7 +95,8 @@ async def upload_file(
     file: UploadFile = File(...), 
     instance: dict = Depends(get_valid_instance)
 ):
-    if instance.get("lab_id") != "5" or instance.get("variant_id") != f"1{variant}":
+    expected = [f"1{variant}", variant]
+    if instance.get("lab_id") != "5" or instance.get("variant_id") not in expected:
         raise HTTPException(status_code=403, detail="Instance mismatch")
         
     filename = await store_upload(instance['instance_id'], variant, "1", file)
@@ -102,10 +109,34 @@ async def get_uploaded_file(
     filename: str, 
     instance: dict = Depends(get_valid_instance)
 ):
-    if instance.get("lab_id") != "5" or instance.get("variant_id") != f"1{variant}":
+    expected = [f"1{variant}", variant]
+    if instance.get("lab_id") != "5" or instance.get("variant_id") not in expected:
         raise HTTPException(status_code=403, detail="Instance mismatch")
         
     return await serve_upload(instance['instance_id'], variant, "1", filename)
+
+
+@router.delete("/lab5/1/{variant}/files/avatars/{filename}")
+async def delete_uploaded_file(
+    variant: str,
+    filename: str,
+    instance: dict = Depends(get_valid_instance)
+):
+    expected = [f"1{variant}", variant]
+    if instance.get("lab_id") != "5" or instance.get("variant_id") not in expected:
+        raise HTTPException(status_code=403, detail="Instance mismatch")
+    
+    safe_filename = sanitize_filename(filename)
+    res = await db.lab_uploads.delete_one({
+        "instance_id": instance["instance_id"],
+        "variant": variant,
+        "level": "1",
+        "filename": safe_filename
+    })
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="File not found")
+    return {"message": "File deleted successfully"}
+
 
 
 @router.post("/lab5/2/{variant}/upload")
@@ -137,3 +168,25 @@ async def get_uploaded_file_level2(
         raise HTTPException(status_code=403, detail="Instance mismatch")
         
     return await serve_upload(instance['instance_id'], variant, "2", filename)
+
+
+@router.delete("/lab5/2/{variant}/files/avatars/{filename}")
+async def delete_uploaded_file_level2(
+    variant: str,
+    filename: str,
+    instance: dict = Depends(get_valid_instance)
+):
+    if instance.get("lab_id") != "5" or instance.get("variant_id") != f"2{variant}":
+        raise HTTPException(status_code=403, detail="Instance mismatch")
+    
+    safe_filename = sanitize_filename(filename)
+    res = await db.lab_uploads.delete_one({
+        "instance_id": instance["instance_id"],
+        "variant": variant,
+        "level": "2",
+        "filename": safe_filename
+    })
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="File not found")
+    return {"message": "File deleted successfully"}
+

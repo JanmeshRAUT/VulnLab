@@ -75,12 +75,28 @@ async def submit_instance_flag(request: Request, instance_id: str, req: Instance
     valid_id = instance["instance_id"]
     if instance_id != valid_id:
         raise HTTPException(status_code=403, detail="Instance ID mismatch")
-    success, message, all_solved = await submit_flag(valid_id, req.objective_id, req.flag)
+
+    objective_id = req.objective_id
+    if not objective_id:
+        db = get_database()
+        fresh_instance = await db.instances.find_one({"instance_id": valid_id})
+        records = (fresh_instance or instance).get("state", {}).get("flag_records", [])
+        matching = [r for r in records if r.get("flag_value", "").strip() == req.flag.strip()]
+        if len(matching) == 1:
+            objective_id = matching[0].get("objective_id")
+        elif len(records) == 1:
+            objective_id = records[0].get("objective_id")
+        else:
+            return JSONResponse(status_code=400, content={"success": False, "error": f"Objective not specified or multiple matching objectives found (found {len(matching)} matching in {len(records)} records)."})
+
+
+    success, message, all_solved = await submit_flag(valid_id, objective_id, req.flag)
     if success:
         if all_solved:
             await update_instance_status(valid_id, "SOLVED")
         return {"success": True, "message": message}
     return JSONResponse(status_code=400, content={"success": False, "error": message})
+
 
 @router.post("/submit_flag")
 @limiter.limit("20/minute")

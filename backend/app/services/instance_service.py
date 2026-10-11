@@ -82,9 +82,10 @@ async def create_instance(user_id: str, lab_id: str, variant_id: str):
         import string
         chars = "".join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(5))
         state_data["admin_password"] = f"{chars}-Admin"
-    elif lab_id == "3" and variant_id.startswith("1"):
+    elif lab_id == "3" and (variant_id.startswith("1") or variant_id in ["a", "b", "c"]):
         state_data["target_username"] = secrets.choice(USERNAMES)
         state_data["target_password"] = secrets.choice(PASSWORDS)
+
 
     doc = {
         'instance_id': instance_id,
@@ -104,11 +105,14 @@ async def create_instance(user_id: str, lab_id: str, variant_id: str):
 
 async def update_instance_state(instance_id: str, new_state: dict):
     db = get_database()
-    await db.instances.update_one(
-        {'instance_id': instance_id},
-        {'$set': {'state': new_state}}
-    )
+    update_data = {f"state.{k}": v for k, v in new_state.items()}
+    if update_data:
+        await db.instances.update_one(
+            {'instance_id': instance_id},
+            {'$set': update_data}
+        )
     return True
+
 
 async def cleanup_expired_instances():
     db = get_database()

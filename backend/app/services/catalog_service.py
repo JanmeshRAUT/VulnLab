@@ -38,9 +38,15 @@ LAB_CATALOG = [
         title="Brute Force",
         description="Test rate limiting and brute force protections.",
         variants=[
-            LabVariant(variant_id="a", title="SecureShop", description="Brute force login."),
-            LabVariant(variant_id="b", title="VaultMart", description="Brute force login."),
-            LabVariant(variant_id="c", title="AlphaCart", description="Brute force login.")
+            LabVariant(variant_id="1a", title="SecureShop", description="Brute force login.", submodule="Basic Brute Force"),
+            LabVariant(variant_id="1b", title="VaultMart", description="Brute force login.", submodule="Basic Brute Force"),
+            LabVariant(variant_id="1c", title="AlphaCart", description="Brute force login.", submodule="Basic Brute Force"),
+            LabVariant(variant_id="2a", title="SocialSphere", description="2FA bypass via broken logic.", submodule="2FA Bypass"),
+            LabVariant(variant_id="2b", title="FinEdge", description="2FA bypass via broken logic.", submodule="2FA Bypass"),
+            LabVariant(variant_id="2c", title="CloudDrive", description="2FA bypass via broken logic.", submodule="2FA Bypass"),
+            LabVariant(variant_id="a", title="SecureShop Legacy", description="Legacy identifier"),
+            LabVariant(variant_id="b", title="VaultMart Legacy", description="Legacy identifier"),
+            LabVariant(variant_id="c", title="AlphaCart Legacy", description="Legacy identifier"),
         ]
     ),
     Lab(
@@ -48,6 +54,12 @@ LAB_CATALOG = [
         title="Server-Side Request Forgery",
         description="Probe internal services and trust boundaries from the server side.",
         variants=[
+            LabVariant(variant_id="1a", title="RetailStore SSRF", description="SSRF against local loopback.", submodule="Basic SSRF"),
+            LabVariant(variant_id="1b", title="CloudInfra SSRF", description="SSRF against cloud backend.", submodule="Basic SSRF"),
+            LabVariant(variant_id="1c", title="GlobalLogistics SSRF", description="SSRF against internal logistics.", submodule="Basic SSRF"),
+            LabVariant(variant_id="2a", title="ArcadeAvenue SSRF", description="SSRF with blacklist-based input filter.", submodule="Bypass SSRF"),
+            LabVariant(variant_id="2b", title="NimbusMarketplace SSRF", description="SSRF with whitelist-based input filter.", submodule="Bypass SSRF"),
+            LabVariant(variant_id="2c", title="PortlineFreight SSRF", description="Blind SSRF with out-of-band detection.", submodule="Bypass SSRF"),
             LabVariant(variant_id="a", title="ImageProxy", description="SSRF via image fetcher."),
             LabVariant(variant_id="b", title="WebhookHook", description="SSRF via webhook.")
         ]
@@ -57,8 +69,14 @@ LAB_CATALOG = [
         title="File Upload Exploitation",
         description="Abuse unrestricted upload flows to bypass validations, upload malicious payloads.",
         variants=[
-            LabVariant(variant_id="a", title="AvatarUpload", description="Unrestricted file upload."),
-            LabVariant(variant_id="b", title="DocumentVault", description="Extension bypass.")
+            LabVariant(variant_id="1a", title="AvatarUpload", description="Unrestricted file upload.", submodule="Direct Upload"),
+            LabVariant(variant_id="1b", title="DocumentVault", description="Extension bypass.", submodule="Direct Upload"),
+            LabVariant(variant_id="1c", title="MediaHub", description="Direct PHP script upload.", submodule="Direct Upload"),
+            LabVariant(variant_id="2a", title="SecureAvatar", description="Content-type verification bypass.", submodule="Flawed Validation"),
+            LabVariant(variant_id="2b", title="SecureDoc", description="Content-type verification bypass.", submodule="Flawed Validation"),
+            LabVariant(variant_id="2c", title="SecureVault", description="Content-type verification bypass.", submodule="Flawed Validation"),
+            LabVariant(variant_id="a", title="AvatarUpload Legacy", description="Unrestricted file upload."),
+            LabVariant(variant_id="b", title="DocumentVault Legacy", description="Extension bypass.")
         ]
     ),
     Lab(
@@ -66,9 +84,12 @@ LAB_CATALOG = [
         title="Command Injection",
         description="Execute arbitrary commands on the host OS.",
         variants=[
-            LabVariant(variant_id="a", title="MegaMart", description="Command injection via forms."),
-            LabVariant(variant_id="b", title="AutoParts Pro", description="Command injection via forms."),
-            LabVariant(variant_id="c", title="Tech Tools", description="Command injection via forms.")
+            LabVariant(variant_id="1a", title="MegaMart", description="Command injection via forms.", submodule="OS Command Injection"),
+            LabVariant(variant_id="1b", title="AutoParts Pro", description="Command injection via forms.", submodule="OS Command Injection"),
+            LabVariant(variant_id="1c", title="Tech Tools", description="Command injection via forms.", submodule="OS Command Injection"),
+            LabVariant(variant_id="a", title="MegaMart Legacy", description="Command injection via forms."),
+            LabVariant(variant_id="b", title="AutoParts Pro Legacy", description="Command injection via forms."),
+            LabVariant(variant_id="c", title="Tech Tools Legacy", description="Command injection via forms.")
         ]
     ),
     Lab(
@@ -76,14 +97,21 @@ LAB_CATALOG = [
         title="SQL Injection",
         description="Interfere with the queries the application makes to its database.",
         variants=[
-            LabVariant(variant_id="a", title="Gift Shop", description="Classic SQLi.", submodule="Classic SQLi"),
-            LabVariant(variant_id="b", title="Book Store", description="Classic SQLi.", submodule="Classic SQLi"),
-            LabVariant(variant_id="c", title="Tech Shop", description="Classic SQLi.", submodule="Classic SQLi"),
-            LabVariant(variant_id="blind-a", title="Blind A", description="Blind SQLi.", submodule="Blind SQLi"),
-            LabVariant(variant_id="blind-b", title="Blind B", description="Blind SQLi.", submodule="Blind SQLi"),
-            LabVariant(variant_id="blind-c", title="Blind C", description="Blind SQLi.", submodule="Blind SQLi")
+            LabVariant(variant_id="1a", title="Gift Shop", description="Classic SQLi.", submodule="Classic SQLi"),
+            LabVariant(variant_id="1b", title="Book Store", description="Classic SQLi.", submodule="Classic SQLi"),
+            LabVariant(variant_id="1c", title="Tech Shop", description="Classic SQLi.", submodule="Classic SQLi"),
+            LabVariant(variant_id="2a", title="Blind A", description="Blind SQLi.", submodule="Blind SQLi"),
+            LabVariant(variant_id="2b", title="Blind B", description="Blind SQLi.", submodule="Blind SQLi"),
+            LabVariant(variant_id="2c", title="Blind C", description="Blind SQLi.", submodule="Blind SQLi"),
+            LabVariant(variant_id="a", title="Gift Shop Legacy", description="Classic SQLi.", submodule="Classic SQLi"),
+            LabVariant(variant_id="b", title="Book Store Legacy", description="Classic SQLi.", submodule="Classic SQLi"),
+            LabVariant(variant_id="c", title="Tech Shop Legacy", description="Classic SQLi.", submodule="Classic SQLi"),
+            LabVariant(variant_id="blind-a", title="Blind A Legacy", description="Blind SQLi.", submodule="Blind SQLi"),
+            LabVariant(variant_id="blind-b", title="Blind B Legacy", description="Blind SQLi.", submodule="Blind SQLi"),
+            LabVariant(variant_id="blind-c", title="Blind C Legacy", description="Blind SQLi.", submodule="Blind SQLi")
         ]
     ),
+
     Lab(
         lab_id="8",
         title="Cross-Site Scripting (XSS)",

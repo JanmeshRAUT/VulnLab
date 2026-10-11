@@ -16,8 +16,10 @@ async def check_stock_level(
     The application supposedly runs:
     stock_checker.sh <productId> <storeId>
     """
-    if instance.get("lab_id") != "6" or instance.get("variant_id") != f"1{variant}":
+    expected = [f"1{variant}", variant]
+    if instance.get("lab_id") != "6" or instance.get("variant_id") not in expected:
         raise HTTPException(status_code=403, detail="Instance mismatch")
+
         
     form_data = await request.form()
     

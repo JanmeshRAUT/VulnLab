@@ -18,8 +18,15 @@ def test_no_unsafe_operations_in_labs():
         (r'\bos\.path\.join\b', "os.path.join"),
         (r'\bFileResponse\b', "FileResponse"),
         (r'\bsubprocess\.', "subprocess"),
-        (r'\bhttpx\.', "httpx")
+        (r'\bhttpx\.', "httpx"),
+        (r'\bsocket\b', "socket"),
+        (r'\burllib\.request\b', "urllib.request"),
+        (r'\baiohttp\b', "aiohttp"),
+        (r'\bos\.system\b', "os.system"),
+        (r'\beval\(', "eval()"),
+        (r'\bexec\(', "exec()")
     ]
+
     
     errors = []
     

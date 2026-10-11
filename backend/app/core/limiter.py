@@ -10,10 +10,16 @@ def get_client_ip(request: Request) -> str:
             user_id = request.session.get("user_id")
         except Exception:
             user_id = None
+
+    if not user_id and hasattr(request, "state"):
+        user = getattr(request.state, "user", None)
+        if isinstance(user, dict):
+            user_id = str(user.get("_id") or user.get("id") or "")
             
     if user_id:
         return f"u:{user_id}"
     return get_strict_ip(request)
+
 
 # Strict IP-only key function for unauthenticated routes (login, register, OAuth start)
 def get_strict_ip(request: Request) -> str:

@@ -4,9 +4,13 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from app.core.config import settings
 
 _client = None
+_test_db = None
 
 def get_database():
-    global _client
+    global _client, _test_db
+    if _test_db is not None:
+        return _test_db
+
     try:
         current_loop = asyncio.get_running_loop()
     except RuntimeError:
@@ -23,6 +27,7 @@ def get_database():
             _client = AsyncIOMotorClient(settings.MONGO_URI, tlsCAFile=certifi.where())
 
     return _client[settings.MONGO_DB]
+
 
 
 class _DatabaseProxy:

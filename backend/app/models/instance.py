@@ -6,11 +6,12 @@ class LaunchRequest(BaseModel):
     variant_id: str
 
 class InstanceFlagSubmitRequest(BaseModel):
-    objective_id: str = Field(..., alias="objectiveId")
+    objective_id: Optional[str] = Field(None, alias="objectiveId")
     flag: str
     
     class Config:
         populate_by_name = True
+
 
 class InstanceResponse(BaseModel):
     instance_id: str

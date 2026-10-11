@@ -5,17 +5,11 @@ from pydantic import BaseModel
 from typing import Optional
 from app.services.instance_service import get_instance
 from app.services.validation_service import issue_flag_for_instance
+from app.api.deps import get_valid_instance
+from app.core.database import get_database
 
 router = APIRouter(prefix="/lab3", tags=["lab3"])
 
-async def get_valid_instance(request: Request):
-    instance_id = request.headers.get("X-Variant-Session-ID")
-    if not instance_id:
-        raise HTTPException(status_code=401, detail="Missing instance ID")
-    instance = await get_instance(instance_id)
-    if not instance or instance.get("status") not in ["CREATED", "ACTIVE"]:
-        raise HTTPException(status_code=404, detail="Instance not found or expired")
-    return instance
 
 class Lab31LoginRequest(BaseModel):
     username: str
@@ -23,8 +17,10 @@ class Lab31LoginRequest(BaseModel):
 
 @router.post("/1/{variant}/login")
 async def lab3_1_login(variant: str, req: Lab31LoginRequest, instance: dict = Depends(get_valid_instance)):
-    if instance.get("lab_id") != "3" or instance.get("variant_id") != f"1{variant}":
+    expected = [f"1{variant}", variant]
+    if instance.get("lab_id") != "3" or instance.get("variant_id") not in expected:
         raise HTTPException(status_code=403, detail="Instance mismatch")
+
         
     state = instance.get("state", {})
     target_username = state.get("target_username", "admin")
@@ -44,8 +40,10 @@ async def lab3_1_login(variant: str, req: Lab31LoginRequest, instance: dict = De
 
 @router.get("/1/{variant}/profile")
 async def lab3_1_profile(variant: str, id: str, instance: dict = Depends(get_valid_instance)):
-    if instance.get("lab_id") != "3" or instance.get("variant_id") != f"1{variant}":
+    expected = [f"1{variant}", variant]
+    if instance.get("lab_id") != "3" or instance.get("variant_id") not in expected:
         raise HTTPException(status_code=403, detail="Instance mismatch")
+
         
     state = instance.get("state", {})
     target_username = state.get("target_username", "admin")
@@ -82,24 +80,32 @@ class Lab32VerifyRequest(BaseModel):
 async def lab3_2_login(variant: str, req: Lab32LoginRequest, instance: dict = Depends(get_valid_instance)):
     if instance.get("lab_id") != "3" or instance.get("variant_id") != f"2{variant}":
         raise HTTPException(status_code=403, detail="Instance mismatch")
-        
-    otp = str(secrets.choice(range(1000, 10000)))
-    state = instance.get("state", {})
-    state["otp"] = otp
-    await update_instance_state(instance["instance_id"], state)
-    
+
     if req.username == "wiener" and req.password == "peter":
+        otp = str(secrets.choice(range(1000, 10000)))
+        db = get_database()
+        await db.instances.update_one(
+            {"instance_id": instance["instance_id"]},
+            {"$set": {"state.otp": otp}}
+        )
         return JSONResponse({
             "session_token": f"partial_session_wiener_{instance['instance_id']}",
             "requires_mfa": True
         })
     elif req.username == "carlos" and req.password == "montoya":
+        otp = str(secrets.choice(range(1000, 10000)))
+        db = get_database()
+        await db.instances.update_one(
+            {"instance_id": instance["instance_id"]},
+            {"$set": {"state.otp": otp}}
+        )
         return JSONResponse({
             "session_token": f"partial_session_carlos_{instance['instance_id']}",
             "requires_mfa": True
         })
     else:
         raise HTTPException(status_code=401, detail="Invalid username or password")
+
 
 @router.get("/2/{variant}/email")
 async def lab3_2_email(variant: str, instance: dict = Depends(get_valid_instance)):

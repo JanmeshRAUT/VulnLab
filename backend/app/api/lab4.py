@@ -117,8 +117,10 @@ async def delete_user_internal(variant: str, target: str, x_internal_ssrf: str, 
 
 @router.post("/lab4/1/{variant}/check")
 async def check_ssrf(variant: str, request_data: SSRFCheckRequest, request: Request, instance: dict = Depends(get_valid_instance)):
-    if instance.get("lab_id") != "4" or instance.get("variant_id") != f"1{variant}":
+    expected = [f"1{variant}", variant]
+    if instance.get("lab_id") != "4" or instance.get("variant_id") not in expected:
         raise HTTPException(status_code=403, detail="Instance mismatch")
+
 
     target_url = request_data.stockApi
 
@@ -153,16 +155,19 @@ async def check_ssrf(variant: str, request_data: SSRFCheckRequest, request: Requ
 
 @router.get("/lab4/1/{variant}/admin")
 async def get_admin_panel(variant: str, request: Request, x_internal_ssrf: Optional[str] = Header(None), instance: dict = Depends(get_valid_instance)):
-    if instance.get("lab_id") != "4" or instance.get("variant_id") != f"1{variant}":
+    expected = [f"1{variant}", variant]
+    if instance.get("lab_id") != "4" or instance.get("variant_id") not in expected:
         raise HTTPException(status_code=403, detail="Instance mismatch")
     return await get_admin_panel_internal(variant, x_internal_ssrf or "", instance)
 
 @router.get("/lab4/1/{variant}/admin/delete")
 async def delete_user(variant: str, request: Request, x_internal_ssrf: Optional[str] = Header(None), instance: dict = Depends(get_valid_instance)):
-    if instance.get("lab_id") != "4" or instance.get("variant_id") != f"1{variant}":
+    expected = [f"1{variant}", variant]
+    if instance.get("lab_id") != "4" or instance.get("variant_id") not in expected:
         raise HTTPException(status_code=403, detail="Instance mismatch")
     target = request.query_params.get("username") or request.query_params.get("instance") or request.query_params.get("shipment")
     return await delete_user_internal(variant, target, x_internal_ssrf or "", instance)
+
 
 
 # LAB 4.2

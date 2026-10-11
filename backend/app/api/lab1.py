@@ -3,8 +3,10 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import PlainTextResponse, Response
 from app.api.deps import get_valid_instance
 from app.services.validation_service import issue_flag_for_instance
+from app.services.image_service import get_product_image, get_media_image
 
 router = APIRouter(prefix="/lab1", tags=["Lab 1"])
+
 
 def get_passwd_content(flag_value: str) -> str:
     lines = [
@@ -137,6 +139,11 @@ async def lab1_2_image(filename: str, instance: dict = Depends(get_valid_instanc
     if actual_filename.startswith("images/"):
         actual_filename = actual_filename[7:]
     
+    img_res = get_product_image(actual_filename)
+    if img_res:
+        content, media_type = img_res
+        return Response(content=content, media_type=media_type)
+    
     base_dir = "/app/img"
     resolved_path = posixpath.normpath(posixpath.join(base_dir, actual_filename))
     
@@ -175,6 +182,11 @@ async def lab1_3_image(filename: str, instance: dict = Depends(get_valid_instanc
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error accessing system file template: {e}")
 
+    img_res = get_media_image(filename)
+    if img_res:
+        content, media_type = img_res
+        return Response(content=content, media_type=media_type)
+
     base_dir = "/app/img"
     resolved_path = posixpath.normpath(posixpath.join(base_dir, filename))
     
@@ -182,3 +194,4 @@ async def lab1_3_image(filename: str, instance: dict = Depends(get_valid_instanc
         return Response(content=b"dummy media content", media_type="image/jpeg")
         
     raise HTTPException(status_code=404, detail="File not found")
+
