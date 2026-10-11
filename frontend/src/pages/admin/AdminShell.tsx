@@ -88,7 +88,7 @@ export default function AdminShell({ title, subtitle, activeSection, children }:
           <div className="fixed inset-0 bg-slate-900/50 z-40 xl:hidden backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}></div>
         )}
 
-        <aside className={`fixed xl:static inset-y-0 left-0 z-50 w-72 2xl:w-80 bg-white border-r border-slate-200 flex-col h-screen transform transition-transform duration-300 flex ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'}`}>
+        <aside className={`fixed xl:sticky top-0 inset-y-0 left-0 z-50 w-72 2xl:w-80 bg-white border-r border-slate-200 flex-col h-screen transform transition-transform duration-300 flex ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'}`}>
           <div className="h-16 px-6 flex items-center justify-between border-b border-slate-200">
             <Link to="/" className="flex items-center gap-2 font-black text-xl tracking-tight text-slate-900">
               <Shield className="text-brand-orange" size={24} /> Vuln<span className="text-brand-orange">Lab</span>

@@ -375,7 +375,7 @@ function App() {
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isLab1SubPath = location.pathname.match(/^\/labs\/1\/sub\d+$/i) !== null;
   const isOtherLabEnvPath = location.pathname.match(/^\/labs\/[2-8]\/sub\d+\/[a-c](?:\/.*)?$/i) !== null;
-  const isSemanticLabPath = location.pathname.match(/^\/labs\/[a-z0-9-]+(\/[a-z0-9-]+)+$/i) !== null;
+  const isSemanticLabPath = location.pathname.match(/^\/labs\/[a-z0-9_-]+(\/[a-z0-9_.-]+)+$/i) !== null;
   const isLabEnvironment = (isLab1SubPath || isOtherLabEnvPath || isSemanticLabPath) && (step === 'lab' || !step);
 
   return (
