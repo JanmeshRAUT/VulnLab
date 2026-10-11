@@ -471,7 +471,6 @@ def build_overview(students: list[dict], sessions: list[dict], progress_docs: li
 
     recent_activity = sorted(recent_activity, key=lambda item: item["timestamp"], reverse=True)[:15]
 
-    import time
     now = time.time()
     
     # Calculate real statistics based on sessions

@@ -85,7 +85,7 @@ async def get_products(variant: str, category: str = '', instance: dict = Depend
     try:
         # VULNERABLE QUERY - string concatenation
         if category:
-            query = f"SELECT * FROM products WHERE category = '{category}' AND released = 1"
+            query = f"SELECT * FROM products WHERE category = '{category}' AND released = 1"  # nosec B608
         else:
             query = "SELECT * FROM products WHERE released = 1"
             
@@ -154,7 +154,7 @@ async def login(variant: str, req: LoginRequest, instance: dict = Depends(get_va
     
     try:
         # VULNERABLE QUERY - string concatenation
-        query = f"SELECT * FROM users WHERE username = '{req.username}' AND password = '{req.password}'"
+        query = f"SELECT * FROM users WHERE username = '{req.username}' AND password = '{req.password}'"  # nosec B608
         cursor.execute(query)
         user = cursor.fetchone()
         

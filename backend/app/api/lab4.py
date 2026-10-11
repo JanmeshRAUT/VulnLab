@@ -284,7 +284,7 @@ async def check_ssrf_2(variant: str, request_data: SSRFCheckRequest, request: Re
         octet = int(match.group(1))
         path_and_query = match.group(2)
         
-        h = int(hashlib.md5(instance['instance_id'].encode()).hexdigest(), 16)
+        h = int(hashlib.md5(instance['instance_id'].encode(), usedforsecurity=False).hexdigest(), 16)
         admin_octet = (h % 254) + 1
         
         if octet == admin_octet:

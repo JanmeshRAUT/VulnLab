@@ -69,7 +69,7 @@ class LegacyFlagSubmitRequest(BaseModel):
 
 @router.post("/{instance_id}/submit-flag")
 @limiter.limit("20/minute")
-@limiter.limit("5/minute", key_func=lambda req: f"obj:{getattr(req.scope.get('parsed_body', {}), 'objective_id', 'none')}")
+@limiter.limit("5/minute", key_func=lambda request: f"obj:{getattr(request.scope.get('parsed_body', {}), 'objective_id', 'none')}")
 async def submit_instance_flag(request: Request, instance_id: str, req: InstanceFlagSubmitRequest, instance: dict = Depends(get_valid_instance)):
     # Use the verified instance_id from the dependency
     valid_id = instance["instance_id"]
