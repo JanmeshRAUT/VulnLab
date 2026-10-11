@@ -2,8 +2,11 @@ import time
 import secrets
 import os
 import shutil
+import logging
 from fastapi import HTTPException
 from app.core.database import get_database
+
+logger = logging.getLogger(__name__)
 
 INSTANCE_ACTIVE_TTL_SECONDS = 300
 INSTANCE_TERMINAL_TTL_SECONDS = 300
@@ -151,13 +154,17 @@ async def cleanup_expired_instances():
     
     to_delete_ids = []
     history_docs = []
-    
+    deleted_instance_ids = []
+
     async for instance in cursor:
         to_delete_ids.append(instance["_id"])
-        
+        inst_id = instance.get("instance_id")
+        if inst_id:
+            deleted_instance_ids.append(inst_id)
+
         # 1. Save to session_history
         history_docs.append({
-            "instance_id": instance["instance_id"],
+            "instance_id": inst_id,
             "user_id": instance.get("user_id"),
             "lab_id": instance.get("lab_id"),
             "variant_id": instance.get("variant_id"),
@@ -167,21 +174,25 @@ async def cleanup_expired_instances():
             "solved_at": instance.get("solved_at"),
             "ended_at": now
         })
-        
+
         # 2. Cleanup artifacts
-        inst_upload_dir = os.path.join(UPLOADS_DIR, instance["instance_id"])
-        if os.path.exists(inst_upload_dir):
-            try:
-                shutil.rmtree(inst_upload_dir)
-            except Exception as e:
-                print(f"Failed to remove artifacts for {instance['instance_id']}: {e}")
-                
+        if inst_id:
+            inst_upload_dir = os.path.join(UPLOADS_DIR, inst_id)
+            if os.path.exists(inst_upload_dir):
+                try:
+                    shutil.rmtree(inst_upload_dir)
+                except Exception as e:
+                    logger.warning(f"Failed to remove artifacts for {inst_id}: {e}")
+
     if history_docs:
         await db.session_history.insert_many(history_docs)
-        
+
+    if deleted_instance_ids:
+        await db.lab_uploads.delete_many({"instance_id": {"$in": deleted_instance_ids}})
+
     if to_delete_ids:
         await db.instances.delete_many({"_id": {"$in": to_delete_ids}})
-    
+
     return True
 
 async def get_instance(instance_id: str):

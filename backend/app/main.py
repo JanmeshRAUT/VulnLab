@@ -17,6 +17,9 @@ from app.api.lab7 import router as lab7_router
 from app.api.lab8 import router as lab8_router
 from app.api.admin import router as admin_router
 from app.api.chatbot import router as chatbot_router
+import logging
+logger = logging.getLogger("vulnlab")
+
 from app.services.instance_service import cleanup_expired_instances
 
 async def expiration_worker():
@@ -24,7 +27,7 @@ async def expiration_worker():
         try:
             await cleanup_expired_instances()
         except Exception as e:
-            print(f"Error in expiration worker: {e}")
+            logger.error(f"Error in expiration worker: {e}")
         await asyncio.sleep(60)  # Run every 60 seconds
 
 @asynccontextmanager
@@ -32,22 +35,51 @@ async def lifespan(app: FastAPI):
     # Startup
     task = asyncio.create_task(expiration_worker())
     
-    # Create indexes
     from app.core.database import get_database
-    import pymongo
+    from scripts.migrate_progress import migrate as run_progress_migration
     db = get_database()
+
+    # 1. Run progress migration automatically and idempotently BEFORE creating unique progress index
     try:
-        await db.users.create_index("email", unique=True, sparse=True)
-        await db.users.create_index("enrollment_id")
-        await db.instances.create_index("instance_id", unique=True)
-        await db.instances.create_index([("user_id", 1), ("status", 1)])
-        await db.instances.create_index("expires_at", expireAfterSeconds=0)
-        await db.progress.create_index([("user_id", 1), ("lab_id", 1), ("variant_id", 1)], unique=True)
-        await db.lab_access.create_index([("student_id", 1), ("lab_id", 1)], unique=True)
-        await db.audit_logs.create_index([("timestamp", -1)])
+        migration_res = await run_progress_migration(db)
+        logger.info(f"Progress migration completed: {migration_res}")
     except Exception as e:
-        print(f"Error creating indexes: {e}")
-        
+        logger.error(f"Error during progress migration: {e}")
+
+    # 2. Remove TTL index on instances.expires_at if it exists
+    try:
+        await db.instances.drop_index("expires_at_1")
+        logger.info("Dropped legacy TTL index expires_at_1 on instances")
+    except Exception:
+        pass
+
+    # 3. Create each index in its own try/except that logs failure with index name
+    app.state.index_status = {}
+    indexes_to_create = [
+        ("users_email_sparse_unique", db.users, "email", {"unique": True, "sparse": True}),
+        ("users_enrollment_id", db.users, "enrollment_id", {}),
+        ("instances_instance_id_unique", db.instances, "instance_id", {"unique": True}),
+        ("instances_user_status", db.instances, [("user_id", 1), ("status", 1)], {}),
+        ("progress_user_lab_variant_unique", db.progress, [("user_id", 1), ("lab_id", 1), ("variant_id", 1)], {"unique": True}),
+        ("lab_access_student_lab_unique", db.lab_access, [("student_id", 1), ("lab_id", 1)], {"unique": True}),
+        ("audit_logs_timestamp", db.audit_logs, [("timestamp", -1)], {}),
+        ("lab_uploads_instance_id", db.lab_uploads, "instance_id", {}),
+        ("session_history_user_ended_at", db.session_history, [("user_id", 1), ("ended_at", -1)], {}),
+    ]
+
+    all_indexes_ok = True
+    for index_name, collection, keys, kwargs in indexes_to_create:
+        try:
+            await collection.create_index(keys, name=index_name, **kwargs)
+            app.state.index_status[index_name] = True
+            logger.info(f"Successfully created index '{index_name}' on collection '{collection.name}'")
+        except Exception as e:
+            app.state.index_status[index_name] = False
+            all_indexes_ok = False
+            logger.error(f"Failed to create index '{index_name}' on collection '{collection.name}': {e}")
+
+    app.state.indexes_ready = all_indexes_ok
+
     yield
     # Shutdown
     task.cancel()
@@ -156,7 +188,45 @@ app.add_middleware(
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "message": "New FastAPI Backend is running!"}
+    from app.core.database import get_database
+    db = get_database()
+    try:
+        await db.command("ping")
+        return {"status": "ok", "message": "VulnLab backend is healthy"}
+    except Exception as e:
+        logger.error(f"Health check failed on db ping: {e}")
+        return JSONResponse(status_code=503, content={"status": "unhealthy", "detail": "Database ping failed"})
+
+
+@app.get("/ready")
+async def readiness_check():
+    from app.core.database import get_database
+    db = get_database()
+    try:
+        await db.command("ping")
+    except Exception as e:
+        logger.error(f"Readiness check failed on db ping: {e}")
+        return JSONResponse(status_code=503, content={"status": "not_ready", "detail": "Database ping failed"})
+
+    index_status = getattr(app.state, "index_status", {})
+    indexes_ready = getattr(app.state, "indexes_ready", True)
+    if not indexes_ready:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "not_ready", "detail": "One or more indexes failed to build", "indexes": index_status}
+        )
+
+    return {"status": "ready", "indexes": index_status}
+
+
+@app.get(f"{settings.API_V1_STR}/health")
+async def api_health_check():
+    return await health_check()
+
+
+@app.get(f"{settings.API_V1_STR}/ready")
+async def api_readiness_check():
+    return await readiness_check()
 
 
 
